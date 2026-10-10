@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useShop } from '../context/ShopContext';
 import { 
   X, PlusCircle, Sparkles, Check, RefreshCw, Upload, 
-  Trash2, Edit3, Image as ImageIcon, ArrowLeft, AlertCircle 
+  Trash2, Edit3, Image as ImageIcon, ArrowLeft, AlertCircle,
+  Camera, Layers 
 } from 'lucide-react';
 
 export default function AtelierAdminModal() {
@@ -39,10 +40,12 @@ export default function AtelierAdminModal() {
     drapeWeight: 'Featherlight & Fluid',
     zariWork: 'Banarasi Antique Gold Zari Border',
     isCustomColorAvailable: true,
-    gallery: []
+    modelPhotos: [],
+    flatlayPhotos: []
   });
 
-  const [customPhotoUrl, setCustomPhotoUrl] = useState('');
+  const [customModelUrl, setCustomModelUrl] = useState('');
+  const [customFlatlayUrl, setCustomFlatlayUrl] = useState('');
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
@@ -50,9 +53,10 @@ export default function AtelierAdminModal() {
   useEffect(() => {
     if (editingProduct) {
       setActiveTab('editor');
-      const gallery = (editingProduct.images?.gallery && editingProduct.images.gallery.length > 0)
-        ? editingProduct.images.gallery
-        : [editingProduct.images?.modelView, editingProduct.images?.flatlayView, editingProduct.images?.swatchZoom].filter(Boolean);
+      const modelPhotos = editingProduct.images?.modelPhotos 
+        || [editingProduct.images?.modelView].filter(Boolean);
+      const flatlayPhotos = editingProduct.images?.flatlayPhotos 
+        || [editingProduct.images?.flatlayView, editingProduct.images?.swatchZoom].filter(Boolean);
 
       setFormData({
         id: editingProduct.id,
@@ -69,7 +73,8 @@ export default function AtelierAdminModal() {
         drapeWeight: editingProduct.drapeWeight || 'Featherlight & Fluid',
         zariWork: editingProduct.zariWork || '',
         isCustomColorAvailable: Boolean(editingProduct.isCustomColorAvailable),
-        gallery: gallery
+        modelPhotos: modelPhotos.length > 0 ? modelPhotos : ['/assets/muse_sunset_tissue.jpg'],
+        flatlayPhotos: flatlayPhotos.length > 0 ? flatlayPhotos : ['/assets/saak_folded_copper_tissue.jpg']
       });
     } else {
       setFormData({
@@ -87,26 +92,38 @@ export default function AtelierAdminModal() {
         drapeWeight: 'Featherlight & Fluid',
         zariWork: 'Banarasi Antique Gold Zari Border',
         isCustomColorAvailable: true,
-        gallery: [
+        modelPhotos: [
           '/assets/muse_sunset_tissue.jpg',
-          '/assets/saak_folded_copper_tissue.jpg'
+          '/assets/muse_sunset_tissue_2.jpg'
+        ],
+        flatlayPhotos: [
+          '/assets/saak_folded_copper_tissue.jpg',
+          '/assets/saak_flatlay_copper_green.jpg'
         ]
       });
     }
   }, [editingProduct]);
 
+  // Model Presets
   const musePresets = [
-    { label: 'Sunset Orange Muse', url: '/assets/muse_sunset_tissue.jpg' },
+    { label: 'Sunset Orange Muse (Front)', url: '/assets/muse_sunset_tissue.jpg' },
+    { label: 'Sunset Orange Muse (Portrait #2)', url: '/assets/muse_sunset_tissue_2.jpg' },
     { label: 'Olive Tissue Muse', url: '/assets/muse_olive_tissue.jpg' },
     { label: 'Burnt Copper Muse', url: '/assets/muse_copper_tissue.jpg' },
-    { label: 'Black Saree Muse', url: '/assets/saak_muse_black_saree_gold_corset.jpg' },
-    { label: 'Copper Folded', url: '/assets/saak_folded_copper_tissue.jpg' },
-    { label: 'Green Tissue Swatch', url: '/assets/saak_green_tissue_drape.jpg' },
-    { label: 'Brass Thali & Mogra', url: '/assets/saak_flatlay_copper_green.jpg' }
+    { label: 'Black Saree Muse (Front)', url: '/assets/saak_muse_black_saree_gold_corset.jpg' },
+    { label: 'Black Saree Muse (Side Profile)', url: '/assets/saak_muse_black_corset_side.jpg' }
   ];
 
-  // Photo Upload Handler (FileReader)
-  const handlePhotoUpload = (e) => {
+  // Flat-lay Presets
+  const flatlayPresets = [
+    { label: 'Folded Copper Tissue', url: '/assets/saak_folded_copper_tissue.jpg' },
+    { label: 'Green Tissue Drape', url: '/assets/saak_green_tissue_drape.jpg' },
+    { label: 'Green Texture Swirl (Macro)', url: '/assets/saak_green_tissue_swirl.jpg' },
+    { label: 'Brass Thali & Fresh Mogra', url: '/assets/saak_flatlay_copper_green.jpg' }
+  ];
+
+  // Handlers for Model Photos
+  const handleModelPhotoUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -114,35 +131,77 @@ export default function AtelierAdminModal() {
         const newImg = event.target.result;
         setFormData(prev => ({
           ...prev,
-          gallery: [...prev.gallery, newImg]
+          modelPhotos: [...prev.modelPhotos, newImg]
         }));
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleAddUrlPhoto = () => {
-    if (customPhotoUrl.trim()) {
+  const handleAddModelUrl = () => {
+    if (customModelUrl.trim()) {
       setFormData(prev => ({
         ...prev,
-        gallery: [...prev.gallery, customPhotoUrl.trim()]
+        modelPhotos: [...prev.modelPhotos, customModelUrl.trim()]
       }));
-      setCustomPhotoUrl('');
+      setCustomModelUrl('');
     }
   };
 
-  const handleRemovePhoto = (indexToRemove) => {
+  const handleRemoveModelPhoto = (idxToRemove) => {
     setFormData(prev => ({
       ...prev,
-      gallery: prev.gallery.filter((_, idx) => idx !== indexToRemove)
+      modelPhotos: prev.modelPhotos.filter((_, idx) => idx !== idxToRemove)
     }));
   };
 
-  const handleAddPresetPhoto = (url) => {
-    if (!formData.gallery.includes(url)) {
+  const handleAddModelPreset = (url) => {
+    if (!formData.modelPhotos.includes(url)) {
       setFormData(prev => ({
         ...prev,
-        gallery: [...prev.gallery, url]
+        modelPhotos: [...prev.modelPhotos, url]
+      }));
+    }
+  };
+
+  // Handlers for Flat-lay Photos
+  const handleFlatlayPhotoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const newImg = event.target.result;
+        setFormData(prev => ({
+          ...prev,
+          flatlayPhotos: [...prev.flatlayPhotos, newImg]
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAddFlatlayUrl = () => {
+    if (customFlatlayUrl.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        flatlayPhotos: [...prev.flatlayPhotos, customFlatlayUrl.trim()]
+      }));
+      setCustomFlatlayUrl('');
+    }
+  };
+
+  const handleRemoveFlatlayPhoto = (idxToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      flatlayPhotos: prev.flatlayPhotos.filter((_, idx) => idx !== idxToRemove)
+    }));
+  };
+
+  const handleAddFlatlayPreset = (url) => {
+    if (!formData.flatlayPhotos.includes(url)) {
+      setFormData(prev => ({
+        ...prev,
+        flatlayPhotos: [...prev.flatlayPhotos, url]
       }));
     }
   };
@@ -151,15 +210,25 @@ export default function AtelierAdminModal() {
     e.preventDefault();
     if (!formData.name) return;
 
+    const combinedGallery = [
+      ...formData.modelPhotos,
+      ...formData.flatlayPhotos
+    ];
+
     const payload = {
       ...formData,
       price: Number(formData.price),
       originalPrice: formData.originalPrice ? Number(formData.originalPrice) : undefined,
+      modelPhotos: formData.modelPhotos,
+      flatlayPhotos: formData.flatlayPhotos,
+      gallery: combinedGallery.length > 0 ? combinedGallery : ['/assets/muse_sunset_tissue.jpg'],
       images: {
-        modelView: formData.gallery[0] || '/assets/muse_sunset_tissue.jpg',
-        flatlayView: formData.gallery[1] || formData.gallery[0] || '/assets/saak_folded_copper_tissue.jpg',
-        swatchZoom: formData.gallery[2] || formData.gallery[0] || '/assets/saak_flatlay_copper_green.jpg',
-        gallery: formData.gallery.length > 0 ? formData.gallery : ['/assets/muse_sunset_tissue.jpg']
+        modelPhotos: formData.modelPhotos.length > 0 ? formData.modelPhotos : ['/assets/muse_sunset_tissue.jpg'],
+        flatlayPhotos: formData.flatlayPhotos.length > 0 ? formData.flatlayPhotos : ['/assets/saak_folded_copper_tissue.jpg'],
+        modelView: formData.modelPhotos[0] || formData.flatlayPhotos[0] || '/assets/muse_sunset_tissue.jpg',
+        flatlayView: formData.flatlayPhotos[0] || formData.modelPhotos[0] || '/assets/saak_folded_copper_tissue.jpg',
+        swatchZoom: formData.flatlayPhotos[1] || formData.flatlayPhotos[0] || '/assets/saak_flatlay_copper_green.jpg',
+        gallery: combinedGallery.length > 0 ? combinedGallery : ['/assets/muse_sunset_tissue.jpg']
       }
     };
 
@@ -218,7 +287,7 @@ export default function AtelierAdminModal() {
               : (editingProduct ? `Edit: ${editingProduct.name}` : 'Add New Creation')}
           </h2>
           <p className="admin-subtitle">
-            Manage your live store products, edit prices &amp; descriptions, upload or delete photos, and re-arrange looks in real time.
+            Manage your live store products, edit prices &amp; descriptions, upload multiple model and flat-lay photos, and re-arrange looks in real time.
           </p>
 
           {/* Navigation Tabs */}
@@ -268,7 +337,7 @@ export default function AtelierAdminModal() {
                       )}
                       <span className="inv-cat-pill">{prod.category}</span>
                       <span className="inv-photo-count">
-                        📷 {prod.images?.gallery?.length || 2} photos
+                        📷 {prod.images?.modelPhotos?.length || 1} model • {prod.images?.flatlayPhotos?.length || 1} flat-lay
                       </span>
                     </div>
                   </div>
@@ -444,7 +513,7 @@ export default function AtelierAdminModal() {
                   className="form-select"
                 >
                   <option value="Featherlight & Fluid">Featherlight &amp; Fluid</option>
-                  <option value="Ultra-Light Sheen">Ultra-Light Sheen</option>
+                  <option value="Ultra-Lightweight & Fluid">Ultra-Lightweight &amp; Fluid</option>
                   <option value="Architectural & Secure">Architectural &amp; Secure (Corset)</option>
                   <option value="Crisp Festive Volume">Crisp Festive Volume</option>
                 </select>
@@ -474,80 +543,175 @@ export default function AtelierAdminModal() {
                 />
               </div>
 
-              {/* PHOTO MANAGER: ADD / REMOVE PHOTOS */}
-              <div className="form-group full-width photo-manager-block">
+              {/* ========================================================================= */}
+              {/* SECTION 1: MODEL / ON MUSE PHOTOS (MULTIPLE) */}
+              {/* ========================================================================= */}
+              <div className="form-group full-width photo-manager-block model-photos-block">
                 <div className="manager-title-row">
                   <div>
-                    <h4 className="manager-title">Photo Gallery Carousel ({formData.gallery.length} Photos)</h4>
-                    <span className="manager-sub">These photos will display in the product card's side arrow carousel.</span>
+                    <div className="photo-section-badge badge-muse">
+                      <Camera size={13} />
+                      <span>MODEL / ON MUSE LOOKS ({formData.modelPhotos.length})</span>
+                    </div>
+                    <h4 className="manager-title">Photos of Model Wearing the Outfit</h4>
+                    <span className="manager-sub">Add multiple model angles (full drape, side angle, close-up with jewelry, back pleats).</span>
                   </div>
 
                   {/* Upload from Computer Button */}
                   <label className="upload-file-btn">
                     <Upload size={14} />
-                    <span>Upload From Computer</span>
+                    <span>Upload Model Photo</span>
                     <input 
                       type="file" 
                       accept="image/*" 
-                      onChange={handlePhotoUpload} 
+                      onChange={handleModelPhotoUpload} 
                       style={{ display: 'none' }}
                     />
                   </label>
                 </div>
 
-                {/* Current Photos Strip with Remove Buttons */}
+                {/* Model Photos Grid with Trash Buttons */}
                 <div className="gallery-thumbnails-grid">
-                  {formData.gallery.map((photoUrl, idx) => (
-                    <div key={idx} className="gallery-thumb-card">
+                  {formData.modelPhotos.map((photoUrl, idx) => (
+                    <div key={idx} className="gallery-thumb-card card-model">
                       <img src={photoUrl} alt="" className="thumb-preview-img" />
-                      <div className="thumb-order-badge">#{idx + 1}</div>
+                      <div className="thumb-order-badge">Muse #{idx + 1}</div>
                       <button 
                         type="button"
-                        onClick={() => handleRemovePhoto(idx)}
+                        onClick={() => handleRemoveModelPhoto(idx)}
                         className="thumb-delete-btn"
-                        title="Remove this photo from carousel"
+                        title="Remove this model photo"
                       >
                         <Trash2 size={13} />
                       </button>
                     </div>
                   ))}
 
-                  {formData.gallery.length === 0 && (
+                  {formData.modelPhotos.length === 0 && (
                     <div className="no-photos-alert">
                       <AlertCircle size={18} />
-                      <span>No photos added yet. Upload a photo or pick from presets below.</span>
+                      <span>No model photos added yet. Upload a photo or select from presets below.</span>
                     </div>
                   )}
                 </div>
 
-                {/* Add Photo by URL */}
+                {/* Add Model Photo by URL */}
                 <div className="add-url-row">
                   <input 
                     type="text" 
-                    placeholder="Or paste an image web link (https://... or /assets/...)"
-                    value={customPhotoUrl}
-                    onChange={(e) => setCustomPhotoUrl(e.target.value)}
+                    placeholder="Or paste model image link (https://... or /assets/...)"
+                    value={customModelUrl}
+                    onChange={(e) => setCustomModelUrl(e.target.value)}
                     className="url-input"
                   />
                   <button 
                     type="button" 
-                    onClick={handleAddUrlPhoto}
+                    onClick={handleAddModelUrl}
                     className="btn btn-outline add-url-btn"
                   >
-                    Add Photo
+                    Add Model Photo
                   </button>
                 </div>
 
                 {/* Pick from Muse Presets */}
                 <div className="preset-strip">
-                  <span className="preset-label">Quick Add From Atelier Gallery:</span>
+                  <span className="preset-label">Quick Add From Muse Gallery:</span>
                   <div className="preset-chips">
                     {musePresets.map((preset, idx) => (
                       <button
                         type="button"
                         key={idx}
                         className="preset-chip-btn"
-                        onClick={() => handleAddPresetPhoto(preset.url)}
+                        onClick={() => handleAddModelPreset(preset.url)}
+                      >
+                        <img src={preset.url} alt="" className="mini-preset-img" />
+                        <span>+ {preset.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* ========================================================================= */}
+              {/* SECTION 2: STUDIO FLAT-LAYS & SWATCHES (MULTIPLE) */}
+              {/* ========================================================================= */}
+              <div className="form-group full-width photo-manager-block flatlay-photos-block">
+                <div className="manager-title-row">
+                  <div>
+                    <div className="photo-section-badge badge-flatlay">
+                      <Layers size={13} />
+                      <span>STUDIO FLAT-LAYS &amp; SWATCHES ({formData.flatlayPhotos.length})</span>
+                    </div>
+                    <h4 className="manager-title">Folded Sarees, Swatches &amp; Craft Details</h4>
+                    <span className="manager-sub">Add multiple flat-lay angles (folded look, embroidery close-ups, brass thali &amp; flowers).</span>
+                  </div>
+
+                  {/* Upload Flatlay Button */}
+                  <label className="upload-file-btn upload-flatlay-btn">
+                    <Upload size={14} />
+                    <span>Upload Flat-lay Photo</span>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleFlatlayPhotoUpload} 
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                </div>
+
+                {/* Flatlay Photos Grid with Trash Buttons */}
+                <div className="gallery-thumbnails-grid">
+                  {formData.flatlayPhotos.map((photoUrl, idx) => (
+                    <div key={idx} className="gallery-thumb-card card-flatlay">
+                      <img src={photoUrl} alt="" className="thumb-preview-img" />
+                      <div className="thumb-order-badge">Flat-lay #{idx + 1}</div>
+                      <button 
+                        type="button"
+                        onClick={() => handleRemoveFlatlayPhoto(idx)}
+                        className="thumb-delete-btn"
+                        title="Remove this flat-lay photo"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))}
+
+                  {formData.flatlayPhotos.length === 0 && (
+                    <div className="no-photos-alert">
+                      <AlertCircle size={18} />
+                      <span>No flat-lay photos added yet. Upload a photo or select from presets below.</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Add Flat-lay Photo by URL */}
+                <div className="add-url-row">
+                  <input 
+                    type="text" 
+                    placeholder="Or paste flat-lay image link (https://... or /assets/...)"
+                    value={customFlatlayUrl}
+                    onChange={(e) => setCustomFlatlayUrl(e.target.value)}
+                    className="url-input"
+                  />
+                  <button 
+                    type="button" 
+                    onClick={handleAddFlatlayUrl}
+                    className="btn btn-outline add-url-btn"
+                  >
+                    Add Flat-lay Photo
+                  </button>
+                </div>
+
+                {/* Pick from Flat-lay Presets */}
+                <div className="preset-strip">
+                  <span className="preset-label">Quick Add From Flat-lay Gallery:</span>
+                  <div className="preset-chips">
+                    {flatlayPresets.map((preset, idx) => (
+                      <button
+                        type="button"
+                        key={idx}
+                        className="preset-chip-btn"
+                        onClick={() => handleAddFlatlayPreset(preset.url)}
                       >
                         <img src={preset.url} alt="" className="mini-preset-img" />
                         <span>+ {preset.label}</span>
@@ -595,7 +759,7 @@ export default function AtelierAdminModal() {
         .admin-modal {
           background: #FFFFFF;
           border-radius: 4px;
-          max-width: 860px;
+          max-width: 880px;
           width: 100%;
           max-height: 90vh;
           overflow-y: auto;
@@ -705,6 +869,7 @@ export default function AtelierAdminModal() {
           align-items: center;
           gap: 8px;
           font-size: 12px;
+          flex-wrap: wrap;
         }
         .inv-price {
           font-weight: 700;
@@ -739,48 +904,64 @@ export default function AtelierAdminModal() {
           background: none;
           border: 1px solid var(--border-light);
           color: var(--text-muted);
-          padding: 6px;
-          border-radius: 3px;
-          cursor: pointer;
+          width: 32px;
+          height: 32px;
+          border-radius: 2px;
           display: flex;
           align-items: center;
           justify-content: center;
+          cursor: pointer;
           transition: var(--transition);
         }
         .inv-delete-btn:hover {
-          border-color: #D32F2F;
+          background: rgba(211, 47, 47, 0.1);
           color: #D32F2F;
-          background: rgba(211, 47, 47, 0.05);
+          border-color: #D32F2F;
         }
         .confirm-delete-box {
           display: flex;
           align-items: center;
           gap: 6px;
+          background: #FFF1F0;
+          border: 1px solid #FFA39E;
+          padding: 4px 8px;
+          border-radius: 3px;
         }
         .confirm-text {
           font-size: 11px;
-          color: #D32F2F;
-          font-weight: 600;
+          font-weight: 700;
+          color: #CF1322;
         }
         .confirm-yes {
           padding: 4px 8px;
-          font-size: 10px;
-          background: #D32F2F;
+          font-size: 11px;
+          background: #CF1322;
+          color: #FFFFFF;
+          border: none;
         }
         .confirm-no {
           padding: 4px 8px;
-          font-size: 10px;
+          font-size: 11px;
         }
         .inventory-footer {
-          padding-top: 14px;
-          border-top: 1px solid var(--border-light);
           display: flex;
           justify-content: flex-end;
+          border-top: 1px solid var(--border-light);
+          padding-top: 14px;
+        }
+        .reset-btn {
+          font-size: 11px;
+          gap: 6px;
         }
 
-        /* Editor Tab Styling */
+        /* Editor Form Styling */
+        .admin-form {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
         .editor-back-row {
-          margin-bottom: 12px;
+          margin-bottom: -10px;
         }
         .back-to-inv-btn {
           background: none;
@@ -788,9 +969,9 @@ export default function AtelierAdminModal() {
           color: var(--accent-terracotta);
           font-size: 12px;
           font-weight: 600;
-          display: flex;
+          display: inline-flex;
           align-items: center;
-          gap: 4px;
+          gap: 6px;
           cursor: pointer;
         }
         .form-grid {
@@ -798,13 +979,13 @@ export default function AtelierAdminModal() {
           grid-template-columns: 1fr 1fr;
           gap: 16px;
         }
-        .full-width {
-          grid-column: 1 / -1;
-        }
         .form-group {
           display: flex;
           flex-direction: column;
           gap: 6px;
+        }
+        .form-group.full-width {
+          grid-column: 1 / -1;
         }
         .form-label {
           font-size: 12px;
@@ -812,67 +993,97 @@ export default function AtelierAdminModal() {
           color: var(--text-primary);
         }
         .form-hint {
-          font-size: 10px;
+          font-size: 11px;
           color: var(--text-muted);
         }
         .form-input, .form-select, .form-textarea {
-          padding: 9px 12px;
+          padding: 10px 14px;
           font-size: 13px;
           font-family: inherit;
           border: 1px solid var(--border-light);
           border-radius: 3px;
           background: var(--bg-primary);
           outline: none;
+          transition: var(--transition);
         }
         .form-input:focus, .form-select:focus, .form-textarea:focus {
           border-color: var(--accent-terracotta);
           background: #FFFFFF;
         }
 
-        /* Photo Manager Block */
+        /* Photo Manager Dual Blocks */
         .photo-manager-block {
-          background: var(--bg-primary);
-          padding: 18px;
+          background: #FAF6EF;
+          border: 1px solid var(--border-light);
           border-radius: 4px;
-          border: 1px solid var(--border-gold);
+          padding: 20px;
           display: flex;
           flex-direction: column;
-          gap: 14px;
+          gap: 16px;
+        }
+        .photo-manager-block.model-photos-block {
+          border-left: 3px solid var(--accent-terracotta);
+        }
+        .photo-manager-block.flatlay-photos-block {
+          border-left: 3px solid var(--accent-gold);
+        }
+        .photo-section-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          padding: 2px 8px;
+          border-radius: 2px;
+          margin-bottom: 4px;
+          width: fit-content;
+        }
+        .photo-section-badge.badge-muse {
+          background: rgba(163, 72, 53, 0.12);
+          color: var(--accent-terracotta);
+        }
+        .photo-section-badge.badge-flatlay {
+          background: rgba(197, 160, 89, 0.18);
+          color: #7D6124;
         }
         .manager-title-row {
           display: flex;
-          justify-content: space-between;
           align-items: flex-start;
-          gap: 12px;
+          justify-content: space-between;
+          gap: 16px;
         }
         .manager-title {
-          font-size: 14px;
-          font-weight: 700;
+          font-size: 15px;
           color: var(--text-primary);
+          margin-bottom: 2px;
         }
         .manager-sub {
-          font-size: 11px;
-          color: var(--text-muted);
+          font-size: 12px;
+          color: var(--text-secondary);
         }
         .upload-file-btn {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          background: #FFFFFF;
-          border: 1px solid var(--border-light);
-          padding: 6px 14px;
-          border-radius: 20px;
-          font-size: 11px;
+          background: var(--text-primary);
+          color: #FFFFFF;
+          padding: 8px 14px;
+          border-radius: 2px;
+          font-size: 12px;
           font-weight: 600;
-          color: var(--accent-terracotta);
           cursor: pointer;
-          transition: var(--transition);
           white-space: nowrap;
-          box-shadow: var(--shadow-sm);
+          transition: var(--transition);
         }
         .upload-file-btn:hover {
           background: var(--accent-terracotta);
-          color: #FFFFFF;
+        }
+        .upload-flatlay-btn {
+          background: #3B332E;
+        }
+        .upload-flatlay-btn:hover {
+          background: #7D6124;
         }
         .gallery-thumbnails-grid {
           display: flex;
@@ -881,13 +1092,19 @@ export default function AtelierAdminModal() {
         }
         .gallery-thumb-card {
           position: relative;
-          width: 80px;
-          height: 104px;
+          width: 84px;
+          height: 110px;
           border-radius: 3px;
           overflow: hidden;
           background: #EAE3D6;
           border: 1px solid var(--border-light);
           box-shadow: var(--shadow-sm);
+        }
+        .gallery-thumb-card.card-model {
+          border-top: 2px solid var(--accent-terracotta);
+        }
+        .gallery-thumb-card.card-flatlay {
+          border-top: 2px solid var(--accent-gold);
         }
         .thumb-preview-img {
           width: 100%;
@@ -898,11 +1115,11 @@ export default function AtelierAdminModal() {
           position: absolute;
           top: 4px;
           left: 4px;
-          background: rgba(0, 0, 0, 0.7);
+          background: rgba(0, 0, 0, 0.72);
           color: #FFFFFF;
           font-size: 9px;
           font-weight: 700;
-          padding: 1px 4px;
+          padding: 1px 5px;
           border-radius: 2px;
         }
         .thumb-delete-btn {
@@ -929,9 +1146,9 @@ export default function AtelierAdminModal() {
           display: flex;
           align-items: center;
           gap: 8px;
-          padding: 16px;
-          background: rgba(163, 72, 53, 0.06);
-          color: var(--accent-terracotta);
+          padding: 14px;
+          background: rgba(0, 0, 0, 0.04);
+          color: var(--text-muted);
           font-size: 12px;
           border-radius: 3px;
           width: 100%;
@@ -972,11 +1189,11 @@ export default function AtelierAdminModal() {
           display: flex;
           align-items: center;
           gap: 5px;
-          padding: 3px 8px;
+          padding: 4px 9px;
           border: 1px solid var(--border-light);
           background: #FFFFFF;
           border-radius: 3px;
-          font-size: 10px;
+          font-size: 11px;
           cursor: pointer;
           transition: var(--transition);
         }
@@ -987,26 +1204,30 @@ export default function AtelierAdminModal() {
         .mini-preset-img {
           width: 18px;
           height: 18px;
-          border-radius: 2px;
           object-fit: cover;
+          border-radius: 2px;
         }
+
         .admin-actions {
           display: flex;
-          align-items: center;
-          justify-content: space-between;
+          justify-content: flex-end;
+          gap: 12px;
           padding-top: 16px;
-          border-top: 1px solid var(--border-subtle);
+          border-top: 1px solid var(--border-light);
         }
         .publish-btn {
-          padding: 12px 24px;
-          font-size: 13px;
+          min-width: 190px;
         }
         .publish-btn.success {
           background: #2E7D32;
         }
-        @media (max-width: 600px) {
+        @media (max-width: 650px) {
           .form-grid {
             grid-template-columns: 1fr;
+          }
+          .manager-title-row {
+            flex-direction: column;
+            align-items: flex-start;
           }
         }
       `}</style>

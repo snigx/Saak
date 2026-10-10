@@ -6,7 +6,7 @@ const ShopContext = createContext();
 export function ShopProvider({ children }) {
   const [products, setProducts] = useState(() => {
     try {
-      const saved = localStorage.getItem('saak_products_v5');
+      const saved = localStorage.getItem('saak_products_v6');
       return saved ? JSON.parse(saved) : initialProducts;
     } catch {
       return initialProducts;
@@ -49,7 +49,7 @@ export function ShopProvider({ children }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem('saak_products_v5', JSON.stringify(products));
+      localStorage.setItem('saak_products_v6', JSON.stringify(products));
     } catch (e) {
       console.error(e);
     }
@@ -156,9 +156,16 @@ export function ShopProvider({ children }) {
 
   // Add new product (Atelier Admin function)
   const addNewProduct = (newProd) => {
-    const gallery = newProd.gallery && newProd.gallery.length > 0 
-      ? newProd.gallery 
-      : [newProd.modelView, newProd.flatlayView].filter(Boolean);
+    const modelPhotos = newProd.modelPhotos || (newProd.images?.modelPhotos) || [newProd.modelView || newProd.images?.modelView].filter(Boolean);
+    const flatlayPhotos = newProd.flatlayPhotos || (newProd.images?.flatlayPhotos) || [newProd.flatlayView || newProd.images?.flatlayView].filter(Boolean);
+
+    let gallery = newProd.gallery || newProd.images?.gallery || [];
+    if (gallery.length === 0) {
+      gallery = [...modelPhotos, ...flatlayPhotos];
+    }
+    if (gallery.length === 0) {
+      gallery = ['/assets/muse_sunset_tissue.jpg'];
+    }
 
     const productWithDefaults = {
       ...newProd,
@@ -166,10 +173,12 @@ export function ShopProvider({ children }) {
       inStock: true,
       featured: true,
       images: {
-        modelView: newProd.modelView || gallery[0] || '/assets/muse_sunset_tissue.jpg',
-        flatlayView: newProd.flatlayView || gallery[1] || gallery[0] || '/assets/saak_folded_copper_tissue.jpg',
-        swatchZoom: newProd.swatchZoom || gallery[2] || gallery[0] || '/assets/saak_flatlay_copper_green.jpg',
-        gallery: gallery.length > 0 ? gallery : ['/assets/muse_sunset_tissue.jpg']
+        modelPhotos: modelPhotos.length > 0 ? modelPhotos : [gallery[0]],
+        flatlayPhotos: flatlayPhotos.length > 0 ? flatlayPhotos : (gallery.length > 1 ? [gallery[1]] : [gallery[0]]),
+        modelView: modelPhotos[0] || gallery[0] || '/assets/muse_sunset_tissue.jpg',
+        flatlayView: flatlayPhotos[0] || gallery[1] || gallery[0] || '/assets/saak_folded_copper_tissue.jpg',
+        swatchZoom: newProd.images?.swatchZoom || flatlayPhotos[0] || gallery[0],
+        gallery: gallery
       },
       sizeOptions: newProd.sizeOptions?.length > 0 ? newProd.sizeOptions : ['Standard Fit', 'Custom Sizing'],
       recommendedPairings: newProd.recommendedPairings || ['the-gold-corset']
@@ -180,9 +189,13 @@ export function ShopProvider({ children }) {
 
   // Update existing product
   const updateProduct = (updatedProd) => {
-    const gallery = updatedProd.gallery && updatedProd.gallery.length > 0
-      ? updatedProd.gallery
-      : [updatedProd.images?.modelView, updatedProd.images?.flatlayView].filter(Boolean);
+    const modelPhotos = updatedProd.modelPhotos || (updatedProd.images?.modelPhotos) || [updatedProd.modelView || updatedProd.images?.modelView].filter(Boolean);
+    const flatlayPhotos = updatedProd.flatlayPhotos || (updatedProd.images?.flatlayPhotos) || [updatedProd.flatlayView || updatedProd.images?.flatlayView].filter(Boolean);
+
+    let gallery = updatedProd.gallery || updatedProd.images?.gallery || [];
+    if (gallery.length === 0) {
+      gallery = [...modelPhotos, ...flatlayPhotos];
+    }
 
     setProducts(prev => prev.map(p => {
       if (p.id === updatedProd.id) {
@@ -194,9 +207,11 @@ export function ShopProvider({ children }) {
           images: {
             ...p.images,
             ...updatedProd.images,
-            modelView: updatedProd.modelView || gallery[0] || p.images?.modelView,
-            flatlayView: updatedProd.flatlayView || gallery[1] || gallery[0] || p.images?.flatlayView,
-            gallery: gallery.length > 0 ? gallery : [p.images?.modelView]
+            modelPhotos: modelPhotos.length > 0 ? modelPhotos : p.images?.modelPhotos || [p.images?.modelView],
+            flatlayPhotos: flatlayPhotos.length > 0 ? flatlayPhotos : p.images?.flatlayPhotos || [p.images?.flatlayView],
+            modelView: modelPhotos[0] || p.images?.modelView || gallery[0],
+            flatlayView: flatlayPhotos[0] || p.images?.flatlayView || gallery[1] || gallery[0],
+            gallery: gallery.length > 0 ? gallery : (p.images?.gallery || [p.images?.modelView])
           }
         };
       }
@@ -221,7 +236,7 @@ export function ShopProvider({ children }) {
 
   const resetCatalogToDefault = () => {
     setProducts(initialProducts);
-    localStorage.setItem('saak_products_v5', JSON.stringify(initialProducts));
+    localStorage.setItem('saak_products_v6', JSON.stringify(initialProducts));
   };
 
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);

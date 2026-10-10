@@ -18,11 +18,20 @@ export const initialProducts = [
     isPadded: true,
     hasMargins: true,
     images: {
+      modelPhotos: [
+        '/assets/saak_muse_black_saree_gold_corset.jpg',
+        '/assets/saak_muse_black_corset_side.jpg'
+      ],
+      flatlayPhotos: [
+        '/assets/saak_flatlay_copper_green.jpg'
+      ],
       modelView: '/assets/saak_muse_black_saree_gold_corset.jpg',
-      flatlayView: '/assets/saak_muse_black_saree_gold_corset.jpg',
-      swatchZoom: '/assets/saak_muse_black_saree_gold_corset.jpg',
+      flatlayView: '/assets/saak_flatlay_copper_green.jpg',
+      swatchZoom: '/assets/saak_muse_black_corset_side.jpg',
       gallery: [
-        '/assets/saak_muse_black_saree_gold_corset.jpg'
+        '/assets/saak_muse_black_saree_gold_corset.jpg',
+        '/assets/saak_muse_black_corset_side.jpg',
+        '/assets/saak_flatlay_copper_green.jpg'
       ]
     },
     recommendedPairings: ['sunset-orange-tissue', 'olive-bloom-tissue', 'burnt-copper-tissue'],
@@ -55,11 +64,20 @@ export const initialProducts = [
     ],
     sizeOptions: ['Standard 6-Yard', 'Pre-Pleated Fall & Pico (+₹450)'],
     images: {
+      modelPhotos: [
+        '/assets/muse_sunset_tissue.jpg',
+        '/assets/muse_sunset_tissue_2.jpg'
+      ],
+      flatlayPhotos: [
+        '/assets/saak_folded_copper_tissue.jpg',
+        '/assets/saak_flatlay_copper_green.jpg'
+      ],
       modelView: '/assets/muse_sunset_tissue.jpg',
       flatlayView: '/assets/saak_folded_copper_tissue.jpg',
       swatchZoom: '/assets/saak_flatlay_copper_green.jpg',
       gallery: [
         '/assets/muse_sunset_tissue.jpg',
+        '/assets/muse_sunset_tissue_2.jpg',
         '/assets/saak_folded_copper_tissue.jpg',
         '/assets/saak_flatlay_copper_green.jpg'
       ]
@@ -91,13 +109,22 @@ export const initialProducts = [
     ],
     sizeOptions: ['Standard 6-Yard', 'Pre-Pleated Fall & Pico (+₹450)'],
     images: {
+      modelPhotos: [
+        '/assets/muse_olive_tissue.jpg'
+      ],
+      flatlayPhotos: [
+        '/assets/saak_green_tissue_drape.jpg',
+        '/assets/saak_green_tissue_swirl.jpg',
+        '/assets/saak_flatlay_copper_green.jpg'
+      ],
       modelView: '/assets/muse_olive_tissue.jpg',
       flatlayView: '/assets/saak_green_tissue_drape.jpg',
       swatchZoom: '/assets/saak_green_tissue_swirl.jpg',
       gallery: [
         '/assets/muse_olive_tissue.jpg',
         '/assets/saak_green_tissue_drape.jpg',
-        '/assets/saak_green_tissue_swirl.jpg'
+        '/assets/saak_green_tissue_swirl.jpg',
+        '/assets/saak_flatlay_copper_green.jpg'
       ]
     },
     recommendedPairings: ['the-gold-corset'],
@@ -122,11 +149,20 @@ export const initialProducts = [
     isCustomColorAvailable: false,
     sizeOptions: ['Waist 26 + Bust 32', 'Waist 28 + Bust 34', 'Waist 30 + Bust 36', 'Waist 32 + Bust 38', 'Custom Measurements'],
     images: {
+      modelPhotos: [
+        '/assets/saak_muse_black_saree_gold_corset.jpg',
+        '/assets/saak_muse_black_corset_side.jpg'
+      ],
+      flatlayPhotos: [
+        '/assets/saak_flatlay_copper_green.jpg'
+      ],
       modelView: '/assets/saak_muse_black_saree_gold_corset.jpg',
-      flatlayView: '/assets/saak_muse_black_saree_gold_corset.jpg',
-      swatchZoom: '/assets/saak_muse_black_saree_gold_corset.jpg',
+      flatlayView: '/assets/saak_flatlay_copper_green.jpg',
+      swatchZoom: '/assets/saak_muse_black_corset_side.jpg',
       gallery: [
-        '/assets/saak_muse_black_saree_gold_corset.jpg'
+        '/assets/saak_muse_black_saree_gold_corset.jpg',
+        '/assets/saak_muse_black_corset_side.jpg',
+        '/assets/saak_flatlay_copper_green.jpg'
       ]
     },
     recommendedPairings: [],
@@ -156,6 +192,13 @@ export const initialProducts = [
     ],
     sizeOptions: ['Standard 6-Yard', 'Pre-Pleated Fall & Pico (+₹450)'],
     images: {
+      modelPhotos: [
+        '/assets/muse_copper_tissue.jpg'
+      ],
+      flatlayPhotos: [
+        '/assets/saak_folded_copper_tissue.jpg',
+        '/assets/saak_flatlay_copper_green.jpg'
+      ],
       modelView: '/assets/muse_copper_tissue.jpg',
       flatlayView: '/assets/saak_folded_copper_tissue.jpg',
       swatchZoom: '/assets/saak_flatlay_copper_green.jpg',

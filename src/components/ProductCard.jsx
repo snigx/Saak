@@ -104,6 +104,13 @@ export default function ProductCard({ product }) {
               {product.tag}
             </span>
           )}
+
+          {/* Photo type indicator badge */}
+          {galleryImages.length > 1 && (
+            <span className={`card-photo-type-pill ${(product.images?.modelPhotos?.includes(activeImage) || currentImageIndex < (product.images?.modelPhotos?.length || 1)) ? 'type-muse' : 'type-flatlay'}`}>
+              {(product.images?.modelPhotos?.includes(activeImage) || currentImageIndex < (product.images?.modelPhotos?.length || 1)) ? 'On Muse' : 'Flat-lay'} • {currentImageIndex + 1}/{galleryImages.length}
+            </span>
+          )}
         </div>
 
         {/* Wishlist Button */}
@@ -325,6 +332,24 @@ export default function ProductCard({ product }) {
           padding: 3px 8px;
           border-radius: 2px;
           letter-spacing: 0.04em;
+        }
+        .card-photo-type-pill {
+          font-size: 9px;
+          font-weight: 700;
+          padding: 2px 7px;
+          border-radius: 10px;
+          backdrop-filter: blur(4px);
+          letter-spacing: 0.03em;
+          width: fit-content;
+        }
+        .card-photo-type-pill.type-muse {
+          background: rgba(163, 72, 53, 0.88);
+          color: #FFFFFF;
+        }
+        .card-photo-type-pill.type-flatlay {
+          background: rgba(31, 26, 23, 0.85);
+          color: var(--accent-gold);
+          border: 1px solid rgba(197, 160, 89, 0.4);
         }
         .card-wishlist-btn {
           position: absolute;

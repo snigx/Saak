@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
-import { X, Heart, Sparkles, Check, ShoppingBag, ShieldCheck, Ruler, Palette, Edit3 } from 'lucide-react';
+import { X, Heart, Sparkles, Check, ShoppingBag, ShieldCheck, Ruler, Palette, Edit3, ChevronLeft, ChevronRight, Camera, Layers } from 'lucide-react';
 
 export default function ProductDetailModal() {
   const { 
@@ -16,19 +16,38 @@ export default function ProductDetailModal() {
 
   if (!selectedProduct) return null;
 
-  const [activeImageKey, setActiveImageKey] = useState('modelView');
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+  const [photoFilterTab, setPhotoFilterTab] = useState('all'); // 'all', 'model', 'flatlay'
   const [selectedSize, setSelectedSize] = useState(selectedProduct.sizeOptions?.[0] || 'Standard');
   const [isAdded, setIsAdded] = useState(false);
 
   const isWishlisted = wishlist.includes(selectedProduct.id);
 
-  const galleryImages = [
-    { key: 'modelView', label: 'On Model (AI Drape)', url: selectedProduct.images.modelView },
-    { key: 'flatlayView', label: 'Studio Flat-lay & Flowers', url: selectedProduct.images.flatlayView },
-    { key: 'swatchZoom', label: 'Texture Macro Zoom', url: selectedProduct.images.swatchZoom }
-  ].filter(img => Boolean(img.url));
+  // Group photos into multiple model photos & multiple flat-lay photos
+  const modelPhotos = selectedProduct.images?.modelPhotos || [selectedProduct.images?.modelView].filter(Boolean);
+  const flatlayPhotos = selectedProduct.images?.flatlayPhotos || [selectedProduct.images?.flatlayView, selectedProduct.images?.swatchZoom].filter(Boolean);
 
-  const currentImageUrl = selectedProduct.images[activeImageKey] || selectedProduct.images.modelView;
+  const allPhotos = [
+    ...modelPhotos.map((url, idx) => ({ url, type: 'model', label: `On Muse (Look #${idx + 1})` })),
+    ...flatlayPhotos.map((url, idx) => ({ url, type: 'flatlay', label: `Flat-lay & Details (#${idx + 1})` }))
+  ];
+
+  // If activePhotoIndex is out of range, fallback
+  const currentPhoto = allPhotos[activePhotoIndex] || allPhotos[0] || { url: selectedProduct.images?.modelView, type: 'model', label: 'On Muse' };
+
+  const visiblePhotos = photoFilterTab === 'all' 
+    ? allPhotos 
+    : allPhotos.filter(p => p.type === photoFilterTab);
+
+  const handlePrevPhoto = (e) => {
+    e.stopPropagation();
+    setActivePhotoIndex(prev => (prev === 0 ? allPhotos.length - 1 : prev - 1));
+  };
+
+  const handleNextPhoto = (e) => {
+    e.stopPropagation();
+    setActivePhotoIndex(prev => (prev === allPhotos.length - 1 ? 0 : prev + 1));
+  };
 
   const handleAddToCart = () => {
     addToCart(selectedProduct, selectedSize);
@@ -56,34 +75,125 @@ export default function ProductDetailModal() {
         <div className="detail-grid">
           {/* Left Gallery */}
           <div className="detail-gallery-col">
-            <div className="main-image-viewport">
-              <img 
-                src={currentImageUrl} 
-                alt={selectedProduct.name}
-                className="viewport-img" 
-              />
-              {selectedProduct.tag && (
-                <span 
-                  className="viewport-tag"
-                  style={{ backgroundColor: selectedProduct.tagColor || 'var(--accent-terracotta)' }}
+            {/* Photo Category Filter Tabs */}
+            <div className="gallery-filter-tabs">
+              <button 
+                type="button"
+                className={`filter-tab-pill ${photoFilterTab === 'all' ? 'active' : ''}`}
+                onClick={() => setPhotoFilterTab('all')}
+              >
+                <span>All Views ({allPhotos.length})</span>
+              </button>
+              {modelPhotos.length > 0 && (
+                <button 
+                  type="button"
+                  className={`filter-tab-pill ${photoFilterTab === 'model' ? 'active' : ''}`}
+                  onClick={() => {
+                    setPhotoFilterTab('model');
+                    const firstModelIdx = allPhotos.findIndex(p => p.type === 'model');
+                    if (firstModelIdx !== -1) setActivePhotoIndex(firstModelIdx);
+                  }}
                 >
-                  {selectedProduct.tag}
-                </span>
+                  <Camera size={12} />
+                  <span>On Muse ({modelPhotos.length})</span>
+                </button>
+              )}
+              {flatlayPhotos.length > 0 && (
+                <button 
+                  type="button"
+                  className={`filter-tab-pill ${photoFilterTab === 'flatlay' ? 'active' : ''}`}
+                  onClick={() => {
+                    setPhotoFilterTab('flatlay');
+                    const firstFlatlayIdx = allPhotos.findIndex(p => p.type === 'flatlay');
+                    if (firstFlatlayIdx !== -1) setActivePhotoIndex(firstFlatlayIdx);
+                  }}
+                >
+                  <Layers size={12} />
+                  <span>Flat-lays &amp; Craft ({flatlayPhotos.length})</span>
+                </button>
               )}
             </div>
 
+            {/* Main Image Viewport with Side Navigation */}
+            <div className="main-image-viewport">
+              <img 
+                src={currentPhoto.url} 
+                alt={selectedProduct.name}
+                className="viewport-img" 
+              />
+
+              {/* Viewport Side Navigation Arrows */}
+              {allPhotos.length > 1 && (
+                <>
+                  <button 
+                    type="button"
+                    className="modal-nav-arrow arrow-left"
+                    onClick={handlePrevPhoto}
+                    aria-label="Previous Photo"
+                    title="Previous photo"
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
+                  <button 
+                    type="button"
+                    className="modal-nav-arrow arrow-right"
+                    onClick={handleNextPhoto}
+                    aria-label="Next Photo"
+                    title="Next photo"
+                  >
+                    <ChevronRight size={20} />
+                  </button>
+                </>
+              )}
+
+              {/* Top Badges */}
+              <div className="viewport-badges-row">
+                {selectedProduct.tag && (
+                  <span 
+                    className="viewport-tag"
+                    style={{ backgroundColor: selectedProduct.tagColor || 'var(--accent-terracotta)' }}
+                  >
+                    {selectedProduct.tag}
+                  </span>
+                )}
+                
+                {/* Photo Type Indicator */}
+                <span className={`viewport-type-pill ${currentPhoto.type === 'model' ? 'pill-model' : 'pill-flatlay'}`}>
+                  {currentPhoto.type === 'model' ? (
+                    <>
+                      <Camera size={11} />
+                      <span>On Muse • {modelPhotos.indexOf(currentPhoto.url) + 1}/{modelPhotos.length}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Layers size={11} />
+                      <span>Studio Flat-lay • {flatlayPhotos.indexOf(currentPhoto.url) + 1}/{flatlayPhotos.length}</span>
+                    </>
+                  )}
+                </span>
+              </div>
+            </div>
+
             {/* Gallery Thumbnails */}
-            <div className="thumbnails-row">
-              {galleryImages.map(img => (
-                <button
-                  key={img.key}
-                  className={`thumb-btn ${activeImageKey === img.key ? 'active' : ''}`}
-                  onClick={() => setActiveImageKey(img.key)}
-                >
-                  <img src={img.url} alt={img.label} className="thumb-img" />
-                  <span className="thumb-label">{img.label}</span>
-                </button>
-              ))}
+            <div className="thumbnails-scroll-strip">
+              {visiblePhotos.map((img, idx) => {
+                const globalIndex = allPhotos.findIndex(p => p.url === img.url);
+                const isActive = activePhotoIndex === globalIndex;
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    className={`thumb-btn ${isActive ? 'active' : ''}`}
+                    onClick={() => setActivePhotoIndex(globalIndex)}
+                    title={img.label}
+                  >
+                    <img src={img.url} alt={img.label} className="thumb-img" />
+                    <span className={`thumb-badge ${img.type === 'model' ? 'thumb-badge-model' : 'thumb-badge-flatlay'}`}>
+                      {img.type === 'model' ? 'Muse' : 'Flat-lay'}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -302,21 +412,123 @@ export default function ProductDetailModal() {
           padding: 3px 10px;
           border-radius: 2px;
         }
-        .thumbnails-row {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 8px;
+        .gallery-filter-tabs {
+          display: flex;
+          gap: 6px;
+          margin-bottom: 2px;
+          flex-wrap: wrap;
         }
-        .thumb-btn {
+        .filter-tab-pill {
           background: #FAF6EF;
           border: 1px solid var(--border-light);
-          border-radius: 2px;
-          padding: 4px;
+          padding: 5px 10px;
+          font-size: 11px;
+          font-weight: 600;
+          border-radius: 14px;
+          color: var(--text-secondary);
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
           cursor: pointer;
+          transition: var(--transition);
+        }
+        .filter-tab-pill:hover {
+          border-color: var(--accent-terracotta);
+          color: var(--text-primary);
+        }
+        .filter-tab-pill.active {
+          background: var(--accent-terracotta);
+          color: #FFFFFF;
+          border-color: var(--accent-terracotta);
+        }
+        .main-image-viewport {
+          position: relative;
+          aspect-ratio: 4/5;
+          border-radius: 3px;
+          overflow: hidden;
+          background: #EAE3D6;
+          border: 1px solid var(--border-light);
+        }
+        .modal-nav-arrow {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          background: rgba(255, 255, 255, 0.88);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
           display: flex;
-          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: var(--text-primary);
+          z-index: 5;
+          transition: var(--transition);
+          box-shadow: var(--shadow-sm);
+        }
+        .modal-nav-arrow:hover {
+          background: #FFFFFF;
+          transform: translateY(-50%) scale(1.08);
+        }
+        .modal-nav-arrow.arrow-left {
+          left: 10px;
+        }
+        .modal-nav-arrow.arrow-right {
+          right: 10px;
+        }
+        .viewport-badges-row {
+          position: absolute;
+          top: 10px;
+          left: 10px;
+          right: 10px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          z-index: 4;
+          pointer-events: none;
+        }
+        .viewport-tag {
+          color: #FFFFFF;
+          font-size: 10px;
+          font-weight: 700;
+          padding: 3px 9px;
+          border-radius: 2px;
+          letter-spacing: 0.03em;
+        }
+        .viewport-type-pill {
+          background: rgba(26, 22, 20, 0.82);
+          backdrop-filter: blur(4px);
+          color: #FFFFFF;
+          font-size: 10px;
+          font-weight: 600;
+          padding: 3px 9px;
+          border-radius: 12px;
+          display: inline-flex;
           align-items: center;
           gap: 4px;
+        }
+        .viewport-type-pill.pill-model {
+          border: 1px solid rgba(163, 72, 53, 0.5);
+        }
+        .viewport-type-pill.pill-flatlay {
+          border: 1px solid rgba(197, 160, 89, 0.5);
+        }
+        .thumbnails-scroll-strip {
+          display: flex;
+          gap: 8px;
+          overflow-x: auto;
+          padding-bottom: 6px;
+        }
+        .thumb-btn {
+          position: relative;
+          background: #FAF6EF;
+          border: 1.5px solid var(--border-light);
+          border-radius: 2px;
+          padding: 3px;
+          cursor: pointer;
+          flex: 0 0 76px;
+          width: 76px;
           transition: var(--transition);
         }
         .thumb-btn.active {
@@ -325,15 +537,30 @@ export default function ProductDetailModal() {
         }
         .thumb-img {
           width: 100%;
-          aspect-ratio: 1;
+          aspect-ratio: 4/5;
           object-fit: cover;
-          border-radius: 2px;
+          border-radius: 1px;
+          display: block;
         }
-        .thumb-label {
-          font-size: 9px;
-          font-weight: 600;
-          color: var(--text-muted);
+        .thumb-badge {
+          position: absolute;
+          bottom: 5px;
+          left: 5px;
+          right: 5px;
+          font-size: 8px;
+          font-weight: 700;
           text-align: center;
+          padding: 2px 0;
+          border-radius: 2px;
+          letter-spacing: 0.04em;
+        }
+        .thumb-badge-model {
+          background: rgba(163, 72, 53, 0.9);
+          color: #FFFFFF;
+        }
+        .thumb-badge-flatlay {
+          background: rgba(45, 38, 33, 0.88);
+          color: var(--accent-gold);
         }
         .detail-info-col {
           display: flex;
