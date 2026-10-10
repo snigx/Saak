@@ -90,9 +90,7 @@ export default function MixMatchStudio() {
                         <span className="item-fabric">{saree.fabric}</span>
                         <span className="item-price">{formatPrice(saree.price)}</span>
                       </div>
-                      {saree.drapeStyle.includes('Pre-draped') && (
-                        <span className="mini-badge">Pre-Draped 60s</span>
-                      )}
+                      <span className="mini-badge">Fluid Drape</span>
                     </div>
                   </div>
                 );

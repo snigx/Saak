@@ -11,7 +11,6 @@ export default function ProductGrid() {
   const filteredProducts = products.filter(product => {
     if (activeCategory === 'all') return true;
     if (activeCategory === 'tissue') return product.subCategory === 'tissue';
-    if (activeCategory === 'pre-draped') return product.subCategory === 'pre-draped';
     if (activeCategory === 'corset') return product.category === 'blouses';
     if (activeCategory === 'sets') return product.category === 'sets';
     return true;
@@ -62,12 +61,6 @@ export default function ProductGrid() {
               onClick={() => setActiveCategory('tissue')}
             >
               The Tissue Series
-            </button>
-            <button 
-              className={`filter-pill ${activeCategory === 'pre-draped' ? 'active' : ''}`}
-              onClick={() => setActiveCategory('pre-draped')}
-            >
-              Pre-Draped in 60s
             </button>
             <button 
               className={`filter-pill ${activeCategory === 'corset' ? 'active' : ''}`}

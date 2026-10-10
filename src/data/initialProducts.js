@@ -1,40 +1,14 @@
 export const initialProducts = [
   {
-    id: 'midnight-black-crepe',
-    name: 'Midnight Black Crepe Pre-Draped Saree',
-    category: 'sarees',
-    subCategory: 'pre-draped',
-    price: 3950,
-    originalPrice: 4500,
-    tag: 'Pre-Draped in 60s',
-    tagColor: '#1F1A17',
-    description: 'A black crepe pre-draped saree with a fluid drape and contemporary silhouette. Designed for the modern woman who loves timeless glamour without the draping hassle. Pair it with our Gold Corset, available separately.',
-    fabric: 'Pure Lightweight Fluid Crepe',
-    drapeStyle: 'Pre-draped (Concealed Hooks & Zip)',
-    drapeWeight: 'Featherlight & Slinky',
-    zariWork: 'Minimalist Raw Hem with Weighted Satin Fall',
-    isCustomColorAvailable: false,
-    sizeOptions: ['Waist 26-28', 'Waist 28-30', 'Waist 30-32', 'Waist 32-34', 'Waist 34-36', 'Custom Waist'],
-    images: {
-      modelView: '/assets/saak_muse_black_saree_gold_corset.jpg',
-      flatlayView: '/assets/saak_sunlit_atelier_1791663084642.jpg',
-      swatchZoom: '/assets/saak_muse_black_saree_gold_corset.jpg'
-    },
-    recommendedPairings: ['the-gold-corset'],
-    bundleDiscountPercent: 10,
-    inStock: true,
-    featured: true
-  },
-  {
     id: 'the-gold-corset',
     name: 'The Sculpted Antique Gold Corset',
     category: 'blouses',
     subCategory: 'corset',
     price: 5450,
     originalPrice: 6200,
-    tag: 'Hero Piece',
+    tag: 'Hero Statement Corset',
     tagColor: '#C5A059',
-    description: 'A masterpiece of modern Indian corsetry. Structured boned bodice with dense antique gold zardozi, micro-sequins, and intricate threadwork. Features a sculpted sweetheart plunge neckline and slender straps. Acts as the jewelry statement of your ensemble.',
+    description: 'A masterpiece of modern Indian corsetry. Structured boned bodice with dense antique gold zardozi, micro-sequins, and intricate threadwork. Features a sculpted sweetheart plunge neckline and slender straps. Acts as the jewelry statement of your ensemble, designed to pair across multiple fluid sarees.',
     fabric: 'Raw Silk Base with Dense Hand Zardozi Embroidery',
     drapeStyle: 'Structured Boned Corset Bustier',
     drapeWeight: 'Architectural & Secure',
@@ -48,7 +22,7 @@ export const initialProducts = [
       flatlayView: '/assets/saak_earthy_heritage_1791662639874.jpg',
       swatchZoom: '/assets/saak_muse_black_saree_gold_corset.jpg'
     },
-    recommendedPairings: ['midnight-black-crepe', 'sunset-orange-tissue', 'olive-bloom-tissue'],
+    recommendedPairings: ['sunset-orange-tissue', 'olive-bloom-tissue', 'burnt-copper-tissue'],
     bundleDiscountPercent: 10,
     inStock: true,
     featured: true

@@ -71,12 +71,6 @@ export default function Navbar() {
             The Tissue Series
           </button>
           <button 
-            className={`nav-link ${activeCategory === 'pre-draped' ? 'active' : ''}`}
-            onClick={() => handleNavClick('pre-draped')}
-          >
-            Pre-Draped in 60s
-          </button>
-          <button 
             className={`nav-link ${activeCategory === 'corset' ? 'active' : ''}`}
             onClick={() => handleNavClick('corset')}
           >
@@ -169,12 +163,6 @@ export default function Navbar() {
             onClick={() => handleNavClick('tissue')}
           >
             The Tissue Series (Shimmer Sarees)
-          </button>
-          <button 
-            className={`mobile-nav-link ${activeCategory === 'pre-draped' ? 'active' : ''}`}
-            onClick={() => handleNavClick('pre-draped')}
-          >
-            Pre-Draped in 60s (Zero-Stress)
           </button>
           <button 
             className={`mobile-nav-link ${activeCategory === 'corset' ? 'active' : ''}`}

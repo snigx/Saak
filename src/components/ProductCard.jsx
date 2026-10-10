@@ -71,11 +71,6 @@ export default function ProductCard({ product }) {
               {product.tag}
             </span>
           )}
-          {product.drapeStyle?.includes('Pre-draped') && (
-            <span className="card-badge badge-dark">
-              ⚡ 60s Slip-on
-            </span>
-          )}
         </div>
 
         {/* Wishlist Button */}

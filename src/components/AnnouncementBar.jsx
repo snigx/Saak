@@ -14,7 +14,7 @@ export default function AnnouncementBar() {
             <span><strong>FESTIVE PREVIEW:</strong> Complimentary Pre-Stitched Fall &amp; Pico on all Tissue Sarees</span>
           </span>
           <span className="divider-dot">•</span>
-          <span className="announcement-subtext">Pre-Draped in 60s &amp; Custom Colourways Available</span>
+          <span className="announcement-subtext">Custom Colourways on Request &amp; Worldwide Shipping</span>
         </div>
 
         <div className="announcement-right">

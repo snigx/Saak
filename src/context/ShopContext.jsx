@@ -6,7 +6,7 @@ const ShopContext = createContext();
 export function ShopProvider({ children }) {
   const [products, setProducts] = useState(() => {
     try {
-      const saved = localStorage.getItem('saak_products_v3');
+      const saved = localStorage.getItem('saak_products_v4');
       return saved ? JSON.parse(saved) : initialProducts;
     } catch {
       return initialProducts;
@@ -49,7 +49,7 @@ export function ShopProvider({ children }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem('saak_products_v3', JSON.stringify(products));
+      localStorage.setItem('saak_products_v4', JSON.stringify(products));
     } catch (e) {
       console.error(e);
     }

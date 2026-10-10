@@ -43,7 +43,7 @@ export default function Hero() {
           </h1>
 
           <p className="hero-description">
-            Fluid crushed metallic shimmer tissue and 60-second pre-draped crepe drapes, paired with hand-embroidered antique gold zardozi corsets. Effortless modern luxury crafted for the women of today.
+            Fluid crushed metallic shimmer tissue and pure crepe drapes, paired with hand-embroidered antique gold zardozi corsets. Effortless modern luxury crafted for the women of today.
           </p>
 
           <div className="hero-ctas">
@@ -62,8 +62,8 @@ export default function Hero() {
             <div className="feature-item">
               <CheckCircle2 size={16} className="feature-icon" />
               <div>
-                <strong>Pre-Draped in 60s</strong>
-                <span>Zero pleating hassle</span>
+                <strong>Featherlight Drapes</strong>
+                <span>Fluid tissue &amp; pure crepe</span>
               </div>
             </div>
             <div className="feature-item">

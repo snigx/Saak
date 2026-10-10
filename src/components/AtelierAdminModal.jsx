@@ -134,8 +134,7 @@ export default function AtelierAdminModal() {
                 className="form-select"
               >
                 <option value="tissue">Crushed Shimmer Tissue</option>
-                <option value="pre-draped">Pre-Draped (60s Slip-on)</option>
-                <option value="crepe">Fluid Crepe / Georgette</option>
+                <option value="crepe">Pure Fluid Crepe</option>
                 <option value="corset">Sculpted Corset Bustier</option>
                 <option value="curated-duo">Curated Complete Look</option>
               </select>
@@ -227,13 +226,13 @@ export default function AtelierAdminModal() {
               <label className="checkbox-label">
                 <input 
                   type="checkbox"
-                  checked={formData.drapeStyle.includes('Pre-draped')}
+                  checked={formData.drapeStyle.includes('Fall & Pico')}
                   onChange={(e) => setFormData({ 
                     ...formData, 
-                    drapeStyle: e.target.checked ? 'Pre-draped in 60s' : 'Classic 6-Yard' 
+                    drapeStyle: e.target.checked ? 'Classic 6-Yard (Fall & Pico Included)' : 'Classic 6-Yard' 
                   })}
                 />
-                <span>Tag as Pre-Draped in 60s (Zero-Stress)</span>
+                <span>Complimentary Fall &amp; Pico Pre-stitched</span>
               </label>
             </div>
 
