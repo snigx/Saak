@@ -1,0 +1,206 @@
+:root {
+  --bg-primary: #FAF6EF;
+  --bg-secondary: #F3ECE1;
+  --bg-card: #FFFFFF;
+  --bg-dark: #1A1614;
+  --text-primary: #1F1A17;
+  --text-secondary: #6B6057;
+  --text-muted: #8E8277;
+  --text-light: #FAF6EF;
+  
+  --accent-terracotta: #A34835;
+  --accent-terracotta-hover: #8D3A29;
+  --accent-rust: #8C3B2B;
+  --accent-gold: #C5A059;
+  --accent-gold-light: #EADBBA;
+  --accent-olive: #5B664B;
+  --accent-black: #12100E;
+
+  --border-subtle: rgba(163, 72, 53, 0.14);
+  --border-light: rgba(0, 0, 0, 0.08);
+  --border-gold: rgba(197, 160, 89, 0.45);
+  
+  --shadow-sm: 0 2px 8px rgba(31, 26, 23, 0.04);
+  --shadow-md: 0 8px 24px rgba(31, 26, 23, 0.08);
+  --shadow-lg: 0 16px 40px rgba(31, 26, 23, 0.12);
+  --shadow-gold: 0 8px 25px rgba(197, 160, 89, 0.25);
+
+  --font-serif: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Typography Helpers */
+h1, h2, h3, h4, .font-serif {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* Smooth Container */
+.container {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: var(--transition);
+  border: 1px solid transparent;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background-color: var(--accent-terracotta);
+  color: #FFFFFF;
+}
+
+.btn-primary:hover {
+  background-color: var(--accent-terracotta-hover);
+  box-shadow: 0 4px 15px rgba(163, 72, 53, 0.25);
+  transform: translateY(-1px);
+}
+
+.btn-dark {
+  background-color: var(--accent-black);
+  color: #FFFFFF;
+}
+
+.btn-dark:hover {
+  background-color: #26211D;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.btn-gold {
+  background: linear-gradient(135deg, #C5A059 0%, #D4AF37 100%);
+  color: #FFFFFF;
+}
+
+.btn-gold:hover {
+  box-shadow: var(--shadow-gold);
+  transform: translateY(-1px);
+}
+
+.btn-outline {
+  background-color: transparent;
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+.btn-outline:hover {
+  background-color: var(--text-primary);
+  color: #FFFFFF;
+}
+
+.btn-outline-gold {
+  background-color: transparent;
+  border-color: var(--accent-gold);
+  color: var(--text-primary);
+}
+
+.btn-outline-gold:hover {
+  background-color: var(--accent-gold);
+  color: #FFFFFF;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-radius: 2px;
+}
+
+.badge-terracotta {
+  background: rgba(163, 72, 53, 0.1);
+  color: var(--accent-terracotta);
+  border: 1px solid rgba(163, 72, 53, 0.2);
+}
+
+.badge-gold {
+  background: rgba(197, 160, 89, 0.15);
+  color: #8C6D2B;
+  border: 1px solid rgba(197, 160, 89, 0.3);
+}
+
+.badge-black {
+  background: rgba(18, 16, 14, 0.88);
+  color: #FFFFFF;
+}
+
+/* Modals & Drawers backdrop */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 22, 20, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent-gold-light);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-gold);
+}
