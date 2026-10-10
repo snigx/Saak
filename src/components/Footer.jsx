@@ -29,16 +29,17 @@ export default function Footer() {
             <span className="footer-brand-sub">by Aprajita</span>
           </div>
           <p className="footer-brand-desc">
-            Contemporary Indian fashion re-imagined for the young connoisseur. Specializing in crushed shimmer tissue sarees, 60-second pre-draped silhouettes, and handcrafted zardozi corsets.
+            Contemporary Indian fashion re-imagined for the young connoisseur. Specializing in crushed shimmer tissue sarees, fluid contemporary silhouettes, and handcrafted zardozi corsets.
           </p>
 
           <div className="footer-social-row">
             <a 
-              href="https://instagram.com" 
+              href="https://www.instagram.com/saakbyaprajita?srtk=MzNuendsOGdtdndu" 
               target="_blank" 
               rel="noopener noreferrer" 
               className="social-circle"
-              aria-label="Instagram"
+              aria-label="Instagram @saakbyaprajita"
+              title="Instagram @saakbyaprajita"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect width="20" height="20" x="2" y="2" rx="5" ry="5"/>
@@ -63,6 +64,15 @@ export default function Footer() {
               <Mail size={16} />
             </a>
           </div>
+
+          <a 
+            href="https://www.instagram.com/saakbyaprajita?srtk=MzNuendsOGdtdndu"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="footer-insta-tag"
+          >
+            <span>Instagram: <strong>@saakbyaprajita</strong></span>
+          </a>
         </div>
 
         {/* Col 2: Textile & Garment Care Guide */}
@@ -74,7 +84,7 @@ export default function Footer() {
               <span>Dry clean only. Store gently rolled in breathable muslin. Never iron directly over the crushed luster.</span>
             </li>
             <li>
-              <strong>Pre-Draped Crepe:</strong>
+              <strong>Pure Crepe Drapes:</strong>
               <span>Gentle vertical steam iron on reverse. Keep hooks fastened during storage.</span>
             </li>
             <li>
@@ -89,9 +99,9 @@ export default function Footer() {
           <h4 className="footer-col-title">Curated Edits</h4>
           <ul className="footer-links-list">
             <li><a href="#catalog-section">The Tissue Series (Shimmer Drapes)</a></li>
-            <li><a href="#catalog-section">Pre-Draped in 60s (Zero-Stress)</a></li>
             <li><a href="#mix-match-studio">Mix &amp; Match Styling Studio</a></li>
             <li><a href="#catalog-section">Sculpted Corsets &amp; Bustiers</a></li>
+            <li><a href="#catalog-section">Curated Duos (Complete Looks)</a></li>
             <li className="future-teaser">
               <span className="teaser-pill">Coming Soon</span>
               <span>The Lightweight Lehenga &amp; Cape Edit</span>
@@ -235,6 +245,18 @@ export default function Footer() {
           border-color: var(--accent-gold);
           color: var(--accent-gold);
           transform: translateY(-2px);
+        }
+        .footer-insta-tag {
+          display: inline-block;
+          font-size: 11px;
+          color: var(--accent-gold);
+          text-decoration: none;
+          margin-top: 4px;
+          transition: var(--transition);
+        }
+        .footer-insta-tag:hover {
+          color: #FFFFFF;
+          text-decoration: underline;
         }
         .footer-col-title {
           font-family: var(--font-serif);

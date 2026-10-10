@@ -1,6 +1,7 @@
 import React from 'react';
 import { useShop } from '../context/ShopContext';
 import { Sparkles, MessageCircle, PlusCircle, Globe } from 'lucide-react';
+import InstagramIcon from './InstagramIcon';
 
 export default function AnnouncementBar() {
   const { currency, setCurrency, setIsAtelierModalOpen } = useShop();
@@ -27,6 +28,18 @@ export default function AnnouncementBar() {
             <PlusCircle size={13} />
             <span>Atelier Portal (Add Products)</span>
           </button>
+
+          {/* Official Instagram */}
+          <a 
+            href="https://www.instagram.com/saakbyaprajita?srtk=MzNuendsOGdtdndu" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="instagram-top-link"
+            title="Follow @saakbyaprajita on Instagram"
+          >
+            <InstagramIcon size={12} />
+            <span>@saakbyaprajita</span>
+          </a>
 
           {/* WhatsApp Stylist */}
           <a 
@@ -119,6 +132,18 @@ export default function AnnouncementBar() {
         .atelier-btn:hover {
           background: var(--accent-gold);
           color: var(--text-primary);
+        }
+        .instagram-top-link {
+          color: rgba(250, 246, 239, 0.9);
+          text-decoration: none;
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          font-weight: 500;
+          transition: var(--transition);
+        }
+        .instagram-top-link:hover {
+          color: var(--accent-gold);
         }
         .whatsapp-link {
           color: #FAF6EF;

@@ -5,6 +5,7 @@ import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import MixMatchStudio from './components/MixMatchStudio';
 import ProductGrid from './components/ProductGrid';
+import InstagramFeed from './components/InstagramFeed';
 import Footer from './components/Footer';
 import ProductDetailModal from './components/ProductDetailModal';
 import CustomShadeModal from './components/CustomShadeModal';
@@ -30,6 +31,9 @@ export default function App() {
 
         {/* Complete Product Catalog */}
         <ProductGrid />
+
+        {/* Official Instagram Community & Atelier Stories */}
+        <InstagramFeed />
 
         {/* Footer & Textile Care */}
         <Footer />

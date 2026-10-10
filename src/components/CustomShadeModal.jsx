@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
 import { X, Palette, MessageCircle, Check, ShoppingBag, Sparkles } from 'lucide-react';
+import InstagramIcon from './InstagramIcon';
 
 export default function CustomShadeModal() {
   const { customShadeProduct, setCustomShadeProduct, addToCart, formatPrice } = useShop();
@@ -128,9 +129,21 @@ export default function CustomShadeModal() {
             target="_blank" 
             rel="noopener noreferrer"
             className="btn btn-outline-gold whatsapp-shade-btn"
+            title="Chat directly with stylist on WhatsApp"
           >
-            <MessageCircle size={16} />
-            <span>Consult on WhatsApp</span>
+            <MessageCircle size={15} />
+            <span>WhatsApp</span>
+          </a>
+
+          <a 
+            href="https://www.instagram.com/saakbyaprajita?srtk=MzNuendsOGdtdndu"
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="btn btn-outline insta-shade-btn"
+            title="Direct Message on Instagram @saakbyaprajita"
+          >
+            <InstagramIcon size={15} />
+            <span>DM on Instagram</span>
           </a>
         </div>
       </div>
@@ -283,10 +296,22 @@ export default function CustomShadeModal() {
           font-size: 13px;
         }
         .whatsapp-shade-btn {
-          flex: 1;
+          flex: 0.8;
           padding: 12px;
           font-size: 13px;
           text-decoration: none;
+        }
+        .insta-shade-btn {
+          flex: 0.9;
+          padding: 12px;
+          font-size: 13px;
+          text-decoration: none;
+          color: var(--accent-terracotta);
+          border-color: rgba(163, 72, 53, 0.3);
+        }
+        .insta-shade-btn:hover {
+          background: var(--accent-terracotta);
+          color: #FFFFFF;
         }
         @media (max-width: 580px) {
           .palette-grid {
