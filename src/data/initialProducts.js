@@ -19,8 +19,11 @@ export const initialProducts = [
     hasMargins: true,
     images: {
       modelView: '/assets/saak_muse_black_saree_gold_corset.jpg',
-      flatlayView: '/assets/saak_earthy_heritage_1791662639874.jpg',
-      swatchZoom: '/assets/saak_muse_black_saree_gold_corset.jpg'
+      flatlayView: '/assets/saak_muse_black_saree_gold_corset.jpg',
+      swatchZoom: '/assets/saak_muse_black_saree_gold_corset.jpg',
+      gallery: [
+        '/assets/saak_muse_black_saree_gold_corset.jpg'
+      ]
     },
     recommendedPairings: ['sunset-orange-tissue', 'olive-bloom-tissue', 'burnt-copper-tissue'],
     bundleDiscountPercent: 10,
@@ -54,7 +57,12 @@ export const initialProducts = [
     images: {
       modelView: '/assets/muse_sunset_tissue.jpg',
       flatlayView: '/assets/saak_folded_copper_tissue.jpg',
-      swatchZoom: '/assets/saak_flatlay_copper_green.jpg'
+      swatchZoom: '/assets/saak_flatlay_copper_green.jpg',
+      gallery: [
+        '/assets/muse_sunset_tissue.jpg',
+        '/assets/saak_folded_copper_tissue.jpg',
+        '/assets/saak_flatlay_copper_green.jpg'
+      ]
     },
     recommendedPairings: ['the-gold-corset'],
     bundleDiscountPercent: 10,
@@ -85,7 +93,12 @@ export const initialProducts = [
     images: {
       modelView: '/assets/muse_olive_tissue.jpg',
       flatlayView: '/assets/saak_green_tissue_drape.jpg',
-      swatchZoom: '/assets/saak_green_tissue_swirl.jpg'
+      swatchZoom: '/assets/saak_green_tissue_swirl.jpg',
+      gallery: [
+        '/assets/muse_olive_tissue.jpg',
+        '/assets/saak_green_tissue_drape.jpg',
+        '/assets/saak_green_tissue_swirl.jpg'
+      ]
     },
     recommendedPairings: ['the-gold-corset'],
     bundleDiscountPercent: 10,
@@ -111,7 +124,10 @@ export const initialProducts = [
     images: {
       modelView: '/assets/saak_muse_black_saree_gold_corset.jpg',
       flatlayView: '/assets/saak_muse_black_saree_gold_corset.jpg',
-      swatchZoom: '/assets/saak_muse_black_saree_gold_corset.jpg'
+      swatchZoom: '/assets/saak_muse_black_saree_gold_corset.jpg',
+      gallery: [
+        '/assets/saak_muse_black_saree_gold_corset.jpg'
+      ]
     },
     recommendedPairings: [],
     bundleDiscountPercent: 10,
@@ -142,7 +158,12 @@ export const initialProducts = [
     images: {
       modelView: '/assets/muse_copper_tissue.jpg',
       flatlayView: '/assets/saak_folded_copper_tissue.jpg',
-      swatchZoom: '/assets/saak_flatlay_copper_green.jpg'
+      swatchZoom: '/assets/saak_flatlay_copper_green.jpg',
+      gallery: [
+        '/assets/muse_copper_tissue.jpg',
+        '/assets/saak_folded_copper_tissue.jpg',
+        '/assets/saak_flatlay_copper_green.jpg'
+      ]
     },
     recommendedPairings: ['the-gold-corset'],
     bundleDiscountPercent: 10,

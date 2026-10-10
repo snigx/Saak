@@ -39,7 +39,7 @@ export default function AtelierAdminModal() {
     { label: 'Green Tissue Swatch', url: '/assets/saak_green_tissue_drape.jpg' },
     { label: 'Copper Folded', url: '/assets/saak_folded_copper_tissue.jpg' },
     { label: 'Brass Thali & Mogra', url: '/assets/saak_flatlay_copper_green.jpg' },
-    { label: 'Gold Zardozi Swatch', url: '/assets/saak_earthy_heritage_1791662639874.jpg' }
+    { label: 'Green Tissue Swirl', url: '/assets/saak_green_tissue_swirl.jpg' }
   ];
 
   const handleFileUpload = (field, e) => {

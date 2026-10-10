@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
-import { Heart, Eye, Sparkles, Palette, ShoppingBag, Check } from 'lucide-react';
+import { Heart, Eye, Sparkles, Palette, ShoppingBag, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function ProductCard({ product }) {
   const { 
@@ -12,14 +12,31 @@ export default function ProductCard({ product }) {
     addToCart 
   } = useShop();
 
-  const [activeView, setActiveView] = useState('model'); // 'model' or 'flatlay'
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isAddedAnimation, setIsAddedAnimation] = useState(false);
 
   const isWishlisted = wishlist.includes(product.id);
 
-  const displayImage = activeView === 'model' 
-    ? (product.images.modelView || product.images.flatlayView)
-    : (product.images.flatlayView || product.images.modelView);
+  // Collect clean isolated gallery images
+  const galleryImages = (product.images.gallery && product.images.gallery.length > 0)
+    ? product.images.gallery
+    : [
+        product.images.modelView,
+        product.images.flatlayView,
+        product.images.swatchZoom
+      ].filter(Boolean);
+
+  const activeImage = galleryImages[currentImageIndex] || product.images.modelView;
+
+  const handlePrevImage = (e) => {
+    e.stopPropagation();
+    setCurrentImageIndex((prev) => (prev === 0 ? galleryImages.length - 1 : prev - 1));
+  };
+
+  const handleNextImage = (e) => {
+    e.stopPropagation();
+    setCurrentImageIndex((prev) => (prev === galleryImages.length - 1 ? 0 : prev + 1));
+  };
 
   const handleQuickAdd = (e) => {
     e.stopPropagation();
@@ -35,31 +52,46 @@ export default function ProductCard({ product }) {
 
   return (
     <div className="product-card" onClick={() => setSelectedProduct(product)}>
-      {/* Media Container */}
+      {/* Media Container with Carousel Slider */}
       <div className="card-media-wrapper">
         <img 
-          src={displayImage} 
-          alt={product.name}
+          src={activeImage} 
+          alt={`${product.name} - View ${currentImageIndex + 1}`}
           className="product-main-img" 
         />
 
-        {/* View Toggle Pill */}
-        <div className="card-view-switch" onClick={(e) => e.stopPropagation()}>
-          <button 
-            className={`switch-btn ${activeView === 'model' ? 'active' : ''}`}
-            onClick={() => setActiveView('model')}
-            title="View on model (AI Drape)"
-          >
-            Model
-          </button>
-          <button 
-            className={`switch-btn ${activeView === 'flatlay' ? 'active' : ''}`}
-            onClick={() => setActiveView('flatlay')}
-            title="View fabric flat-lay with mogra blossoms"
-          >
-            Flatlay
-          </button>
-        </div>
+        {/* Carousel Side Navigation Arrows */}
+        {galleryImages.length > 1 && (
+          <>
+            <button 
+              className="carousel-arrow arrow-left"
+              onClick={handlePrevImage}
+              aria-label="Previous Photo"
+              title="Previous photo"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button 
+              className="carousel-arrow arrow-right"
+              onClick={handleNextImage}
+              aria-label="Next Photo"
+              title="Next photo"
+            >
+              <ChevronRight size={18} />
+            </button>
+
+            {/* Bottom Dots Indicator */}
+            <div className="carousel-dots-row" onClick={(e) => e.stopPropagation()}>
+              {galleryImages.map((_, idx) => (
+                <span 
+                  key={idx} 
+                  className={`carousel-dot ${currentImageIndex === idx ? 'active' : ''}`}
+                  onClick={() => setCurrentImageIndex(idx)}
+                />
+              ))}
+            </div>
+          </>
+        )}
 
         {/* Top Badges */}
         <div className="card-top-badges">
@@ -191,38 +223,77 @@ export default function ProductCard({ product }) {
           height: 100%;
           object-fit: cover;
           object-position: top center;
-          transition: transform 0.6s ease;
+          transition: opacity 0.3s ease, transform 0.6s ease;
         }
         .product-card:hover .product-main-img {
-          transform: scale(1.04);
+          transform: scale(1.03);
         }
-        .card-view-switch {
+
+        /* Side Navigation Arrows */
+        .carousel-arrow {
           position: absolute;
-          bottom: 10px;
-          left: 10px;
-          background: rgba(255, 255, 255, 0.92);
-          backdrop-filter: blur(6px);
-          border-radius: 20px;
-          padding: 2px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: rgba(255, 255, 255, 0.88);
+          backdrop-filter: blur(4px);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
           display: flex;
-          box-shadow: var(--shadow-sm);
-          z-index: 2;
-        }
-        .switch-btn {
-          border: none;
-          background: none;
-          font-size: 10px;
-          font-weight: 600;
-          padding: 3px 8px;
-          border-radius: 14px;
+          align-items: center;
+          justify-content: center;
           cursor: pointer;
-          color: var(--text-secondary);
+          color: var(--text-primary);
+          z-index: 5;
+          opacity: 0;
+          transition: var(--transition);
+          box-shadow: var(--shadow-sm);
+        }
+        .product-card:hover .carousel-arrow {
+          opacity: 1;
+        }
+        .carousel-arrow:hover {
+          background: #FFFFFF;
+          color: var(--accent-terracotta);
+          transform: translateY(-50%) scale(1.12);
+        }
+        .arrow-left {
+          left: 10px;
+        }
+        .arrow-right {
+          right: 10px;
+        }
+
+        /* Dots Indicator */
+        .carousel-dots-row {
+          position: absolute;
+          bottom: 12px;
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: rgba(26, 22, 20, 0.5);
+          backdrop-filter: blur(4px);
+          padding: 4px 8px;
+          border-radius: 12px;
+          z-index: 5;
+        }
+        .carousel-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.5);
+          cursor: pointer;
           transition: var(--transition);
         }
-        .switch-btn.active {
-          background: var(--text-primary);
-          color: #FFFFFF;
+        .carousel-dot.active {
+          background: #FFFFFF;
+          width: 14px;
+          border-radius: 4px;
         }
+
         .card-top-badges {
           position: absolute;
           top: 10px;
@@ -239,9 +310,6 @@ export default function ProductCard({ product }) {
           padding: 3px 8px;
           border-radius: 2px;
           letter-spacing: 0.04em;
-        }
-        .badge-dark {
-          background: rgba(18, 16, 14, 0.88) !important;
         }
         .card-wishlist-btn {
           position: absolute;
@@ -266,7 +334,7 @@ export default function ProductCard({ product }) {
         }
         .card-quick-view-btn {
           position: absolute;
-          bottom: 10px;
+          bottom: 34px;
           right: 10px;
           background: rgba(26, 22, 20, 0.85);
           color: #FFFFFF;
@@ -394,6 +462,13 @@ export default function ProductCard({ product }) {
         }
         .card-add-bag-btn.added {
           background: #2E7D32;
+        }
+        @media (max-width: 768px) {
+          .carousel-arrow {
+            opacity: 1;
+            width: 28px;
+            height: 28px;
+          }
         }
       `}</style>
     </div>
