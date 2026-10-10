@@ -152,17 +152,24 @@ export function ShopProvider({ children }) {
     );
   };
 
+  const [editingProduct, setEditingProduct] = useState(null);
+
   // Add new product (Atelier Admin function)
   const addNewProduct = (newProd) => {
+    const gallery = newProd.gallery && newProd.gallery.length > 0 
+      ? newProd.gallery 
+      : [newProd.modelView, newProd.flatlayView].filter(Boolean);
+
     const productWithDefaults = {
       ...newProd,
       id: newProd.id || `saak-${Date.now()}`,
       inStock: true,
       featured: true,
       images: {
-        modelView: newProd.modelView || '/assets/saak_sunlit_atelier_1791663084642.jpg',
-        flatlayView: newProd.flatlayView || '/assets/saak_folded_copper_tissue.jpg',
-        swatchZoom: newProd.swatchZoom || '/assets/saak_green_tissue_swirl.jpg'
+        modelView: newProd.modelView || gallery[0] || '/assets/muse_sunset_tissue.jpg',
+        flatlayView: newProd.flatlayView || gallery[1] || gallery[0] || '/assets/saak_folded_copper_tissue.jpg',
+        swatchZoom: newProd.swatchZoom || gallery[2] || gallery[0] || '/assets/saak_flatlay_copper_green.jpg',
+        gallery: gallery.length > 0 ? gallery : ['/assets/muse_sunset_tissue.jpg']
       },
       sizeOptions: newProd.sizeOptions?.length > 0 ? newProd.sizeOptions : ['Standard Fit', 'Custom Sizing'],
       recommendedPairings: newProd.recommendedPairings || ['the-gold-corset']
@@ -171,9 +178,50 @@ export function ShopProvider({ children }) {
     setProducts(prev => [productWithDefaults, ...prev]);
   };
 
+  // Update existing product
+  const updateProduct = (updatedProd) => {
+    const gallery = updatedProd.gallery && updatedProd.gallery.length > 0
+      ? updatedProd.gallery
+      : [updatedProd.images?.modelView, updatedProd.images?.flatlayView].filter(Boolean);
+
+    setProducts(prev => prev.map(p => {
+      if (p.id === updatedProd.id) {
+        return {
+          ...p,
+          ...updatedProd,
+          price: Number(updatedProd.price),
+          originalPrice: updatedProd.originalPrice ? Number(updatedProd.originalPrice) : undefined,
+          images: {
+            ...p.images,
+            ...updatedProd.images,
+            modelView: updatedProd.modelView || gallery[0] || p.images?.modelView,
+            flatlayView: updatedProd.flatlayView || gallery[1] || gallery[0] || p.images?.flatlayView,
+            gallery: gallery.length > 0 ? gallery : [p.images?.modelView]
+          }
+        };
+      }
+      return p;
+    }));
+  };
+
+  // Delete product
+  const deleteProduct = (productId) => {
+    setProducts(prev => prev.filter(p => p.id !== productId));
+  };
+
+  const openEditProduct = (product) => {
+    setEditingProduct(product);
+    setIsAtelierModalOpen(true);
+  };
+
+  const openCreateProduct = () => {
+    setEditingProduct(null);
+    setIsAtelierModalOpen(true);
+  };
+
   const resetCatalogToDefault = () => {
     setProducts(initialProducts);
-    localStorage.setItem('saak_products', JSON.stringify(initialProducts));
+    localStorage.setItem('saak_products_v5', JSON.stringify(initialProducts));
   };
 
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -199,6 +247,12 @@ export function ShopProvider({ children }) {
       setIsWishlistOpen,
       isAtelierModalOpen,
       setIsAtelierModalOpen,
+      editingProduct,
+      setEditingProduct,
+      openEditProduct,
+      openCreateProduct,
+      updateProduct,
+      deleteProduct,
       customShadeProduct,
       setCustomShadeProduct,
       currency,

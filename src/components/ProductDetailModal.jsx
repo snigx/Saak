@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
-import { X, Heart, Sparkles, Check, ShoppingBag, ShieldCheck, Ruler, Palette } from 'lucide-react';
+import { X, Heart, Sparkles, Check, ShoppingBag, ShieldCheck, Ruler, Palette, Edit3 } from 'lucide-react';
 
 export default function ProductDetailModal() {
   const { 
@@ -10,7 +10,8 @@ export default function ProductDetailModal() {
     addToCart, 
     toggleWishlist, 
     wishlist,
-    setCustomShadeProduct
+    setCustomShadeProduct,
+    openEditProduct
   } = useShop();
 
   if (!selectedProduct) return null;
@@ -211,6 +212,23 @@ export default function ProductDetailModal() {
                 <Sparkles size={14} className="text-gold" />
                 <span>Complimentary Fall &amp; Pico Stitching Included</span>
               </div>
+            </div>
+
+            {/* Atelier Admin Direct Edit */}
+            <div className="detail-admin-edit-box">
+              <button 
+                type="button"
+                onClick={() => {
+                  const prod = selectedProduct;
+                  setSelectedProduct(null);
+                  openEditProduct(prod);
+                }}
+                className="btn btn-outline detail-edit-btn"
+                title="Open product in Atelier Engine to update photos, price, or title"
+              >
+                <Edit3 size={13} />
+                <span>Edit Product Details &amp; Photos in Atelier</span>
+              </button>
             </div>
           </div>
         </div>
@@ -480,6 +498,28 @@ export default function ProductDetailModal() {
           display: flex;
           align-items: center;
           gap: 6px;
+        }
+        .detail-admin-edit-box {
+          margin-top: 14px;
+          padding-top: 12px;
+          border-top: 1px dashed var(--border-light);
+        }
+        .detail-edit-btn {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          font-size: 11px;
+          font-weight: 600;
+          color: var(--accent-terracotta);
+          border-color: rgba(163, 72, 53, 0.3);
+          background: #FAF6EF;
+          padding: 8px 12px;
+        }
+        .detail-edit-btn:hover {
+          background: var(--accent-terracotta);
+          color: #FFFFFF;
         }
         @media (max-width: 820px) {
           .detail-grid {

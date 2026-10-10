@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
-import { Heart, Eye, Sparkles, Palette, ShoppingBag, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Heart, Eye, Sparkles, Palette, ShoppingBag, Check, ChevronLeft, ChevronRight, Edit3 } from 'lucide-react';
 
 export default function ProductCard({ product }) {
   const { 
@@ -9,7 +9,8 @@ export default function ProductCard({ product }) {
     wishlist, 
     setSelectedProduct, 
     setCustomShadeProduct,
-    addToCart 
+    addToCart,
+    openEditProduct 
   } = useShop();
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -117,17 +118,31 @@ export default function ProductCard({ product }) {
           <Heart size={16} fill={isWishlisted ? '#A34835' : 'none'} color={isWishlisted ? '#A34835' : '#1F1A17'} />
         </button>
 
-        {/* Quick View Button on Hover */}
-        <button 
-          className="card-quick-view-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            setSelectedProduct(product);
-          }}
-        >
-          <Eye size={14} />
-          <span>Quick View</span>
-        </button>
+        {/* Quick View & Edit Actions on Hover */}
+        <div className="card-hover-actions">
+          <button 
+            className="card-hover-action-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedProduct(product);
+            }}
+            title="Quick View"
+          >
+            <Eye size={13} />
+            <span>Quick View</span>
+          </button>
+          <button 
+            className="card-hover-action-btn card-edit-action-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              openEditProduct(product);
+            }}
+            title="Edit product price, title & photos"
+          >
+            <Edit3 size={13} />
+            <span>Edit</span>
+          </button>
+        </div>
       </div>
 
       {/* Product Details */}
@@ -332,14 +347,27 @@ export default function ProductCard({ product }) {
           background: #FFFFFF;
           transform: scale(1.1);
         }
-        .card-quick-view-btn {
+        .card-hover-actions {
           position: absolute;
           bottom: 34px;
           right: 10px;
-          background: rgba(26, 22, 20, 0.85);
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          opacity: 0;
+          transform: translateY(8px);
+          transition: var(--transition);
+          z-index: 4;
+        }
+        .product-card:hover .card-hover-actions {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        .card-hover-action-btn {
+          background: rgba(26, 22, 20, 0.88);
           color: #FFFFFF;
-          border: none;
-          padding: 6px 12px;
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          padding: 6px 10px;
           font-size: 11px;
           font-weight: 600;
           border-radius: 2px;
@@ -347,14 +375,20 @@ export default function ProductCard({ product }) {
           align-items: center;
           gap: 5px;
           cursor: pointer;
-          opacity: 0;
-          transform: translateY(8px);
           transition: var(--transition);
-          z-index: 2;
+          backdrop-filter: blur(4px);
         }
-        .product-card:hover .card-quick-view-btn {
-          opacity: 1;
-          transform: translateY(0);
+        .card-hover-action-btn:hover {
+          background: var(--text-primary);
+          color: #FFFFFF;
+        }
+        .card-edit-action-btn {
+          background: rgba(163, 72, 53, 0.9);
+          border-color: rgba(197, 160, 89, 0.4);
+        }
+        .card-edit-action-btn:hover {
+          background: var(--accent-terracotta);
+          color: #FFFFFF;
         }
         .card-details {
           padding: 16px;
