@@ -12,7 +12,8 @@ export default function CartDrawer() {
     updateCartQty, 
     formatPrice, 
     cartTotal,
-    cartSavings
+    cartSavings,
+    openCheckout
   } = useShop();
 
   const [isCheckingOut, setIsCheckingOut] = useState(false);
@@ -24,19 +25,7 @@ export default function CartDrawer() {
   const freeShippingMet = cartTotal >= freeShippingThreshold;
 
   const handleCheckout = () => {
-    setIsCheckingOut(true);
-    setTimeout(() => {
-      setIsCheckingOut(false);
-      setOrderComplete(true);
-      try {
-        confetti({
-          particleCount: 80,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#A34835', '#C5A059', '#FAF6EF']
-        });
-      } catch (e) {}
-    }, 1500);
+    openCheckout();
   };
 
   return (

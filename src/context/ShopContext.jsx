@@ -37,6 +37,14 @@ export function ShopProvider({ children }) {
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isAtelierModalOpen, setIsAtelierModalOpen] = useState(false);
   const [customShadeProduct, setCustomShadeProduct] = useState(null);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [atelierUpiId, setAtelierUpiId] = useState(() => {
+    try {
+      return localStorage.getItem('saak_upi_id') || 'saakbyaprajita@okhdfcbank';
+    } catch {
+      return 'saakbyaprajita@okhdfcbank';
+    }
+  });
   const [currency, setCurrency] = useState('INR'); // INR, USD, GBP, AED
 
   // Rates approximation
@@ -234,6 +242,18 @@ export function ShopProvider({ children }) {
     setIsAtelierModalOpen(true);
   };
 
+  const openCheckout = () => {
+    setIsCartOpen(false);
+    setIsCheckoutOpen(true);
+  };
+
+  const clearCart = () => {
+    setCart([]);
+    try {
+      localStorage.removeItem('saak_cart');
+    } catch {}
+  };
+
   const resetCatalogToDefault = () => {
     setProducts(initialProducts);
     localStorage.setItem('saak_products_v6', JSON.stringify(initialProducts));
@@ -262,6 +282,12 @@ export function ShopProvider({ children }) {
       setIsWishlistOpen,
       isAtelierModalOpen,
       setIsAtelierModalOpen,
+      isCheckoutOpen,
+      setIsCheckoutOpen,
+      openCheckout,
+      atelierUpiId,
+      setAtelierUpiId,
+      clearCart,
       editingProduct,
       setEditingProduct,
       openEditProduct,

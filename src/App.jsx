@@ -12,6 +12,7 @@ import CustomShadeModal from './components/CustomShadeModal';
 import CartDrawer from './components/CartDrawer';
 import WishlistDrawer from './components/WishlistDrawer';
 import AtelierAdminModal from './components/AtelierAdminModal';
+import CheckoutModal from './components/CheckoutModal';
 
 export default function App() {
   return (
@@ -44,6 +45,7 @@ export default function App() {
         <CartDrawer />
         <WishlistDrawer />
         <AtelierAdminModal />
+        <CheckoutModal />
       </div>
     </ShopProvider>
   );
