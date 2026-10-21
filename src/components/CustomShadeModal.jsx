@@ -154,6 +154,8 @@ export default function CustomShadeModal() {
           border-radius: 4px;
           max-width: 620px;
           width: 100%;
+          max-height: 90vh;
+          overflow-y: auto;
           padding: 32px;
           position: relative;
           box-shadow: var(--shadow-lg);
@@ -314,6 +316,9 @@ export default function CustomShadeModal() {
           color: #FFFFFF;
         }
         @media (max-width: 580px) {
+          .shade-modal {
+            padding: 20px 14px;
+          }
           .palette-grid {
             grid-template-columns: repeat(2, 1fr);
           }

@@ -1,10 +1,10 @@
 import React from 'react';
 import { useShop } from '../context/ShopContext';
-import { Sparkles, MessageCircle, PlusCircle, Globe } from 'lucide-react';
+import { Sparkles, MessageCircle, PlusCircle, Globe, Receipt } from 'lucide-react';
 import InstagramIcon from './InstagramIcon';
 
 export default function AnnouncementBar() {
-  const { currency, setCurrency, setIsAtelierModalOpen } = useShop();
+  const { currency, setCurrency, setIsAtelierModalOpen, openOrdersAdmin } = useShop();
 
   return (
     <div className="announcement-bar">
@@ -23,10 +23,20 @@ export default function AnnouncementBar() {
           <button 
             onClick={() => setIsAtelierModalOpen(true)}
             className="atelier-btn"
-            title="Add a new Saree or Blouse to the catalog"
+            title="Manage Products, Inventory & Pricing"
           >
-            <PlusCircle size={13} />
-            <span>Atelier Portal (Add Products)</span>
+            <Sparkles size={13} className="text-gold" />
+            <span>Atelier Console</span>
+          </button>
+
+          {/* Orders & Transactions Shortcut */}
+          <button 
+            onClick={openOrdersAdmin}
+            className="atelier-btn"
+            title="Check transactions succeeded, failed, and customer orders"
+          >
+            <Receipt size={13} />
+            <span>Orders Ledger</span>
           </button>
 
           {/* Official Instagram */}
@@ -181,7 +191,27 @@ export default function AnnouncementBar() {
           }
         }
         @media (max-width: 650px) {
+          .announcement-content {
+            padding-top: 6px;
+            padding-bottom: 6px;
+            gap: 8px;
+          }
+          .announcement-text {
+            font-size: 11px;
+          }
+          .instagram-top-link span,
+          .whatsapp-link span {
+            display: none;
+          }
           .atelier-btn span {
+            display: none;
+          }
+          .announcement-right {
+            gap: 10px;
+          }
+        }
+        @media (max-width: 420px) {
+          .instagram-top-link {
             display: none;
           }
         }

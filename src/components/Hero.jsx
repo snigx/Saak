@@ -326,8 +326,51 @@ export default function Hero() {
             gap: 40px;
           }
           .hero-features-list {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, 1fr);
             gap: 12px;
+          }
+        }
+        @media (max-width: 640px) {
+          .hero-section {
+            padding: 36px 0 32px;
+          }
+          .hero-title {
+            font-size: clamp(28px, 7.5vw, 40px);
+            margin-bottom: 14px;
+          }
+          .hero-description {
+            font-size: 14px;
+            margin-bottom: 24px;
+          }
+          .hero-ctas {
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 30px;
+          }
+          .hero-ctas .btn {
+            width: 100%;
+          }
+          .hero-features-list {
+            grid-template-columns: 1fr;
+            gap: 10px;
+            padding-top: 18px;
+          }
+          .hero-floating-card {
+            left: 12px;
+            right: 12px;
+            bottom: 12px;
+            padding: 12px 14px;
+          }
+          .floating-card-title {
+            font-size: 15px;
+          }
+          .floating-card-subtitle {
+            font-size: 11px;
+            margin-bottom: 8px;
+          }
+          .floating-buy-btn {
+            padding: 6px 12px;
+            font-size: 11px;
           }
         }
       `}</style>

@@ -755,6 +755,38 @@ export default function ProductDetailModal() {
             gap: 20px;
           }
         }
+        @media (max-width: 600px) {
+          .detail-modal {
+            max-height: 94vh;
+          }
+          .detail-grid {
+            padding: 16px 12px;
+            gap: 16px;
+          }
+          .main-image-viewport {
+            max-height: 46vh;
+          }
+          .modal-close-btn {
+            top: 10px;
+            right: 10px;
+            width: 32px;
+            height: 32px;
+          }
+          .detail-title {
+            font-size: 20px;
+          }
+          .detail-price {
+            font-size: 20px;
+          }
+          .detail-actions {
+            flex-direction: column;
+            gap: 8px;
+          }
+          .detail-wishlist-btn {
+            width: 100%;
+            justify-content: center;
+          }
+        }
       `}</style>
     </div>
   );

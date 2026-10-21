@@ -3,14 +3,19 @@ import { useShop } from '../context/ShopContext';
 import { 
   X, PlusCircle, Sparkles, Check, RefreshCw, Upload, 
   Trash2, Edit3, Image as ImageIcon, ArrowLeft, AlertCircle,
-  Camera, Layers 
+  Camera, Layers, Loader2, Receipt 
 } from 'lucide-react';
+import { uploadImageBlob } from '../services/storageService';
+import AdminOrdersView from './AdminOrdersView';
 
 export default function AtelierAdminModal() {
   const { 
     isAtelierModalOpen, 
     setIsAtelierModalOpen, 
     products, 
+    orders = [],
+    adminActiveTab,
+    setAdminActiveTab,
     addNewProduct, 
     updateProduct, 
     deleteProduct, 
@@ -22,8 +27,16 @@ export default function AtelierAdminModal() {
 
   if (!isAtelierModalOpen) return null;
 
-  // Active Tab: 'inventory' or 'editor'
-  const [activeTab, setActiveTab] = useState(editingProduct ? 'editor' : 'inventory');
+  // Active Tab: 'inventory', 'orders', or 'editor'
+  const [activeTab, setActiveTab] = useState(adminActiveTab || (editingProduct ? 'editor' : 'inventory'));
+
+  useEffect(() => {
+    if (adminActiveTab) {
+      setActiveTab(adminActiveTab);
+    }
+  }, [adminActiveTab]);
+
+  const pendingOrdersCount = orders.filter(o => o.payment_status === 'pending_verification').length;
 
   const [formData, setFormData] = useState({
     id: '',
@@ -48,6 +61,8 @@ export default function AtelierAdminModal() {
   const [customFlatlayUrl, setCustomFlatlayUrl] = useState('');
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [isUploadingModel, setIsUploadingModel] = useState(false);
+  const [isUploadingFlatlay, setIsUploadingFlatlay] = useState(false);
 
   // When editingProduct changes or modal opens
   useEffect(() => {
@@ -122,19 +137,23 @@ export default function AtelierAdminModal() {
     { label: 'Brass Thali & Fresh Mogra', url: '/assets/saak_flatlay_copper_green.jpg' }
   ];
 
-  // Handlers for Model Photos
-  const handleModelPhotoUpload = (e) => {
+  // Handlers for Model Photos (Cloud Storage / Blob or Local Fallback)
+  const handleModelPhotoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const newImg = event.target.result;
+      setIsUploadingModel(true);
+      try {
+        const uploadedUrl = await uploadImageBlob(file, 'muse_looks');
         setFormData(prev => ({
           ...prev,
-          modelPhotos: [...prev.modelPhotos, newImg]
+          modelPhotos: [...prev.modelPhotos, uploadedUrl]
         }));
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        console.error('Model photo upload error:', err);
+      } finally {
+        setIsUploadingModel(false);
+        e.target.value = '';
+      }
     }
   };
 
@@ -164,19 +183,23 @@ export default function AtelierAdminModal() {
     }
   };
 
-  // Handlers for Flat-lay Photos
-  const handleFlatlayPhotoUpload = (e) => {
+  // Handlers for Flat-lay Photos (Cloud Storage / Blob or Local Fallback)
+  const handleFlatlayPhotoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const newImg = event.target.result;
+      setIsUploadingFlatlay(true);
+      try {
+        const uploadedUrl = await uploadImageBlob(file, 'flatlays');
         setFormData(prev => ({
           ...prev,
-          flatlayPhotos: [...prev.flatlayPhotos, newImg]
+          flatlayPhotos: [...prev.flatlayPhotos, uploadedUrl]
         }));
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        console.error('Flat-lay photo upload error:', err);
+      } finally {
+        setIsUploadingFlatlay(false);
+        e.target.value = '';
+      }
     }
   };
 
@@ -284,10 +307,14 @@ export default function AtelierAdminModal() {
           <h2 className="admin-title">
             {activeTab === 'inventory' 
               ? 'Catalog Inventory & Products' 
+              : activeTab === 'orders'
+              ? 'Client Orders & UPI Transactions Ledger'
               : (editingProduct ? `Edit: ${editingProduct.name}` : 'Add New Creation')}
           </h2>
           <p className="admin-subtitle">
-            Manage your live store products, edit prices &amp; descriptions, upload multiple model and flat-lay photos, and re-arrange looks in real time.
+            {activeTab === 'orders'
+              ? 'Reconcile customer UPI payments against bank ledger, approve or reject transactions, manage dispatch fulfillment, and communicate directly on WhatsApp.'
+              : 'Manage your live store products, edit prices & descriptions, upload multiple model and flat-lay photos, and re-arrange looks in real time.'}
           </p>
 
           {/* Navigation Tabs */}
@@ -297,9 +324,24 @@ export default function AtelierAdminModal() {
               onClick={() => {
                 setActiveTab('inventory');
                 setEditingProduct(null);
+                if (setAdminActiveTab) setAdminActiveTab('inventory');
               }}
             >
               All Products ({products.length})
+            </button>
+            <button 
+              className={`admin-tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('orders');
+                setEditingProduct(null);
+                if (setAdminActiveTab) setAdminActiveTab('orders');
+              }}
+            >
+              <Receipt size={14} />
+              <span>Orders &amp; Transactions ({orders.length})</span>
+              {pendingOrdersCount > 0 && (
+                <span className="admin-tab-pending-badge">{pendingOrdersCount} pending</span>
+              )}
             </button>
             <button 
               className={`admin-tab-btn ${activeTab === 'editor' && !editingProduct ? 'active' : ''}`}
@@ -396,7 +438,12 @@ export default function AtelierAdminModal() {
           </div>
         )}
 
-        {/* TAB 2: PRODUCT EDITOR (EDIT / CREATE) */}
+        {/* TAB 2: CLIENT ORDERS & TRANSACTIONS AUDIT */}
+        {activeTab === 'orders' && (
+          <AdminOrdersView />
+        )}
+
+        {/* TAB 3: PRODUCT EDITOR (EDIT / CREATE) */}
         {activeTab === 'editor' && (
           <form onSubmit={handleSubmit} className="admin-form">
             <div className="editor-back-row">
@@ -558,12 +605,13 @@ export default function AtelierAdminModal() {
                   </div>
 
                   {/* Upload from Computer Button */}
-                  <label className="upload-file-btn">
-                    <Upload size={14} />
-                    <span>Upload Model Photo</span>
+                  <label className={`upload-file-btn ${isUploadingModel ? 'uploading' : ''}`}>
+                    {isUploadingModel ? <Loader2 size={14} className="spin" /> : <Upload size={14} />}
+                    <span>{isUploadingModel ? 'Uploading to Blob...' : 'Upload Model Photo'}</span>
                     <input 
                       type="file" 
                       accept="image/*" 
+                      disabled={isUploadingModel}
                       onChange={handleModelPhotoUpload} 
                       style={{ display: 'none' }}
                     />
@@ -647,12 +695,13 @@ export default function AtelierAdminModal() {
                   </div>
 
                   {/* Upload Flatlay Button */}
-                  <label className="upload-file-btn upload-flatlay-btn">
-                    <Upload size={14} />
-                    <span>Upload Flat-lay Photo</span>
+                  <label className={`upload-file-btn upload-flatlay-btn ${isUploadingFlatlay ? 'uploading' : ''}`}>
+                    {isUploadingFlatlay ? <Loader2 size={14} className="spin" /> : <Upload size={14} />}
+                    <span>{isUploadingFlatlay ? 'Uploading to Blob...' : 'Upload Flat-lay Photo'}</span>
                     <input 
                       type="file" 
                       accept="image/*" 
+                      disabled={isUploadingFlatlay}
                       onChange={handleFlatlayPhotoUpload} 
                       style={{ display: 'none' }}
                     />
@@ -759,7 +808,7 @@ export default function AtelierAdminModal() {
         .admin-modal {
           background: #FFFFFF;
           border-radius: 4px;
-          max-width: 880px;
+          max-width: 1040px;
           width: 100%;
           max-height: 90vh;
           overflow-y: auto;
@@ -819,6 +868,18 @@ export default function AtelierAdminModal() {
           background: var(--accent-terracotta);
           color: #FFFFFF;
           border-color: var(--accent-terracotta);
+        }
+        .admin-tab-pending-badge {
+          background: #E65100;
+          color: #FFFFFF;
+          font-size: 10px;
+          font-weight: 700;
+          padding: 1px 7px;
+          border-radius: 10px;
+        }
+        .admin-tab-btn.active .admin-tab-pending-badge {
+          background: #FFFFFF;
+          color: #E65100;
         }
 
         /* Inventory Tab Styling */
@@ -1222,12 +1283,32 @@ export default function AtelierAdminModal() {
           background: #2E7D32;
         }
         @media (max-width: 650px) {
+          .admin-modal {
+            padding: 20px 14px;
+            max-height: 94vh;
+          }
           .form-grid {
             grid-template-columns: 1fr;
+            gap: 14px;
           }
           .manager-title-row {
             flex-direction: column;
             align-items: flex-start;
+            gap: 10px;
+          }
+          .add-url-row {
+            flex-direction: column;
+            gap: 8px;
+          }
+          .add-url-btn {
+            width: 100%;
+          }
+          .admin-actions {
+            flex-direction: column-reverse;
+            gap: 8px;
+          }
+          .publish-btn {
+            width: 100%;
           }
         }
       `}</style>

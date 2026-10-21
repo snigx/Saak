@@ -5,8 +5,11 @@ import { useShop } from '../context/ShopContext';
 import { 
   X, Check, ShieldCheck, ArrowRight, ArrowLeft, Copy, 
   Smartphone, Sparkles, MessageCircle, AlertCircle, ShoppingBag,
-  Upload, Clock, CheckCircle2 
+  Upload, Clock, CheckCircle2, Loader2, Banknote, PhoneCall 
 } from 'lucide-react';
+import { saveOrderToDb } from '../services/ordersService';
+import { uploadImageBlob } from '../services/storageService';
+import { useAuth } from '../context/AuthContext';
 
 export default function CheckoutModal() {
   const { 
@@ -18,8 +21,11 @@ export default function CheckoutModal() {
     formatPrice, 
     clearCart,
     atelierUpiId,
-    setAtelierUpiId 
+    setAtelierUpiId,
+    refreshOrders 
   } = useShop();
+
+  const { user } = useAuth();
 
   if (!isCheckoutOpen) return null;
 
@@ -28,9 +34,9 @@ export default function CheckoutModal() {
 
   // Customer Shipping Details
   const [shippingData, setShippingData] = useState({
-    fullName: '',
+    fullName: user?.fullName || '',
     phone: '',
-    email: '',
+    email: user?.email || '',
     address: '',
     city: '',
     state: 'Maharashtra',
@@ -40,10 +46,12 @@ export default function CheckoutModal() {
 
   // Payment Verification State
   const [orderId, setOrderId] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('upi'); // 'upi' or 'cod'
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [utrNumber, setUtrNumber] = useState('');
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [paymentScreenshot, setPaymentScreenshot] = useState(null);
+  const [paymentScreenshotFile, setPaymentScreenshotFile] = useState(null);
   const [isVerifying, setIsVerifying] = useState(false);
 
   // Generate unique order ID on open
@@ -55,7 +63,7 @@ export default function CheckoutModal() {
   }, [orderId]);
 
   // Construct NPCI Standard UPI URI
-  const payeeVpa = atelierUpiId || 'saakbyaprajita@okhdfcbank';
+  const payeeVpa = atelierUpiId || '6267664409@ybl';
   const payeeName = 'Saak by Aprajita';
   const amountStr = cartTotal.toFixed(2);
   const transactionNote = `Order ${orderId}`;
@@ -89,6 +97,7 @@ export default function CheckoutModal() {
   const handleScreenshotUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
+      setPaymentScreenshotFile(file);
       const reader = new FileReader();
       reader.onload = (event) => {
         setPaymentScreenshot(event.target.result);
@@ -106,7 +115,7 @@ export default function CheckoutModal() {
     setCurrentStep('payment');
   };
 
-  const handleConfirmPayment = (e) => {
+  const handleConfirmPayment = async (e) => {
     e.preventDefault();
     if (!utrNumber || utrNumber.length < 6) {
       alert('Please enter a valid 12-digit UPI Reference Number (UTR) from your payment app.');
@@ -114,7 +123,35 @@ export default function CheckoutModal() {
     }
 
     setIsVerifying(true);
-    setTimeout(() => {
+    try {
+      let finalScreenshotUrl = paymentScreenshot;
+      if (paymentScreenshotFile) {
+        try {
+          finalScreenshotUrl = await uploadImageBlob(paymentScreenshotFile, 'receipts');
+        } catch (err) {
+          console.warn('Screenshot upload fallback:', err);
+        }
+      }
+
+      await saveOrderToDb({
+        orderId,
+        fullName: shippingData.fullName,
+        phone: shippingData.phone,
+        email: shippingData.email,
+        address: shippingData.address,
+        city: shippingData.city,
+        state: shippingData.state,
+        pincode: shippingData.pincode,
+        stylingNotes: shippingData.stylingNotes,
+        items: cart,
+        totalAmount: cartTotal,
+        utrNumber,
+        paymentScreenshotUrl: finalScreenshotUrl
+      });
+      if (refreshOrders) refreshOrders();
+    } catch (err) {
+      console.warn('Could not save order:', err);
+    } finally {
       setIsVerifying(false);
       setCurrentStep('success');
       try {
@@ -126,21 +163,73 @@ export default function CheckoutModal() {
         });
       } catch (e) {}
       if (clearCart) clearCart();
-    }, 1200);
+    }
+  };
+
+  // Cash on Delivery confirmation handler
+  const handleConfirmCodOrder = async (e) => {
+    e.preventDefault();
+    setIsVerifying(true);
+    try {
+      await saveOrderToDb({
+        orderId,
+        fullName: shippingData.fullName,
+        phone: shippingData.phone,
+        email: shippingData.email,
+        address: shippingData.address,
+        city: shippingData.city,
+        state: shippingData.state,
+        pincode: shippingData.pincode,
+        stylingNotes: shippingData.stylingNotes,
+        items: cart,
+        totalAmount: cartTotal,
+        utrNumber: 'COD-PENDING',
+        paymentMethod: 'Cash on Delivery (COD)',
+        paymentScreenshotUrl: null,
+        paymentStatus: 'cod_pending',
+        fulfillmentStatus: 'unfulfilled',
+        adminNotes: 'Order placed via Cash on Delivery. Awaiting concierge phone confirmation before handcrafting fall & pico.'
+      });
+      if (refreshOrders) refreshOrders();
+    } catch (err) {
+      console.warn('Could not save COD order:', err);
+    } finally {
+      setIsVerifying(false);
+      setCurrentStep('success');
+      try {
+        confetti({
+          particleCount: 90,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#A34835', '#C5A059', '#FAF6EF']
+        });
+      } catch (e) {}
+      if (clearCart) clearCart();
+    }
   };
 
   // WhatsApp formatted message for direct client-to-Aprajita confirmation
   const orderSummaryText = cart.map(i => `• ${i.name} (${i.selectedSize}${i.customColor ? `, Shade: ${i.customColor}` : ''}) x${i.quantity} = ₹${i.price * i.quantity}`).join('\n');
   const whatsappReceiptMessage = encodeURIComponent(
-    `✨ *NEW ORDER CONFIRMATION: ${orderId}*\n\n` +
-    `*Client:* ${shippingData.fullName}\n` +
-    `*Phone:* ${shippingData.phone}\n` +
-    `*Delivery Address:*\n${shippingData.address}, ${shippingData.city}, ${shippingData.state} - ${shippingData.pincode}\n\n` +
-    `*Items Ordered:*\n${orderSummaryText}\n\n` +
-    `*Total Paid via UPI:* ₹${cartTotal.toLocaleString('en-IN')}\n` +
-    `*UPI UTR / Ref No:* ${utrNumber}\n` +
-    `${shippingData.stylingNotes ? `*Tailoring Note:* ${shippingData.stylingNotes}\n` : ''}\n` +
-    `Please confirm the order and dispatch timeline from Saak Atelier!`
+    paymentMethod === 'cod'
+      ? `✨ *NEW CASH ON DELIVERY (COD) ORDER: ${orderId}*\n\n` +
+        `*Client:* ${shippingData.fullName}\n` +
+        `*Phone:* ${shippingData.phone}\n` +
+        `*Delivery Address:*\n${shippingData.address}, ${shippingData.city}, ${shippingData.state} - ${shippingData.pincode}\n\n` +
+        `*Items Ordered:*\n${orderSummaryText}\n\n` +
+        `*Amount Payable upon Delivery:* ₹${cartTotal.toLocaleString('en-IN')}\n` +
+        `*Payment Mode:* Cash on Delivery (Doorstep Cash / UPI)\n` +
+        `${shippingData.stylingNotes ? `*Tailoring Note:* ${shippingData.stylingNotes}\n` : ''}\n` +
+        `Please confirm my delivery schedule and dispatch timeline from Saak Atelier!`
+      : `✨ *NEW ORDER CONFIRMATION: ${orderId}*\n\n` +
+        `*Client:* ${shippingData.fullName}\n` +
+        `*Phone:* ${shippingData.phone}\n` +
+        `*Delivery Address:*\n${shippingData.address}, ${shippingData.city}, ${shippingData.state} - ${shippingData.pincode}\n\n` +
+        `*Items Ordered:*\n${orderSummaryText}\n\n` +
+        `*Total Paid via UPI:* ₹${cartTotal.toLocaleString('en-IN')}\n` +
+        `*UPI UTR / Ref No:* ${utrNumber}\n` +
+        `${shippingData.stylingNotes ? `*Tailoring Note:* ${shippingData.stylingNotes}\n` : ''}\n` +
+        `Please confirm the order and dispatch timeline from Saak Atelier!`
   );
 
   return (
@@ -159,12 +248,12 @@ export default function CheckoutModal() {
         <div className="checkout-header">
           <div className="checkout-badge">
             <Sparkles size={13} className="text-gold" />
-            <span>DIRECT UPI ATELIER CHECKOUT • ZERO FEES</span>
+            <span>SAAK ATELIER • BESPOKE CLIENT CHECKOUT</span>
           </div>
           <h2 className="checkout-title">
             {currentStep === 'shipping' && 'Delivery & Client Details'}
-            {currentStep === 'payment' && 'Scan & Pay via UPI'}
-            {currentStep === 'success' && 'Order Successfully Placed!'}
+            {currentStep === 'payment' && (paymentMethod === 'cod' ? 'Cash on Delivery (COD)' : 'Scan & Pay via UPI')}
+            {currentStep === 'success' && (paymentMethod === 'cod' ? 'Cash on Delivery Order Placed!' : 'Order Successfully Placed!')}
           </h2>
 
           {/* Stepper Navigation */}
@@ -177,7 +266,7 @@ export default function CheckoutModal() {
               <div className="step-connector"></div>
               <div className={`step-item ${currentStep === 'payment' ? 'active' : ''}`}>
                 <span className="step-num">2</span>
-                <span>Direct UPI Payment</span>
+                <span>{paymentMethod === 'cod' ? 'Doorstep Payment' : 'Payment Preference'}</span>
               </div>
             </div>
           )}
@@ -327,7 +416,7 @@ export default function CheckoutModal() {
                 </div>
 
                 <button type="submit" className="btn btn-primary next-step-btn">
-                  <span>Continue to Direct UPI Payment</span>
+                  <span>Continue to Payment Method</span>
                   <ArrowRight size={16} />
                 </button>
               </div>
@@ -336,136 +425,284 @@ export default function CheckoutModal() {
         )}
 
         {/* ========================================================================= */}
-        {/* STEP 2: DYNAMIC UPI PAYMENT (SCAN & PAY) */}
+        {/* STEP 2: PAYMENT METHOD & VERIFICATION (UPI OR CASH ON DELIVERY) */}
         {/* ========================================================================= */}
         {currentStep === 'payment' && (
-          <div className="payment-step-grid">
-            {/* Left: Dynamic QR Code Box */}
-            <div className="qr-container-card">
-              <div className="qr-top-bar">
-                <span className="amount-label">Exact Payable Amount:</span>
-                <span className="amount-highlight">₹{cartTotal.toLocaleString('en-IN')}</span>
-              </div>
-
-              {/* Dynamic QR Code Render */}
-              <div className="qr-graphic-frame">
-                {qrDataUrl ? (
-                  <img src={qrDataUrl} alt="Scan to pay via UPI" className="qr-image" />
-                ) : (
-                  <div className="qr-loading">Generating Dynamic UPI QR...</div>
-                )}
-                <div className="qr-corner corner-tl"></div>
-                <div className="qr-corner corner-tr"></div>
-                <div className="qr-corner corner-bl"></div>
-                <div className="qr-corner corner-br"></div>
-              </div>
-
-              <span className="qr-instruction">
-                Scan with any UPI App: <strong>GPay, PhonePe, Paytm, CRED, BHIM</strong>
-              </span>
-
-              {/* Copy UPI ID Row */}
-              <div className="upi-id-pill">
-                <span className="vpa-text">{payeeVpa}</span>
-                <button 
-                  type="button" 
-                  onClick={handleCopyUpi} 
-                  className="copy-btn"
-                  title="Copy UPI ID"
+          <div className="payment-step-wrapper">
+            {/* Payment Method Selector Switch */}
+            <div className="payment-method-selector-card">
+              <span className="method-picker-label">Choose Payment Preference:</span>
+              <div className="payment-method-options">
+                <button
+                  type="button"
+                  className={`payment-method-card ${paymentMethod === 'upi' ? 'active' : ''}`}
+                  onClick={() => setPaymentMethod('upi')}
                 >
-                  {copiedUpi ? <Check size={13} color="#2E7D32" /> : <Copy size={13} />}
-                  <span>{copiedUpi ? 'Copied' : 'Copy'}</span>
+                  <div className="method-card-header">
+                    <div className="method-title-group">
+                      <Sparkles size={16} className={paymentMethod === 'upi' ? 'text-gold' : ''} />
+                      <strong>Direct UPI Transfer</strong>
+                    </div>
+                    <span className="method-tag green">Zero Fee • Instant</span>
+                  </div>
+                  <p className="method-card-desc">
+                    Scan dynamic QR with Google Pay, PhonePe, Paytm, or CRED for fastest confirmation.
+                  </p>
                 </button>
-              </div>
 
-              {/* Mobile 1-Tap Pay Direct App Links */}
-              <div className="mobile-intent-block">
-                <span className="mobile-intent-hint">Browsing on your phone? Tap below:</span>
-                <a 
-                  href={upiIntentUrl}
-                  className="btn btn-primary mobile-pay-btn"
+                <button
+                  type="button"
+                  className={`payment-method-card ${paymentMethod === 'cod' ? 'active' : ''}`}
+                  onClick={() => setPaymentMethod('cod')}
                 >
-                  <Smartphone size={15} />
-                  <span>Tap to Pay via any UPI App</span>
-                </a>
+                  <div className="method-card-header">
+                    <div className="method-title-group">
+                      <Banknote size={16} className={paymentMethod === 'cod' ? 'text-gold' : ''} />
+                      <strong>Cash on Delivery (COD)</strong>
+                    </div>
+                    <span className="method-tag amber">Pay at Doorstep</span>
+                  </div>
+                  <p className="method-card-desc">
+                    Pay via Cash or UPI to the courier delivery executive upon arrival at your door.
+                  </p>
+                </button>
               </div>
             </div>
 
-            {/* Right: Payment Verification Form */}
-            <div className="verification-card">
-              <button 
-                type="button" 
-                onClick={() => setCurrentStep('shipping')}
-                className="back-btn"
-              >
-                <ArrowLeft size={13} />
-                <span>Back to Shipping Details</span>
-              </button>
+            {/* View A: Direct UPI */}
+            {paymentMethod === 'upi' && (
+              <div className="payment-step-grid">
+                {/* Left: Dynamic QR Code Box */}
+                <div className="qr-container-card">
+                  <div className="qr-top-bar">
+                    <span className="amount-label">Exact Payable Amount:</span>
+                    <span className="amount-highlight">₹{cartTotal.toLocaleString('en-IN')}</span>
+                  </div>
 
-              <h4 className="verif-heading">Verify &amp; Confirm Your Payment</h4>
-              <p className="verif-desc">
-                After approving the payment in your UPI app, please enter your <strong>12-digit UPI Reference Number (UTR)</strong> below to confirm your order.
-              </p>
+                  {/* Dynamic QR Code Render */}
+                  <div className="qr-graphic-frame">
+                    {qrDataUrl ? (
+                      <img src={qrDataUrl} alt="Scan to pay via UPI" className="qr-image" />
+                    ) : (
+                      <div className="qr-loading">Generating Dynamic UPI QR...</div>
+                    )}
+                    <div className="qr-corner corner-tl"></div>
+                    <div className="qr-corner corner-tr"></div>
+                    <div className="qr-corner corner-bl"></div>
+                    <div className="qr-corner corner-br"></div>
+                  </div>
 
-              <form onSubmit={handleConfirmPayment} className="verif-form">
-                <div className="form-group">
-                  <label className="form-label">12-Digit UPI Ref Number (UTR) *</label>
-                  <input 
-                    type="text" 
-                    required 
-                    placeholder="e.g. 429108472910"
-                    maxLength={16}
-                    value={utrNumber}
-                    onChange={(e) => setUtrNumber(e.target.value.replace(/[^0-9]/g, ''))}
-                    className="form-input utr-input"
-                  />
-                  <span className="form-hint">
-                    Found in your GPay / PhonePe / Paytm transaction receipt under "UPI Transaction ID" or "UTR".
+                  <span className="qr-instruction">
+                    Scan with any UPI App: <strong>GPay, PhonePe, Paytm, CRED, BHIM</strong>
                   </span>
-                </div>
 
-                {/* Optional Screenshot Upload */}
-                <div className="form-group">
-                  <label className="form-label">Payment Screenshot (Optional)</label>
-                  <label className="screenshot-upload-box">
-                    <Upload size={16} />
-                    <span>{paymentScreenshot ? 'Screenshot Uploaded ✓' : 'Upload Payment Screenshot'}</span>
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={handleScreenshotUpload}
-                      style={{ display: 'none' }} 
-                    />
-                  </label>
-                </div>
-
-                <div className="perks-reassurance-box">
-                  <div className="reassurance-item">
-                    <ShieldCheck size={14} className="text-gold" />
-                    <span>Zero convenience or gateway fees charged.</span>
+                  {/* Copy UPI ID Row */}
+                  <div className="upi-id-pill">
+                    <span className="vpa-text">{payeeVpa}</span>
+                    <button 
+                      type="button" 
+                      onClick={handleCopyUpi} 
+                      className="copy-btn"
+                      title="Copy UPI ID"
+                    >
+                      {copiedUpi ? <Check size={13} color="#2E7D32" /> : <Copy size={13} />}
+                      <span>{copiedUpi ? 'Copied' : 'Copy'}</span>
+                    </button>
                   </div>
-                  <div className="reassurance-item">
-                    <Clock size={14} className="text-gold" />
-                    <span>Orders confirmed within 15 minutes by Aprajita's atelier.</span>
+
+                  {/* Mobile 1-Tap Pay Direct App Links */}
+                  <div className="mobile-intent-block">
+                    <span className="mobile-intent-hint">Browsing on your phone? Tap below:</span>
+                    <a 
+                      href={upiIntentUrl}
+                      className="btn btn-primary mobile-pay-btn"
+                    >
+                      <Smartphone size={15} />
+                      <span>Tap to Pay via any UPI App</span>
+                    </a>
                   </div>
                 </div>
 
-                <button 
-                  type="submit" 
-                  disabled={isVerifying}
-                  className="btn btn-primary confirm-order-btn"
-                >
-                  {isVerifying ? (
-                    <span>Verifying Transfer...</span>
-                  ) : (
-                    <>
-                      <CheckCircle2 size={16} />
-                      <span>Confirm Order ({formatPrice(cartTotal)})</span>
-                    </>
-                  )}
-                </button>
+                {/* Right: Payment Verification Form */}
+                <div className="verification-card">
+                  <button 
+                    type="button" 
+                    onClick={() => setCurrentStep('shipping')}
+                    className="back-btn"
+                  >
+                    <ArrowLeft size={13} />
+                    <span>Back to Shipping Details</span>
+                  </button>
+
+                  <h4 className="verif-heading">Verify &amp; Confirm Your Payment</h4>
+                  <p className="verif-desc">
+                    After approving the payment in your UPI app, please enter your <strong>12-digit UPI Reference Number (UTR)</strong> below to confirm your order.
+                  </p>
+
+                  <form onSubmit={handleConfirmPayment} className="verif-form">
+                    <div className="form-group">
+                      <label className="form-label">12-Digit UPI Ref Number (UTR) *</label>
+                      <input 
+                        type="text" 
+                        required 
+                        placeholder="e.g. 429108472910"
+                        maxLength={16}
+                        value={utrNumber}
+                        onChange={(e) => setUtrNumber(e.target.value.replace(/[^0-9]/g, ''))}
+                        className="form-input utr-input"
+                      />
+                      <span className="form-hint">
+                        Found in your GPay / PhonePe / Paytm transaction receipt under "UPI Transaction ID" or "UTR".
+                      </span>
+                    </div>
+
+                    {/* Optional Screenshot Upload */}
+                    <div className="form-group">
+                      <label className="form-label">Payment Screenshot (Optional)</label>
+                      <label className="screenshot-upload-box">
+                        <Upload size={16} />
+                        <span>{paymentScreenshot ? 'Screenshot Uploaded ✓' : 'Upload Payment Screenshot'}</span>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={handleScreenshotUpload}
+                          style={{ display: 'none' }} 
+                        />
+                      </label>
+                    </div>
+
+                    <div className="perks-reassurance-box">
+                      <div className="reassurance-item">
+                        <ShieldCheck size={14} className="text-gold" />
+                        <span>Zero convenience or gateway fees charged.</span>
+                      </div>
+                      <div className="reassurance-item">
+                        <Clock size={14} className="text-gold" />
+                        <span>Orders confirmed within 15 minutes by Aprajita's atelier.</span>
+                      </div>
+                    </div>
+
+                    <button 
+                      type="submit" 
+                      disabled={isVerifying}
+                      className="btn btn-primary confirm-order-btn"
+                    >
+                      {isVerifying ? (
+                        <span>Verifying Transfer...</span>
+                      ) : (
+                        <>
+                          <CheckCircle2 size={16} />
+                          <span>Confirm Order ({formatPrice(cartTotal)})</span>
+                        </>
+                      )}
+                    </button>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* View B: Cash on Delivery */}
+            {paymentMethod === 'cod' && (
+              <form onSubmit={handleConfirmCodOrder} className="cod-step-container">
+                <div className="cod-details-grid">
+                  <div className="cod-reassurance-card">
+                    <h4 className="cod-card-title">
+                      <Banknote size={18} className="text-gold" />
+                      <span>Doorstep Payment Assurance</span>
+                    </h4>
+                    
+                    <div className="cod-perks-list">
+                      <div className="cod-perk-item">
+                        <ShieldCheck size={18} className="text-green" />
+                        <div>
+                          <strong>Zero Upfront Payment Required</strong>
+                          <p>Pay cash or scan courier's QR code only when your Saak parcel arrives at your hands.</p>
+                        </div>
+                      </div>
+
+                      <div className="cod-perk-item">
+                        <PhoneCall size={18} className="text-gold" />
+                        <div>
+                          <strong>Concierge Drape Verification Call</strong>
+                          <p>Our atelier team will contact <strong>{shippingData.phone}</strong> to re-confirm your delivery date and tailoring measurements before hand-finishing.</p>
+                        </div>
+                      </div>
+
+                      <div className="cod-perk-item">
+                        <Clock size={18} className="text-gold" />
+                        <div>
+                          <strong>Complimentary Fall &amp; Pico Stitching</strong>
+                          <p>All festive preview benefits remain 100% complimentary on COD orders as well.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="cod-summary-card">
+                    <div className="cod-summary-top">
+                      <button 
+                        type="button" 
+                        onClick={() => setCurrentStep('shipping')}
+                        className="back-btn"
+                      >
+                        <ArrowLeft size={13} />
+                        <span>Back to Address</span>
+                      </button>
+                      <span className="order-tag">Order #{orderId}</span>
+                    </div>
+
+                    <h4 className="cod-card-title">
+                      <ShoppingBag size={16} className="text-gold" />
+                      <span>Order &amp; Delivery Summary</span>
+                    </h4>
+
+                    <div className="cod-delivery-preview">
+                      <span className="delivery-label">Delivering To:</span>
+                      <strong className="delivery-recipient">{shippingData.fullName}</strong>
+                      <p className="delivery-address">{shippingData.address}, {shippingData.city}, {shippingData.state} - {shippingData.pincode}</p>
+                      <span className="delivery-phone">Phone: {shippingData.phone}</span>
+                      {shippingData.stylingNotes && (
+                        <div className="delivery-note">Note: "{shippingData.stylingNotes}"</div>
+                      )}
+                    </div>
+
+                    <div className="cod-amount-breakdown">
+                      <div className="breakdown-row">
+                        <span>Items Subtotal:</span>
+                        <span>{formatPrice(cartTotal)}</span>
+                      </div>
+                      <div className="breakdown-row">
+                        <span>Insured Express Shipping:</span>
+                        <span className="text-green">COMPLIMENTARY</span>
+                      </div>
+                      <div className="breakdown-row">
+                        <span>Cash on Delivery Handling Fee:</span>
+                        <span className="text-green">₹0 (WAIVED)</span>
+                      </div>
+                      <div className="breakdown-row total-row">
+                        <span>Amount to Pay on Arrival:</span>
+                        <span className="total-highlight">{formatPrice(cartTotal)}</span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isVerifying}
+                      className="btn btn-primary confirm-order-btn cod-submit-btn"
+                    >
+                      {isVerifying ? (
+                        <span>Logging COD Order...</span>
+                      ) : (
+                        <>
+                          <CheckCircle2 size={16} />
+                          <span>Place Cash on Delivery Order ({formatPrice(cartTotal)})</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
               </form>
-            </div>
+            )}
           </div>
         )}
 
@@ -479,16 +716,31 @@ export default function CheckoutModal() {
             </div>
 
             <span className="success-sub">THANK YOU, {shippingData.fullName.toUpperCase()}</span>
-            <h3 className="success-title">Your Saak Creation is Being Prepared!</h3>
+            <h3 className="success-title">
+              {paymentMethod === 'cod' 
+                ? 'Your Cash on Delivery Order is Confirmed!' 
+                : 'Your Saak Creation is Being Prepared!'}
+            </h3>
             <p className="success-msg">
-              We have received your payment reference <strong>UTR: {utrNumber}</strong> for Order <strong>#{orderId}</strong>. Our atelier master dyers and tailors have begun preparing your ensemble.
+              {paymentMethod === 'cod' ? (
+                <>
+                  Order <strong>#{orderId}</strong> has been logged for Cash on Delivery. Amount to pay upon arrival: <strong>₹{cartTotal.toLocaleString('en-IN')}</strong>. Our concierge will contact you on <strong>{shippingData.phone}</strong> to confirm your delivery availability.
+                </>
+              ) : (
+                <>
+                  We have received your payment reference <strong>UTR: {utrNumber}</strong> for Order <strong>#{orderId}</strong>. Our atelier master dyers and tailors have begun preparing your ensemble.
+                </>
+              )}
             </p>
 
             {/* Order Card */}
             <div className="success-order-card">
               <div className="card-top">
                 <span>Order Reference: <strong>#{orderId}</strong></span>
-                <span>Total Amount: <strong>₹{cartTotal.toLocaleString('en-IN')}</strong></span>
+                <span>
+                  {paymentMethod === 'cod' ? 'Pay on Delivery: ' : 'Total Paid: '}
+                  <strong>₹{cartTotal.toLocaleString('en-IN')}</strong>
+                </span>
               </div>
               <div className="card-deliver">
                 <span>Delivery To:</span>
@@ -508,7 +760,11 @@ export default function CheckoutModal() {
                 className="btn btn-primary whatsapp-order-btn"
               >
                 <MessageCircle size={18} />
-                <span>Send Order &amp; Receipt to Aprajita on WhatsApp</span>
+                <span>
+                  {paymentMethod === 'cod' 
+                    ? 'Send COD Order Details to Aprajita on WhatsApp' 
+                    : 'Send Order & Receipt to Aprajita on WhatsApp'}
+                </span>
               </a>
             </div>
 
@@ -1019,16 +1275,231 @@ export default function CheckoutModal() {
           font-size: 12px;
         }
 
+        /* Payment Method Selector */
+        .payment-step-wrapper {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+        .payment-method-selector-card {
+          background: #FAF7F2;
+          border: 1px solid var(--border-light);
+          border-radius: 4px;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .method-picker-label {
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.8px;
+          font-weight: 700;
+          color: var(--text-muted);
+        }
+        .payment-method-options {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+        .payment-method-card {
+          background: #FFFFFF;
+          border: 1.5px solid var(--border-light);
+          border-radius: 4px;
+          padding: 14px;
+          text-align: left;
+          cursor: pointer;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          transition: var(--transition);
+        }
+        .payment-method-card:hover {
+          border-color: var(--accent-terracotta);
+          transform: translateY(-1px);
+        }
+        .payment-method-card.active {
+          border-color: var(--accent-terracotta);
+          background: #FFFDF9;
+          box-shadow: 0 4px 12px rgba(163, 72, 53, 0.08);
+        }
+        .method-card-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 8px;
+        }
+        .method-title-group {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          color: var(--text-primary);
+        }
+        .method-tag {
+          font-size: 10px;
+          font-weight: 700;
+          padding: 2px 7px;
+          border-radius: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.4px;
+        }
+        .method-tag.green {
+          background: #E8F5E9;
+          color: #2E7D32;
+        }
+        .method-tag.amber {
+          background: #FFF3E0;
+          color: #E65100;
+        }
+        .method-card-desc {
+          font-size: 11px;
+          color: var(--text-secondary);
+          margin: 0;
+          line-height: 1.35;
+        }
+
+        /* Cash on Delivery Step */
+        .cod-step-container {
+          display: flex;
+          flex-direction: column;
+        }
+        .cod-details-grid {
+          display: grid;
+          grid-template-columns: 1.1fr 1fr;
+          gap: 24px;
+        }
+        .cod-reassurance-card {
+          background: #FAF8F5;
+          border: 1px solid var(--border-light);
+          border-radius: 4px;
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .cod-card-title {
+          font-family: var(--font-serif);
+          font-size: 17px;
+          color: var(--text-primary);
+          margin: 0;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          border-bottom: 1px solid var(--border-light);
+          padding-bottom: 8px;
+        }
+        .cod-perks-list {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+        .cod-perk-item {
+          display: flex;
+          gap: 12px;
+          align-items: flex-start;
+        }
+        .cod-perk-item strong {
+          display: block;
+          font-size: 13px;
+          color: var(--text-primary);
+          margin-bottom: 2px;
+        }
+        .cod-perk-item p {
+          font-size: 12px;
+          color: var(--text-secondary);
+          margin: 0;
+          line-height: 1.4;
+        }
+        .cod-summary-card {
+          background: #FFFFFF;
+          border: 1px solid var(--border-light);
+          border-radius: 4px;
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+        .cod-summary-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .cod-delivery-preview {
+          background: rgba(0, 0, 0, 0.02);
+          border: 1px dashed var(--border-light);
+          padding: 12px;
+          border-radius: 4px;
+          font-size: 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+        }
+        .delivery-label {
+          font-size: 10px;
+          font-weight: 700;
+          color: var(--text-muted);
+          text-transform: uppercase;
+        }
+        .delivery-recipient {
+          font-size: 14px;
+          color: var(--text-primary);
+        }
+        .delivery-address, .delivery-phone {
+          margin: 0;
+          color: var(--text-secondary);
+        }
+        .delivery-note {
+          margin-top: 4px;
+          font-style: italic;
+          color: var(--accent-terracotta);
+          font-size: 11px;
+        }
+        .cod-amount-breakdown {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          padding: 12px 0;
+          border-top: 1px solid var(--border-light);
+          border-bottom: 1px solid var(--border-light);
+          font-size: 12px;
+        }
+        .cod-amount-breakdown .breakdown-row {
+          display: flex;
+          justify-content: space-between;
+        }
+        .cod-amount-breakdown .total-row {
+          font-size: 15px;
+          font-weight: 700;
+          padding-top: 6px;
+          margin-top: 4px;
+          border-top: 1px dashed var(--border-light);
+        }
+        .cod-submit-btn {
+          width: 100%;
+          padding: 12px;
+          font-size: 13px;
+        }
+
         @media (max-width: 768px) {
-          .form-sections-grid, .payment-step-grid {
+          .payment-method-options, .cod-details-grid {
             grid-template-columns: 1fr;
-            gap: 20px;
+            gap: 12px;
           }
-          .form-row {
-            grid-template-columns: 1fr;
-          }
+        }
+
+        @media (max-width: 540px) {
           .checkout-modal {
-            padding: 20px;
+            padding: 18px 12px;
+            max-height: 94vh;
+          }
+          .checkout-title {
+            font-size: 20px;
+          }
+          .step-connector {
+            width: 16px;
+          }
+          .step-item span:not(.step-num) {
+            font-size: 11px;
           }
         }
       `}</style>

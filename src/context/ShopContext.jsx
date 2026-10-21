@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { initialProducts } from '../data/initialProducts';
+import { fetchProductsFromDb, saveProductToDb, deleteProductFromDb } from '../services/productsService';
+import { fetchOrdersFromDb, updateOrderStatusInDb, deleteOrderFromDb, resetOrdersToDefault } from '../services/ordersService';
 
 const ShopContext = createContext();
 
@@ -12,6 +14,9 @@ export function ShopProvider({ children }) {
       return initialProducts;
     }
   });
+
+  const [orders, setOrders] = useState([]);
+  const [adminActiveTab, setAdminActiveTab] = useState('inventory'); // 'inventory', 'orders', 'editor'
 
   const [cart, setCart] = useState(() => {
     try {
@@ -40,11 +45,22 @@ export function ShopProvider({ children }) {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [atelierUpiId, setAtelierUpiId] = useState(() => {
     try {
-      return localStorage.getItem('saak_upi_id') || 'saakbyaprajita@okhdfcbank';
+      const saved = localStorage.getItem('saak_upi_id');
+      if (saved && saved !== 'saakbyaprajita@okhdfcbank') {
+        return saved;
+      }
+      localStorage.setItem('saak_upi_id', '6267664409@ybl');
+      return '6267664409@ybl';
     } catch {
-      return 'saakbyaprajita@okhdfcbank';
+      return '6267664409@ybl';
     }
   });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('saak_upi_id', atelierUpiId);
+    } catch {}
+  }, [atelierUpiId]);
   const [currency, setCurrency] = useState('INR'); // INR, USD, GBP, AED
 
   // Rates approximation
@@ -54,6 +70,33 @@ export function ShopProvider({ children }) {
     GBP: { symbol: '£', rate: 0.0095 },
     AED: { symbol: 'AED ', rate: 0.044 }
   };
+
+  // Asynchronously sync with Supabase PostgreSQL if configured
+  useEffect(() => {
+    let isMounted = true;
+    fetchProductsFromDb().then(dbProducts => {
+      if (isMounted && dbProducts && dbProducts.length > 0) {
+        setProducts(dbProducts);
+      }
+    });
+    return () => { isMounted = false; };
+  }, []);
+
+  // Asynchronously load client orders
+  const refreshOrders = async () => {
+    try {
+      const data = await fetchOrdersFromDb();
+      setOrders(data || []);
+      return data;
+    } catch (e) {
+      console.warn('Orders refresh error:', e);
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    refreshOrders();
+  }, []);
 
   useEffect(() => {
     try {
@@ -192,6 +235,7 @@ export function ShopProvider({ children }) {
       recommendedPairings: newProd.recommendedPairings || ['the-gold-corset']
     };
 
+    saveProductToDb(productWithDefaults);
     setProducts(prev => [productWithDefaults, ...prev]);
   };
 
@@ -205,30 +249,27 @@ export function ShopProvider({ children }) {
       gallery = [...modelPhotos, ...flatlayPhotos];
     }
 
-    setProducts(prev => prev.map(p => {
-      if (p.id === updatedProd.id) {
-        return {
-          ...p,
-          ...updatedProd,
-          price: Number(updatedProd.price),
-          originalPrice: updatedProd.originalPrice ? Number(updatedProd.originalPrice) : undefined,
-          images: {
-            ...p.images,
-            ...updatedProd.images,
-            modelPhotos: modelPhotos.length > 0 ? modelPhotos : p.images?.modelPhotos || [p.images?.modelView],
-            flatlayPhotos: flatlayPhotos.length > 0 ? flatlayPhotos : p.images?.flatlayPhotos || [p.images?.flatlayView],
-            modelView: modelPhotos[0] || p.images?.modelView || gallery[0],
-            flatlayView: flatlayPhotos[0] || p.images?.flatlayView || gallery[1] || gallery[0],
-            gallery: gallery.length > 0 ? gallery : (p.images?.gallery || [p.images?.modelView])
-          }
-        };
+    const mergedProduct = {
+      ...updatedProd,
+      price: Number(updatedProd.price),
+      originalPrice: updatedProd.originalPrice ? Number(updatedProd.originalPrice) : undefined,
+      images: {
+        ...updatedProd.images,
+        modelPhotos: modelPhotos.length > 0 ? modelPhotos : [updatedProd.images?.modelView],
+        flatlayPhotos: flatlayPhotos.length > 0 ? flatlayPhotos : [updatedProd.images?.flatlayView],
+        modelView: modelPhotos[0] || updatedProd.images?.modelView || gallery[0],
+        flatlayView: flatlayPhotos[0] || updatedProd.images?.flatlayView || gallery[1] || gallery[0],
+        gallery: gallery.length > 0 ? gallery : [updatedProd.images?.modelView]
       }
-      return p;
-    }));
+    };
+
+    saveProductToDb(mergedProduct);
+    setProducts(prev => prev.map(p => (p.id === updatedProd.id ? { ...p, ...mergedProduct } : p)));
   };
 
   // Delete product
   const deleteProduct = (productId) => {
+    deleteProductFromDb(productId);
     setProducts(prev => prev.filter(p => p.id !== productId));
   };
 
@@ -259,6 +300,26 @@ export function ShopProvider({ children }) {
     localStorage.setItem('saak_products_v6', JSON.stringify(initialProducts));
   };
 
+  const updateOrderStatus = async (orderId, updates) => {
+    await updateOrderStatusInDb(orderId, updates);
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updates } : o));
+  };
+
+  const deleteOrder = async (orderId) => {
+    await deleteOrderFromDb(orderId);
+    setOrders(prev => prev.filter(o => o.id !== orderId));
+  };
+
+  const resetOrders = () => {
+    const fresh = resetOrdersToDefault();
+    setOrders(fresh);
+  };
+
+  const openOrdersAdmin = () => {
+    setAdminActiveTab('orders');
+    setIsAtelierModalOpen(true);
+  };
+
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const cartSavings = cart.reduce((sum, item) => {
     if (item.originalPrice && item.originalPrice > item.price) {
@@ -270,6 +331,14 @@ export function ShopProvider({ children }) {
   return (
     <ShopContext.Provider value={{
       products,
+      orders,
+      adminActiveTab,
+      setAdminActiveTab,
+      openOrdersAdmin,
+      refreshOrders,
+      updateOrderStatus,
+      deleteOrder,
+      resetOrders,
       cart,
       wishlist,
       activeCategory,

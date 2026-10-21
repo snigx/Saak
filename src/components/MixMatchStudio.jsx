@@ -597,12 +597,45 @@ export default function MixMatchStudio() {
         .dot {
           color: var(--text-muted);
         }
-        @media (max-width: 1100px) {
+        @media (max-width: 1024px) {
           .studio-canvas-grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
           }
           .preview-column {
+            grid-column: span 2;
             order: -1;
+          }
+          .preview-image-container {
+            max-height: 480px;
+            margin: 0 auto;
+            max-width: 440px;
+          }
+        }
+        @media (max-width: 768px) {
+          .studio-section {
+            padding: 50px 0;
+          }
+          .studio-header {
+            margin-bottom: 28px;
+          }
+          .studio-canvas-grid {
+            grid-template-columns: 1fr;
+            gap: 18px;
+          }
+          .preview-column {
+            grid-column: span 1;
+            padding: 12px;
+          }
+          .studio-column {
+            padding: 14px;
+          }
+          .items-selector-list {
+            max-height: 260px;
+          }
+          .preview-image-container {
+            max-width: 100%;
+            aspect-ratio: 4/5;
           }
         }
       `}</style>

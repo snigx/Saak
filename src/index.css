@@ -59,6 +59,18 @@ h1, h2, h3, h4, .font-serif {
   padding: 0 24px;
 }
 
+@media (max-width: 768px) {
+  .container {
+    padding: 0 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 0 12px;
+  }
+}
+
 /* Buttons */
 .btn {
   display: inline-flex;
@@ -174,6 +186,13 @@ h1, h2, h3, h4, .font-serif {
   justify-content: center;
   padding: 20px;
   animation: fadeIn 0.25s ease-out;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 600px) {
+  .modal-overlay {
+    padding: 10px 8px;
+  }
 }
 
 @keyframes fadeIn {
@@ -204,3 +223,13 @@ h1, h2, h3, h4, .font-serif {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent-gold);
 }
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+

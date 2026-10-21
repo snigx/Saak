@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
-import { Heart, ShoppingBag, Search, Sparkles, Menu, X } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Heart, ShoppingBag, Search, Sparkles, Menu, X, User } from 'lucide-react';
 
 export default function Navbar() {
   const { 
@@ -13,6 +14,8 @@ export default function Navbar() {
     formatPrice,
     cartTotal
   } = useShop();
+
+  const { user, openAuthModal, openProfile } = useAuth();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -132,6 +135,23 @@ export default function Navbar() {
             )}
           </button>
 
+          {/* Patron Account / Sign In */}
+          <button 
+            onClick={() => user ? openProfile() : openAuthModal('signin')}
+            className={`action-icon-btn patron-account-btn ${user ? 'is-logged-in' : ''}`}
+            title={user ? `Patron Profile (${user.fullName || user.email})` : "Sign In to Atelier"}
+          >
+            {user ? (
+              user.avatarUrl ? (
+                <img src={user.avatarUrl} alt="" className="nav-avatar-img" />
+              ) : (
+                <span className="nav-avatar-badge">{user.fullName ? user.fullName[0].toUpperCase() : 'P'}</span>
+              )
+            ) : (
+              <User size={19} />
+            )}
+          </button>
+
           {/* Cart Bag */}
           <button 
             onClick={() => setIsCartOpen(true)}
@@ -183,6 +203,25 @@ export default function Navbar() {
           >
             Curated Duos (Save 10%)
           </button>
+
+          <div className="mobile-auth-divider"></div>
+          {user ? (
+            <button 
+              className="mobile-nav-link mobile-account-btn"
+              onClick={() => { setMobileMenuOpen(false); openProfile(); }}
+            >
+              <User size={16} />
+              <span>Patron Profile ({user.fullName || 'Member'})</span>
+            </button>
+          ) : (
+            <button 
+              className="mobile-nav-link mobile-account-btn"
+              onClick={() => { setMobileMenuOpen(false); openAuthModal('signin'); }}
+            >
+              <User size={16} />
+              <span>Sign In / Create Account</span>
+            </button>
+          )}
         </div>
       )}
 
@@ -301,6 +340,42 @@ export default function Navbar() {
         .action-icon-btn:hover {
           color: var(--accent-terracotta);
         }
+        .patron-account-btn {
+          position: relative;
+        }
+        .nav-avatar-badge {
+          width: 25px;
+          height: 25px;
+          border-radius: 50%;
+          background: var(--accent-terracotta);
+          color: #FFFFFF;
+          font-size: 11px;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1.5px solid var(--accent-gold);
+          box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        }
+        .nav-avatar-img {
+          width: 25px;
+          height: 25px;
+          border-radius: 50%;
+          object-fit: cover;
+          border: 1.5px solid var(--accent-gold);
+        }
+        .mobile-auth-divider {
+          height: 1px;
+          background: var(--border-light);
+          margin: 10px 0;
+        }
+        .mobile-account-btn {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          color: var(--accent-terracotta) !important;
+          font-weight: 600;
+        }
         .icon-badge {
           position: absolute;
           top: -2px;
@@ -400,6 +475,33 @@ export default function Navbar() {
           }
           .mobile-menu-toggle {
             display: block;
+          }
+        }
+        @media (max-width: 640px) {
+          .nav-container {
+            height: 64px;
+          }
+          .nav-actions {
+            gap: 10px;
+          }
+          .brand-name {
+            font-size: 24px;
+          }
+          .brand-sub {
+            font-size: 9px;
+            letter-spacing: 0.16em;
+          }
+          .cart-total-text {
+            display: none;
+          }
+          .cart-trigger-btn {
+            padding: 7px 10px;
+          }
+          .search-input {
+            width: 120px;
+          }
+          .action-icon-btn {
+            padding: 4px;
           }
         }
       `}</style>

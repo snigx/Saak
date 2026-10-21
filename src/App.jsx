@@ -1,4 +1,5 @@
 import React from 'react';
+import { AuthProvider } from './context/AuthContext';
 import { ShopProvider } from './context/ShopContext';
 import AnnouncementBar from './components/AnnouncementBar';
 import Navbar from './components/Navbar';
@@ -13,10 +14,13 @@ import CartDrawer from './components/CartDrawer';
 import WishlistDrawer from './components/WishlistDrawer';
 import AtelierAdminModal from './components/AtelierAdminModal';
 import CheckoutModal from './components/CheckoutModal';
+import AuthModal from './components/AuthModal';
+import ProfileModal from './components/ProfileModal';
 
 export default function App() {
   return (
-    <ShopProvider>
+    <AuthProvider>
+      <ShopProvider>
       <div className="saak-app">
         {/* Top Announcements */}
         <AnnouncementBar />
@@ -46,7 +50,10 @@ export default function App() {
         <WishlistDrawer />
         <AtelierAdminModal />
         <CheckoutModal />
+        <AuthModal />
+        <ProfileModal />
       </div>
     </ShopProvider>
+  </AuthProvider>
   );
 }

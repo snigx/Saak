@@ -525,8 +525,35 @@ export default function ProductCard({ product }) {
         @media (max-width: 768px) {
           .carousel-arrow {
             opacity: 1;
-            width: 28px;
-            height: 28px;
+            width: 26px;
+            height: 26px;
+          }
+          .card-details {
+            padding: 10px 8px;
+            gap: 4px;
+          }
+          .card-title {
+            font-size: 13px;
+            margin-bottom: 0;
+          }
+          .card-current-price {
+            font-size: 14px;
+          }
+          .card-old-price {
+            font-size: 11px;
+          }
+          .card-fabric-tag {
+            font-size: 10px;
+          }
+          .card-add-bag-btn {
+            padding: 7px 4px;
+            font-size: 11px;
+          }
+          .custom-shade-btn {
+            font-size: 10px;
+          }
+          .card-hover-actions {
+            display: none;
           }
         }
       `}</style>

@@ -3,7 +3,7 @@ import { useShop } from '../context/ShopContext';
 import { Sparkles, MessageCircle, Mail, ShieldCheck, Heart } from 'lucide-react';
 
 export default function Footer() {
-  const { setIsAtelierModalOpen } = useShop();
+  const { setIsAtelierModalOpen, openOrdersAdmin } = useShop();
 
   return (
     <footer className="atelier-footer">
@@ -126,12 +126,21 @@ export default function Footer() {
             <span>WhatsApp Consultation</span>
           </a>
 
-          <button 
-            onClick={() => setIsAtelierModalOpen(true)}
-            className="portal-link-btn"
-          >
-            Atelier Portal (Product Management)
-          </button>
+          <div className="footer-admin-links">
+            <button 
+              onClick={() => setIsAtelierModalOpen(true)}
+              className="portal-link-btn"
+            >
+              Atelier Portal (Catalog &amp; Inventory)
+            </button>
+            <span className="divider-dot">•</span>
+            <button 
+              onClick={openOrdersAdmin}
+              className="portal-link-btn"
+            >
+              Orders &amp; UPI Ledger
+            </button>
+          </div>
         </div>
       </div>
 

@@ -216,9 +216,35 @@ export default function ProductGrid() {
           gap: 14px;
         }
         @media (max-width: 768px) {
+          .catalog-header-row {
+            margin-bottom: 18px;
+          }
+          .catalog-controls-bar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
+          }
+          .category-pills-list {
+            overflow-x: auto;
+            padding-bottom: 6px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+          }
+          .category-pills-list::-webkit-scrollbar {
+            display: none;
+          }
           .products-grid {
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            gap: 18px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+          }
+        }
+        @media (max-width: 460px) {
+          .products-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+          }
+          .catalog-title {
+            font-size: 26px;
           }
         }
       `}</style>
