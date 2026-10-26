@@ -44,6 +44,9 @@ export default function CheckoutModal() {
     stylingNotes: ''
   });
 
+  // Validation Errors State
+  const [formErrors, setFormErrors] = useState({});
+
   // Payment Verification State
   const [orderId, setOrderId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('upi'); // 'upi' or 'cod'
@@ -53,6 +56,74 @@ export default function CheckoutModal() {
   const [paymentScreenshot, setPaymentScreenshot] = useState(null);
   const [paymentScreenshotFile, setPaymentScreenshotFile] = useState(null);
   const [isVerifying, setIsVerifying] = useState(false);
+
+  // Guardrail: Disallow letters in phone input in real time
+  const handlePhoneChange = (e) => {
+    let raw = e.target.value;
+    // Strip all alphabetic characters (a-z, A-Z) and invalid characters
+    let cleaned = raw.replace(/[a-zA-Z]/g, '').replace(/[^\d+\s-]/g, '');
+
+    // Format '+' so it can only ever appear as the very first character
+    if (cleaned.includes('+')) {
+      const startsWithPlus = cleaned.startsWith('+');
+      cleaned = (startsWithPlus ? '+' : '') + cleaned.replace(/\+/g, '');
+    }
+
+    setShippingData(prev => ({ ...prev, phone: cleaned }));
+
+    // Clear error if phone digits reach valid length (10 to 15 digits)
+    const digitsOnly = cleaned.replace(/\D/g, '');
+    if (formErrors.phone && digitsOnly.length >= 10 && digitsOnly.length <= 15) {
+      setFormErrors(prev => ({ ...prev, phone: null }));
+    }
+  };
+
+  const handlePhoneKeyDown = (e) => {
+    // Intercept letter keys directly to prevent any alphabet entry
+    if (e.key.length === 1 && /[a-zA-Z]/.test(e.key) && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+    }
+  };
+
+  const handlePhonePaste = (e) => {
+    e.preventDefault();
+    const pastedText = (e.clipboardData || window.clipboardData).getData('text') || '';
+    const sanitized = pastedText.replace(/[a-zA-Z]/g, '').replace(/[^\d+\s-]/g, '');
+    const currentVal = shippingData.phone || '';
+    let combined = (currentVal + sanitized).replace(/[^\d+\s-]/g, '');
+    if (combined.includes('+')) {
+      const startsWithPlus = combined.startsWith('+');
+      combined = (startsWithPlus ? '+' : '') + combined.replace(/\+/g, '');
+    }
+    setShippingData(prev => ({ ...prev, phone: combined }));
+    const digitsOnly = combined.replace(/\D/g, '');
+    if (formErrors.phone && digitsOnly.length >= 10 && digitsOnly.length <= 15) {
+      setFormErrors(prev => ({ ...prev, phone: null }));
+    }
+  };
+
+  const handleEmailChange = (e) => {
+    const val = e.target.value;
+    setShippingData(prev => ({ ...prev, email: val }));
+
+    if (formErrors.email) {
+      const emailTrim = val.trim();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailTrim || emailRegex.test(emailTrim)) {
+        setFormErrors(prev => ({ ...prev, email: null }));
+      }
+    }
+  };
+
+  const handlePincodeChange = (e) => {
+    // Only numbers, max 6 digits
+    const cleaned = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setShippingData(prev => ({ ...prev, pincode: cleaned }));
+
+    if (formErrors.pincode && cleaned.length === 6) {
+      setFormErrors(prev => ({ ...prev, pincode: null }));
+    }
+  };
 
   // Generate unique order ID on open
   useEffect(() => {
@@ -106,10 +177,62 @@ export default function CheckoutModal() {
     }
   };
 
+  const validateShippingForm = () => {
+    const errors = {};
+
+    // 1. Full name validation
+    if (!shippingData.fullName || !shippingData.fullName.trim()) {
+      errors.fullName = 'Please enter your full name.';
+    }
+
+    // 2. Phone validation (guardrail against letters, minimum 10 digits)
+    const phoneRaw = (shippingData.phone || '').trim();
+    const phoneDigits = phoneRaw.replace(/\D/g, '');
+    
+    if (!phoneRaw) {
+      errors.phone = 'Mobile contact is required.';
+    } else if (/[a-zA-Z]/.test(phoneRaw)) {
+      errors.phone = 'Phone number cannot contain letters.';
+    } else if (phoneDigits.length < 10) {
+      errors.phone = 'Please enter a valid 10-digit number.';
+    } else if (phoneDigits.length > 15) {
+      errors.phone = 'Phone number is too long (max 15 digits).';
+    }
+
+    // 3. Email validation (simple validation: if provided, must match email format)
+    const emailTrim = (shippingData.email || '').trim();
+    if (emailTrim) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailTrim)) {
+        errors.email = 'Please enter a valid email address.';
+      }
+    }
+
+    // 4. Address validation
+    if (!shippingData.address || !shippingData.address.trim()) {
+      errors.address = 'Please enter delivery address.';
+    }
+
+    // 5. City validation
+    if (!shippingData.city || !shippingData.city.trim()) {
+      errors.city = 'Please enter city.';
+    }
+
+    // 6. Pincode validation
+    const pinDigits = (shippingData.pincode || '').replace(/\D/g, '');
+    if (!shippingData.pincode || !shippingData.pincode.trim()) {
+      errors.pincode = 'Pincode is required.';
+    } else if (pinDigits.length !== 6) {
+      errors.pincode = 'Please enter a valid 6-digit pincode.';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleProceedToPayment = (e) => {
     e.preventDefault();
-    if (!shippingData.fullName || !shippingData.phone || !shippingData.address || !shippingData.pincode) {
-      alert('Please fill in all required delivery details.');
+    if (!validateShippingForm()) {
       return;
     }
     setCurrentStep('payment');
@@ -276,83 +399,122 @@ export default function CheckoutModal() {
         {/* STEP 1: SHIPPING & DELIVERY DETAILS */}
         {/* ========================================================================= */}
         {currentStep === 'shipping' && (
-          <form onSubmit={handleProceedToPayment} className="checkout-form">
+          <form onSubmit={handleProceedToPayment} className="checkout-form" noValidate>
             <div className="form-sections-grid">
               {/* Left: Client Form */}
               <div className="form-col">
                 <h4 className="section-subheading">Shipping Information</h4>
 
                 <div className="form-group">
-                  <label className="form-label">Full Name *</label>
+                  <label className="form-label">
+                    <span>Full Name *</span>
+                    {formErrors.fullName && <span className="field-error-text">{formErrors.fullName}</span>}
+                  </label>
                   <input 
                     type="text" 
-                    required 
                     placeholder="e.g. Priya Sharma"
                     value={shippingData.fullName}
-                    onChange={(e) => setShippingData({ ...shippingData, fullName: e.target.value })}
-                    className="form-input"
+                    onChange={(e) => {
+                      setShippingData({ ...shippingData, fullName: e.target.value });
+                      if (formErrors.fullName && e.target.value.trim()) {
+                        setFormErrors(prev => ({ ...prev, fullName: null }));
+                      }
+                    }}
+                    className={`form-input ${formErrors.fullName ? 'input-error' : ''}`}
                   />
                 </div>
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">WhatsApp Contact *</label>
+                    <label className="form-label">
+                      <span>WhatsApp Contact *</span>
+                      {formErrors.phone && <span className="field-error-text">{formErrors.phone}</span>}
+                    </label>
                     <input 
                       type="tel" 
-                      required 
-                      placeholder="e.g. +91 98765 43210"
+                      inputMode="tel"
+                      placeholder="e.g. 98765 43210 or +91 98765 43210"
                       value={shippingData.phone}
-                      onChange={(e) => setShippingData({ ...shippingData, phone: e.target.value })}
-                      className="form-input"
+                      onChange={handlePhoneChange}
+                      onKeyDown={handlePhoneKeyDown}
+                      onPaste={handlePhonePaste}
+                      className={`form-input ${formErrors.phone ? 'input-error' : ''}`}
                     />
-                    <span className="form-hint">For dispatch tracking &amp; drape fit updates</span>
+                    <span className="form-hint">Numbers only (no letters). For dispatch tracking &amp; drape fit updates</span>
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Email Address (Optional)</label>
+                    <label className="form-label">
+                      <span>Email Address (Optional)</span>
+                      {formErrors.email && <span className="field-error-text">{formErrors.email}</span>}
+                    </label>
                     <input 
                       type="email" 
                       placeholder="priya@example.com"
                       value={shippingData.email}
-                      onChange={(e) => setShippingData({ ...shippingData, email: e.target.value })}
-                      className="form-input"
+                      onChange={handleEmailChange}
+                      className={`form-input ${formErrors.email ? 'input-error' : ''}`}
                     />
+                    <span className="form-hint">For order confirmation &amp; courier tracking emails</span>
                   </div>
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Delivery Street Address *</label>
+                  <label className="form-label">
+                    <span>Delivery Street Address *</span>
+                    {formErrors.address && <span className="field-error-text">{formErrors.address}</span>}
+                  </label>
                   <textarea 
                     rows="2"
-                    required 
                     placeholder="Flat/House number, Apartment name, Street, Landmark..."
                     value={shippingData.address}
-                    onChange={(e) => setShippingData({ ...shippingData, address: e.target.value })}
-                    className="form-textarea"
+                    onChange={(e) => {
+                      setShippingData({ ...shippingData, address: e.target.value });
+                      if (formErrors.address && e.target.value.trim()) {
+                        setFormErrors(prev => ({ ...prev, address: null }));
+                      }
+                    }}
+                    className={`form-textarea ${formErrors.address ? 'input-error' : ''}`}
                   />
                 </div>
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">City *</label>
+                    <label className="form-label">
+                      <span>City *</span>
+                      {formErrors.city && <span className="field-error-text">{formErrors.city}</span>}
+                    </label>
                     <input 
                       type="text" 
-                      required 
                       placeholder="Mumbai / Delhi / Bengaluru"
                       value={shippingData.city}
-                      onChange={(e) => setShippingData({ ...shippingData, city: e.target.value })}
-                      className="form-input"
+                      onChange={(e) => {
+                        setShippingData({ ...shippingData, city: e.target.value });
+                        if (formErrors.city && e.target.value.trim()) {
+                          setFormErrors(prev => ({ ...prev, city: null }));
+                        }
+                      }}
+                      className={`form-input ${formErrors.city ? 'input-error' : ''}`}
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Pincode *</label>
+                    <label className="form-label">
+                      <span>Pincode *</span>
+                      {formErrors.pincode && <span className="field-error-text">{formErrors.pincode}</span>}
+                    </label>
                     <input 
                       type="text" 
-                      required 
+                      inputMode="numeric"
+                      maxLength={6}
                       placeholder="e.g. 400050"
                       value={shippingData.pincode}
-                      onChange={(e) => setShippingData({ ...shippingData, pincode: e.target.value })}
-                      className="form-input"
+                      onChange={handlePincodeChange}
+                      onKeyDown={(e) => {
+                        if (e.key.length === 1 && /\D/.test(e.key) && !e.ctrlKey && !e.metaKey) {
+                          e.preventDefault();
+                        }
+                      }}
+                      className={`form-input ${formErrors.pincode ? 'input-error' : ''}`}
                     />
                   </div>
                 </div>
@@ -904,9 +1066,18 @@ export default function CheckoutModal() {
           margin-bottom: 12px;
         }
         .form-label {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
           font-size: 12px;
           font-weight: 600;
           color: var(--text-primary);
+        }
+        .field-error-text {
+          font-size: 11px;
+          color: #C62828;
+          font-weight: 500;
+          letter-spacing: 0;
         }
         .form-hint {
           font-size: 10px;
@@ -920,10 +1091,16 @@ export default function CheckoutModal() {
           background: var(--bg-primary);
           outline: none;
           font-family: inherit;
+          transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
         }
         .form-input:focus, .form-textarea:focus {
           border-color: var(--accent-terracotta);
           background: #FFFFFF;
+        }
+        .form-input.input-error, .form-textarea.input-error {
+          border-color: #C62828 !important;
+          background: #FFF9F9 !important;
+          box-shadow: 0 0 0 1px rgba(198, 40, 40, 0.25);
         }
 
         /* Summary Preview Column */
