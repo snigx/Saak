@@ -254,3 +254,23 @@ on conflict (id) do update set
   model_photos = excluded.model_photos,
   flatlay_photos = excluded.flatlay_photos,
   gallery = excluded.gallery;
+
+-- =============================================================================
+-- 5. ORDER DISPATCH & TRACKING PIPELINE MIGRATIONS
+-- Run these statements in Supabase SQL editor to ensure all dispatch columns exist
+-- =============================================================================
+alter table public.orders add column if not exists payment_method text default 'Dynamic UPI QR';
+alter table public.orders add column if not exists fulfillment_status text default 'processing';
+alter table public.orders add column if not exists tracking_number text;
+alter table public.orders add column if not exists dispatch_details jsonb;
+alter table public.orders add column if not exists verified_at timestamp with time zone;
+alter table public.orders add column if not exists verified_by text;
+alter table public.orders add column if not exists failure_reason text;
+alter table public.orders add column if not exists admin_notes text;
+
+-- Policy: Allow updates on orders (for admin verification and dispatch updates)
+create policy "Allow public update on orders"
+  on public.orders for update
+  using (true)
+  with check (true);
+

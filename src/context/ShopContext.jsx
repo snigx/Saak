@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { initialProducts } from '../data/initialProducts';
 import { fetchProductsFromDb, saveProductToDb, deleteProductFromDb } from '../services/productsService';
-import { fetchOrdersFromDb, updateOrderStatusInDb, deleteOrderFromDb, resetOrdersToDefault } from '../services/ordersService';
+import { fetchOrdersFromDb, updateOrderStatusInDb, dispatchOrderInDb, deleteOrderFromDb, resetOrdersToDefault } from '../services/ordersService';
 
 const ShopContext = createContext();
 
@@ -305,6 +305,14 @@ export function ShopProvider({ children }) {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updates } : o));
   };
 
+  const dispatchOrder = async (orderId, dispatchDetails, sendEmail = true) => {
+    const updated = await dispatchOrderInDb(orderId, dispatchDetails, sendEmail);
+    if (updated) {
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updated } : o));
+    }
+    return updated;
+  };
+
   const deleteOrder = async (orderId) => {
     await deleteOrderFromDb(orderId);
     setOrders(prev => prev.filter(o => o.id !== orderId));
@@ -337,6 +345,7 @@ export function ShopProvider({ children }) {
       openOrdersAdmin,
       refreshOrders,
       updateOrderStatus,
+      dispatchOrder,
       deleteOrder,
       resetOrders,
       cart,

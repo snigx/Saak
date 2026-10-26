@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabaseClient';
+import { sendOrderConfirmationEmail, sendDispatchNotificationEmail } from './emailService';
 
 const TABLE_NAME = 'orders';
 
@@ -270,8 +271,9 @@ export async function saveOrderToDb(orderData) {
     payment_screenshot_url: orderData.paymentScreenshotUrl || null,
     payment_status: orderData.paymentStatus || 'pending_verification',
     failure_reason: orderData.failureReason || null,
-    fulfillment_status: orderData.fulfillmentStatus || 'unfulfilled',
+    fulfillment_status: orderData.fulfillmentStatus || 'processing', // "processing" = in process
     tracking_number: orderData.trackingNumber || null,
+    dispatch_details: orderData.dispatchDetails || null,
     admin_notes: orderData.adminNotes || null,
     verified_at: orderData.verifiedAt || null,
     verified_by: orderData.verifiedBy || null,
@@ -280,6 +282,7 @@ export async function saveOrderToDb(orderData) {
 
   if (isSupabaseConfigured && supabase) {
     try {
+      // Attempt full insert
       const { data, error } = await supabase
         .from(TABLE_NAME)
         .insert(payload)
@@ -287,9 +290,42 @@ export async function saveOrderToDb(orderData) {
         .single();
 
       if (!error && data) {
-        // Also sync local
-        syncLocalOrder(data);
-        return data;
+        syncLocalOrder({ ...payload, ...data });
+        triggerOrderConfirmation(payload);
+        return { ...payload, ...data };
+      }
+
+      // If schema cache lacks newer columns (code PGRST204), fallback to core columns
+      if (error && (error.code === 'PGRST204' || error.message?.includes('column'))) {
+        const corePayload = {
+          id: payload.id,
+          customer_name: payload.customer_name,
+          customer_phone: payload.customer_phone,
+          customer_email: payload.customer_email,
+          shipping_address: payload.shipping_address,
+          city: payload.city,
+          state: payload.state,
+          pincode: payload.pincode,
+          styling_notes: payload.styling_notes,
+          items: payload.items,
+          total_amount: payload.total_amount,
+          utr_number: payload.utr_number,
+          payment_screenshot_url: payload.payment_screenshot_url,
+          payment_status: payload.payment_status,
+          created_at: payload.created_at
+        };
+
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from(TABLE_NAME)
+          .insert(corePayload)
+          .select()
+          .single();
+
+        if (!fallbackError && fallbackData) {
+          syncLocalOrder(payload);
+          triggerOrderConfirmation(payload);
+          return payload;
+        }
       }
     } catch (err) {
       console.error('Failed to insert order into Supabase:', err);
@@ -298,7 +334,17 @@ export async function saveOrderToDb(orderData) {
 
   // Local storage save
   syncLocalOrder(payload);
+  triggerOrderConfirmation(payload);
   return payload;
+}
+
+// Background helper to dispatch confirmation email without blocking checkout UI
+function triggerOrderConfirmation(orderPayload) {
+  if (orderPayload.customer_email) {
+    setTimeout(() => {
+      sendOrderConfirmationEmail(orderPayload).catch(e => console.warn('Email trigger error:', e));
+    }, 100);
+  }
 }
 
 function syncLocalOrder(newOrder) {
@@ -308,6 +354,40 @@ function syncLocalOrder(newOrder) {
     filtered.unshift(newOrder);
     localStorage.setItem('saak_orders_v2', JSON.stringify(filtered));
   } catch (e) {}
+}
+
+/**
+ * Dispatch an order and notify patron with tracking details
+ * @param {string} orderId
+ * @param {Object} dispatchDetails - { courier, trackingNumber, trackingUrl, estimatedDelivery, notes }
+ * @param {boolean} sendEmail
+ */
+export async function dispatchOrderInDb(orderId, dispatchDetails, sendEmail = true) {
+  const courier = dispatchDetails.courier || 'Blue Dart Express';
+  const trackingNumber = dispatchDetails.trackingNumber || 'Pending';
+  const trackingStr = `${courier} #${trackingNumber}`;
+
+  const updates = {
+    fulfillment_status: 'dispatched',
+    tracking_number: trackingStr,
+    dispatch_details: {
+      ...dispatchDetails,
+      dispatched_at: new Date().toISOString()
+    },
+    admin_notes: `Dispatched via ${trackingStr} on ${new Date().toLocaleDateString('en-IN')}. ${dispatchDetails.notes || ''}`.trim()
+  };
+
+  const updatedOrder = await updateOrderStatusInDb(orderId, updates);
+
+  if (sendEmail && updatedOrder && updatedOrder.customer_email) {
+    try {
+      await sendDispatchNotificationEmail(updatedOrder, dispatchDetails);
+    } catch (err) {
+      console.warn('Dispatch email notification failed:', err);
+    }
+  }
+
+  return updatedOrder;
 }
 
 /**
@@ -328,6 +408,17 @@ export async function updateOrderStatusInDb(orderId, updates) {
       if (!error && data) {
         updateLocalOrder(orderId, data);
         return data;
+      }
+
+      // If schema cache lacks columns, update local and try known subset
+      if (error && (error.code === 'PGRST204' || error.message?.includes('column'))) {
+        const knownUpdates = {};
+        ['payment_status', 'payment_screenshot_url', 'utr_number', 'styling_notes'].forEach(k => {
+          if (updates[k] !== undefined) knownUpdates[k] = updates[k];
+        });
+        if (Object.keys(knownUpdates).length > 0) {
+          await supabase.from(TABLE_NAME).update(knownUpdates).eq('id', orderId);
+        }
       }
     } catch (err) {
       console.warn('Supabase update order error:', err);

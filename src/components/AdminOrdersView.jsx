@@ -5,14 +5,16 @@ import {
   MessageCircle, ExternalLink, Receipt, Truck, Download, 
   ShieldCheck, AlertCircle, Clock, PlusCircle, RefreshCw,
   Trash2, Sparkles, ChevronRight, CheckCheck, Printer,
-  FileText, Banknote, PhoneCall
+  FileText, Banknote, PhoneCall, Mail, Send
 } from 'lucide-react';
 import InstagramIcon from './InstagramIcon';
+import { getOutboxEmails } from '../services/emailService';
 
 export default function AdminOrdersView() {
   const { 
     orders = [], 
     updateOrderStatus, 
+    dispatchOrder,
     deleteOrder, 
     resetOrders, 
     refreshOrders, 
@@ -35,9 +37,22 @@ export default function AdminOrdersView() {
   const [failModalOrder, setFailModalOrder] = useState(null);
   const [failReasonInput, setFailReasonInput] = useState('Invalid 12-digit UTR - Payment not credited to bank ledger');
   const [customFailReason, setCustomFailReason] = useState('');
+  // Comprehensive Dispatch & Tracking Modal State
   const [shipModalOrder, setShipModalOrder] = useState(null);
   const [courierPartner, setCourierPartner] = useState('BlueDart Express');
   const [trackingNumberInput, setTrackingNumberInput] = useState('');
+  const [trackingUrlInput, setTrackingUrlInput] = useState('');
+  const [estimatedDeliveryInput, setEstimatedDeliveryInput] = useState('');
+  const [dispatchNotesInput, setDispatchNotesInput] = useState('Fall & pico inspected and hand-stitched. Packaged in signature keepsake box.');
+  const [sendDispatchEmail, setSendDispatchEmail] = useState(true);
+  const [isSubmittingDispatch, setIsSubmittingDispatch] = useState(false);
+  const [dispatchToast, setDispatchToast] = useState(null);
+
+  // Email Outbox & Preview state
+  const [showOutboxModal, setShowOutboxModal] = useState(false);
+  const [previewEmail, setPreviewEmail] = useState(null);
+  const [outboxEmails, setOutboxEmails] = useState(() => getOutboxEmails());
+
   const [showSimulateModal, setShowSimulateModal] = useState(false);
   const [simData, setSimData] = useState({
     customerName: 'Kareena Kapoor',
@@ -54,6 +69,7 @@ export default function AdminOrdersView() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await refreshOrders();
+    setOutboxEmails(getOutboxEmails());
     setTimeout(() => setIsRefreshing(false), 500);
   };
 
@@ -89,16 +105,91 @@ export default function AdminOrdersView() {
     setCustomFailReason('');
   };
 
-  const handleConfirmShipped = () => {
-    if (!shipModalOrder) return;
-    const trackingStr = `${courierPartner} #${trackingNumberInput || 'BD-' + Math.floor(100000 + Math.random() * 900000)}`;
-    updateOrderStatus(shipModalOrder.id, {
-      fulfillment_status: 'shipped',
-      tracking_number: trackingStr,
-      admin_notes: `Dispatched via ${trackingStr} on ${new Date().toLocaleDateString('en-IN')}`
+  // Dispatch helpers
+  const handleOpenShipModal = (order) => {
+    setShipModalOrder(order);
+    const existing = order.dispatch_details || {};
+    const defaultCourier = existing.courier || 'BlueDart Express';
+    const defaultAwb = existing.trackingNumber || (order.tracking_number ? order.tracking_number.split('#')[1]?.trim() : `BD-${Math.floor(100000 + Math.random() * 900000)}`);
+    setCourierPartner(defaultCourier);
+    setTrackingNumberInput(defaultAwb);
+    setTrackingUrlInput(existing.trackingUrl || `https://www.bluedart.com/tracking?trackNumber=${defaultAwb}`);
+    
+    const inThreeDays = new Date(Date.now() + 3 * 86400000).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
     });
-    setShipModalOrder(null);
-    setTrackingNumberInput('');
+    setEstimatedDeliveryInput(existing.estimatedDelivery || inThreeDays);
+    setDispatchNotesInput(existing.notes || 'Inspected by Aprajita. Handcrafted fall & pico finished. Packaged in luxury gold box.');
+    setSendDispatchEmail(Boolean(order.customer_email));
+  };
+
+  const handleCourierChange = (newCourier) => {
+    setCourierPartner(newCourier);
+    const awb = trackingNumberInput || '12345678';
+    if (newCourier.includes('BlueDart')) {
+      setTrackingUrlInput(`https://www.bluedart.com/tracking?trackNumber=${awb}`);
+    } else if (newCourier.includes('Delhivery')) {
+      setTrackingUrlInput(`https://www.delhivery.com/track/package/${awb}`);
+    } else if (newCourier.includes('DTDC')) {
+      setTrackingUrlInput(`https://www.dtdc.in/tracking.asp?strCNNo=${awb}`);
+    } else if (newCourier.includes('Speed Post') || newCourier.includes('India Post')) {
+      setTrackingUrlInput(`https://www.indiapost.gov.in/_layouts/15/dpt.cept.tracking/trackconsignment.aspx`);
+    } else {
+      setTrackingUrlInput(`https://www.google.com/search?q=${encodeURIComponent(newCourier + ' tracking ' + awb)}`);
+    }
+  };
+
+  const handleGenerateAwb = () => {
+    let prefix = 'BD';
+    if (courierPartner.includes('Delhivery')) prefix = 'DEL';
+    else if (courierPartner.includes('DTDC')) prefix = 'DTDC';
+    else if (courierPartner.includes('India Post')) prefix = 'SP';
+    const newAwb = `${prefix}-${Math.floor(10000000 + Math.random() * 90000000)}`;
+    setTrackingNumberInput(newAwb);
+    handleCourierChange(courierPartner);
+  };
+
+  const setQuickDays = (days) => {
+    const d = new Date(Date.now() + days * 86400000).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+    setEstimatedDeliveryInput(d);
+  };
+
+  const handleConfirmShipped = async () => {
+    if (!shipModalOrder) return;
+    setIsSubmittingDispatch(true);
+
+    const awb = trackingNumberInput || (`BD-${Math.floor(100000 + Math.random() * 900000)}`);
+    const dispatchDetails = {
+      courier: courierPartner,
+      trackingNumber: awb,
+      trackingUrl: trackingUrlInput || `https://www.bluedart.com/tracking?trackNumber=${awb}`,
+      estimatedDelivery: estimatedDeliveryInput || '3-5 Business Days',
+      notes: dispatchNotesInput,
+      dispatchedAt: new Date().toISOString()
+    };
+
+    try {
+      await dispatchOrder(shipModalOrder.id, dispatchDetails, sendDispatchEmail);
+      setOutboxEmails(getOutboxEmails());
+      setDispatchToast({
+        title: 'Order Dispatched Successfully!',
+        msg: sendDispatchEmail && shipModalOrder.customer_email 
+          ? `Dispatched via ${courierPartner} (AWB: ${awb}). Tracking notification email delivered to ${shipModalOrder.customer_email}!`
+          : `Dispatched via ${courierPartner} (AWB: ${awb}). Live tracking updated in patron UI.`
+      });
+      setTimeout(() => setDispatchToast(null), 6000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmittingDispatch(false);
+      setShipModalOrder(null);
+    }
   };
 
   const handleSimulateOrder = () => {
@@ -230,6 +321,25 @@ export default function AdminOrdersView() {
 
   return (
     <div className="orders-admin-container">
+      {/* Toast Alert for Dispatches */}
+      {dispatchToast && (
+        <div className="dispatch-toast">
+          <div className="dispatch-toast-icon">
+            <Check size={18} />
+          </div>
+          <div className="dispatch-toast-content">
+            <h4>{dispatchToast.title}</h4>
+            <p>{dispatchToast.msg}</p>
+          </div>
+          <button 
+            className="dispatch-toast-close"
+            onClick={() => setDispatchToast(null)}
+          >
+            <X size={15} />
+          </button>
+        </div>
+      )}
+
       {/* 1. ATELIER KPI DASHBOARD SUMMARY */}
       <div className="orders-kpi-grid">
         <div className="kpi-card total">
@@ -330,6 +440,18 @@ export default function AdminOrdersView() {
           >
             <RefreshCw size={13} className={isRefreshing ? 'spin' : ''} />
             <span>Refresh</span>
+          </button>
+
+          <button 
+            className="btn btn-outline toolbar-btn outbox-btn"
+            onClick={() => {
+              setOutboxEmails(getOutboxEmails());
+              setShowOutboxModal(true);
+            }}
+            title="Inspect transactional emails sent to patrons"
+          >
+            <Mail size={13} />
+            <span>Email Outbox ({outboxEmails.length})</span>
           </button>
 
           <button 
@@ -624,10 +746,21 @@ export default function AdminOrdersView() {
                         </div>
                       )}
 
-                      {order.tracking_number && (
+                      {(order.tracking_number || order.dispatch_details) && (
                         <div className="audit-tracking-banner">
-                          <Truck size={13} className="text-blue" />
-                          <span>Dispatch: <strong>{order.tracking_number}</strong></span>
+                          <Truck size={14} className="text-blue" />
+                          <div className="tracking-banner-info">
+                            <div className="tracking-main-line">
+                              <span><strong>{order.dispatch_details?.courier || (order.tracking_number ? order.tracking_number.split('#')[0].trim() : 'Courier')}</strong></span>
+                              <span className="meta-dot">•</span>
+                              <span className="tracking-awb-tag">AWB: {order.dispatch_details?.trackingNumber || (order.tracking_number ? order.tracking_number.split('#')[1]?.trim() : 'N/A')}</span>
+                            </div>
+                            {order.dispatch_details?.estimatedDelivery && (
+                              <div className="tracking-eta-line">
+                                <span>ETA: {order.dispatch_details.estimatedDelivery}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -682,17 +815,23 @@ export default function AdminOrdersView() {
                     )}
 
                     {/* Dispatch button */}
-                    {(isSucceeded || order.payment_status === 'cod_confirmed') && !isShipped && (
+                    {!isShipped ? (
                       <button 
                         className="btn btn-outline ship-btn"
-                        onClick={() => {
-                          setShipModalOrder(order);
-                          setTrackingNumberInput('');
-                        }}
-                        title="Add courier tracking number"
+                        onClick={() => handleOpenShipModal(order)}
+                        title="Add courier tracking and dispatch details"
                       >
                         <Truck size={14} />
-                        <span>Mark Shipped</span>
+                        <span>Dispatch / Add Tracking</span>
+                      </button>
+                    ) : (
+                      <button 
+                        className="btn btn-outline ship-btn-active"
+                        onClick={() => handleOpenShipModal(order)}
+                        title="Update courier tracking details or resend dispatch email"
+                      >
+                        <Truck size={14} />
+                        <span>Update Tracking</span>
                       </button>
                     )}
                   </div>
@@ -860,60 +999,194 @@ export default function AdminOrdersView() {
         </div>
       )}
 
-      {/* MODAL 3: MARK AS SHIPPED MODAL */}
+      {/* MODAL 3: COMPREHENSIVE DISPATCH & TRACKING CONSOLE */}
       {shipModalOrder && (
-        <div className="lightbox-overlay" onClick={() => setShipModalOrder(null)}>
-          <div className="lightbox-modal mini-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="lightbox-overlay" onClick={() => !isSubmittingDispatch && setShipModalOrder(null)}>
+          <div className="lightbox-modal dispatch-modal" onClick={(e) => e.stopPropagation()}>
             <div className="lightbox-header">
               <div className="ship-modal-title">
-                <Truck size={18} className="text-blue" />
-                <h4>Dispatch Order #{shipModalOrder.id}</h4>
+                <Truck size={20} className="text-terracotta" />
+                <div>
+                  <h4>Dispatch &amp; Assign Courier Tracking</h4>
+                  <span className="modal-subtitle">Order #{shipModalOrder.id} • {shipModalOrder.customer_name}</span>
+                </div>
               </div>
-              <button className="lightbox-close-btn" onClick={() => setShipModalOrder(null)}>
+              <button 
+                className="lightbox-close-btn" 
+                onClick={() => !isSubmittingDispatch && setShipModalOrder(null)}
+                disabled={isSubmittingDispatch}
+              >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="lightbox-body-form">
-              <div className="form-group">
-                <label className="form-label">Courier Partner:</label>
-                <select 
-                  value={courierPartner} 
-                  onChange={(e) => setCourierPartner(e.target.value)}
-                  className="form-select"
-                >
-                  <option value="BlueDart Express">BlueDart Express</option>
-                  <option value="DTDC Premium">DTDC Premium</option>
-                  <option value="Delhivery Surface">Delhivery Surface</option>
-                  <option value="DHL Express International">DHL Express International</option>
-                  <option value="India Post Speed Post">India Post Speed Post</option>
-                </select>
+            <div className="lightbox-body-form dispatch-form">
+              {/* Recipient summary strip */}
+              <div className="dispatch-destination-card">
+                <div className="dest-left">
+                  <div className="dest-name">{shipModalOrder.customer_name}</div>
+                  <div className="dest-address">
+                    📍 {shipModalOrder.shipping_address}, {shipModalOrder.city}, {shipModalOrder.state} - {shipModalOrder.pincode}
+                  </div>
+                  <div className="dest-contact">
+                    <span>📞 {shipModalOrder.customer_phone}</span>
+                    {shipModalOrder.customer_email && (
+                      <span className="dest-email">✉️ {shipModalOrder.customer_email}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="dest-right">
+                  <div className="order-items-count">
+                    {shipModalOrder.items?.length || 1} item(s) • ₹{Number(shipModalOrder.total_amount).toLocaleString('en-IN')}
+                  </div>
+                  <div className="order-status-tag">
+                    Current: {shipModalOrder.fulfillment_status === 'dispatched' ? 'Already Dispatched' : 'In Process (Tailoring)'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Form grid */}
+              <div className="form-row-2">
+                <div className="form-group">
+                  <label className="form-label">
+                    <span>Courier Partner:</span>
+                  </label>
+                  <select 
+                    value={courierPartner} 
+                    onChange={(e) => handleCourierChange(e.target.value)}
+                    className="form-select"
+                  >
+                    <option value="BlueDart Express">BlueDart Express</option>
+                    <option value="Delhivery Surface">Delhivery Surface</option>
+                    <option value="DTDC Premium">DTDC Premium</option>
+                    <option value="India Post Speed Post">India Post Speed Post</option>
+                    <option value="Shadowfax Express">Shadowfax Express</option>
+                    <option value="DHL Express International">DHL Express International</option>
+                    <option value="Bespoke Studio Delivery">Bespoke Studio Delivery</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <div className="label-with-action">
+                    <label className="form-label">AWB / Tracking Number:</label>
+                    <button 
+                      type="button" 
+                      onClick={handleGenerateAwb} 
+                      className="generate-awb-btn"
+                      title="Generate a randomized test AWB"
+                    >
+                      🎲 Generate AWB
+                    </button>
+                  </div>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. BD-89214710" 
+                    value={trackingNumberInput}
+                    onChange={(e) => {
+                      setTrackingNumberInput(e.target.value);
+                      handleCourierChange(courierPartner);
+                    }}
+                    className="form-input"
+                  />
+                </div>
               </div>
 
               <div className="form-group">
-                <label className="form-label">AWB / Tracking Number:</label>
+                <label className="form-label">Live Public Tracking URL:</label>
+                <div className="input-with-icon">
+                  <ExternalLink size={14} className="field-icon" />
+                  <input 
+                    type="url" 
+                    placeholder="https://www.bluedart.com/tracking?trackNumber=..." 
+                    value={trackingUrlInput}
+                    onChange={(e) => setTrackingUrlInput(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+                <span className="field-hint">The patron can click directly into this link from their profile to track package transit.</span>
+              </div>
+
+              <div className="form-group">
+                <div className="label-with-action">
+                  <label className="form-label">Estimated Delivery Timeline:</label>
+                  <div className="quick-presets">
+                    <button type="button" onClick={() => setQuickDays(2)} className="preset-pill">+2 Days (Express)</button>
+                    <button type="button" onClick={() => setQuickDays(4)} className="preset-pill">+4 Days (Standard)</button>
+                    <button type="button" onClick={() => setQuickDays(7)} className="preset-pill">+7 Days</button>
+                  </div>
+                </div>
                 <input 
                   type="text" 
-                  placeholder="e.g. BD-89214710" 
-                  value={trackingNumberInput}
-                  onChange={(e) => setTrackingNumberInput(e.target.value)}
+                  placeholder="e.g. 29 Oct 2026 or 3-5 Business Days" 
+                  value={estimatedDeliveryInput}
+                  onChange={(e) => setEstimatedDeliveryInput(e.target.value)}
                   className="form-input"
                 />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Atelier Inspection &amp; Packaging Notes:</label>
+                <textarea 
+                  rows={2}
+                  placeholder="e.g. Saree inspected by Aprajita. Fall & pico hand-stitched. Packaged in luxury gold box."
+                  value={dispatchNotesInput}
+                  onChange={(e) => setDispatchNotesInput(e.target.value)}
+                  className="form-textarea"
+                />
+              </div>
+
+              {/* Email Notification Option */}
+              <div className="dispatch-email-card">
+                <label className="email-toggle-label">
+                  <input 
+                    type="checkbox" 
+                    checked={sendDispatchEmail}
+                    onChange={(e) => setSendDispatchEmail(e.target.checked)}
+                    disabled={!shipModalOrder.customer_email}
+                  />
+                  <div>
+                    <div className="email-toggle-title">
+                      <Mail size={14} className="text-terracotta" />
+                      <span>Send Automated Dispatch &amp; Tracking Email to Patron</span>
+                    </div>
+                    <div className="email-toggle-desc">
+                      {shipModalOrder.customer_email ? (
+                        <>Delivers luxury HTML dispatch notification with AWB tracking link to <strong>{shipModalOrder.customer_email}</strong>.</>
+                      ) : (
+                        <span className="text-muted">No email registered on this order (notification will be recorded in Atelier Outbox).</span>
+                      )}
+                    </div>
+                  </div>
+                </label>
               </div>
             </div>
 
             <div className="lightbox-footer">
               <button 
+                type="button"
                 className="btn btn-outline"
                 onClick={() => setShipModalOrder(null)}
+                disabled={isSubmittingDispatch}
               >
                 Cancel
               </button>
               <button 
-                className="btn btn-primary"
+                type="button"
+                className="btn btn-primary dispatch-submit-btn"
                 onClick={handleConfirmShipped}
+                disabled={isSubmittingDispatch}
               >
-                Confirm Dispatch
+                {isSubmittingDispatch ? (
+                  <>
+                    <RefreshCw size={14} className="spin" />
+                    <span>Dispatching &amp; Sending Email...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send size={14} />
+                    <span>Confirm Dispatch &amp; Notify Patron</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -1105,6 +1378,123 @@ export default function AdminOrdersView() {
                 onClick={handleSimulateOrder}
               >
                 Create Test Transaction
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 6: ATELIER EMAIL OUTBOX & PREVIEW MODAL */}
+      {showOutboxModal && (
+        <div className="lightbox-overlay" onClick={() => setShowOutboxModal(false)}>
+          <div className="lightbox-modal outbox-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="lightbox-header">
+              <div className="ship-modal-title">
+                <Mail size={18} className="text-terracotta" />
+                <div>
+                  <h4>Atelier Email Notification Outbox</h4>
+                  <span className="modal-subtitle">Sent Order Confirmations &amp; Dispatch Tracking Logs ({outboxEmails.length})</span>
+                </div>
+              </div>
+              <button className="lightbox-close-btn" onClick={() => setShowOutboxModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="lightbox-body-outbox">
+              {outboxEmails.length === 0 ? (
+                <div className="empty-outbox-state">
+                  <Mail size={32} className="text-muted" />
+                  <h4>No Emails in Outbox Yet</h4>
+                  <p>When customers place orders or you dispatch shipments, transactional emails will be logged and can be previewed here.</p>
+                </div>
+              ) : (
+                <div className="outbox-list">
+                  {outboxEmails.map((item, idx) => (
+                    <div key={idx} className="outbox-item-card">
+                      <div className="outbox-item-top">
+                        <span className={`outbox-badge type-${item.type}`}>
+                          {item.type === 'dispatch_notification' ? '🚚 Dispatch Tracking' : '✨ Order Confirmation'}
+                        </span>
+                        <span className="outbox-time">
+                          {new Date(item.sentAt).toLocaleString('en-IN', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                      <div className="outbox-subject">
+                        <strong>{item.subject}</strong>
+                      </div>
+                      <div className="outbox-details-row">
+                        <span>Recipient: <code>{item.to}</code></span>
+                        <span>Order: <strong>#{item.orderId}</strong></span>
+                        <span className="outbox-method-tag">Method: {item.deliveryMethod}</span>
+                      </div>
+                      <div className="outbox-item-actions">
+                        <button 
+                          className="btn btn-sm btn-outline preview-email-btn"
+                          onClick={() => setPreviewEmail(item)}
+                        >
+                          <Eye size={12} />
+                          <span>Preview Rendered Email</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="lightbox-footer">
+              <button 
+                className="btn btn-outline"
+                onClick={() => {
+                  if (window.confirm('Clear all sent email records from outbox?')) {
+                    localStorage.removeItem('saak_outbox_emails');
+                    setOutboxEmails([]);
+                  }
+                }}
+              >
+                <Trash2 size={13} />
+                <span>Clear Outbox</span>
+              </button>
+              <button 
+                className="btn btn-primary"
+                onClick={() => setShowOutboxModal(false)}
+              >
+                Close Outbox
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 7: FULL EMAIL HTML PREVIEW LIGHTBOX */}
+      {previewEmail && (
+        <div className="lightbox-overlay" onClick={() => setPreviewEmail(null)}>
+          <div className="lightbox-modal email-preview-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="lightbox-header">
+              <div className="preview-meta">
+                <h4>Preview: {previewEmail.subject}</h4>
+                <span className="modal-subtitle">To: {previewEmail.to} • Sent: {new Date(previewEmail.sentAt).toLocaleString('en-IN')}</span>
+              </div>
+              <button className="lightbox-close-btn" onClick={() => setPreviewEmail(null)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="email-preview-frame-container">
+              <iframe 
+                title="Email Preview"
+                srcDoc={previewEmail.html}
+                className="email-preview-iframe"
+              />
+            </div>
+            <div className="lightbox-footer">
+              <button className="btn btn-primary" onClick={() => setPreviewEmail(null)}>
+                Close Preview
               </button>
             </div>
           </div>
@@ -2074,6 +2464,370 @@ export default function AdminOrdersView() {
           border-top: 1px dashed var(--border-light);
           padding-top: 14px;
           font-style: italic;
+        }
+
+        /* DISPATCH TOAST */
+        .dispatch-toast {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          background: #FAF6EF;
+          border: 1px solid #C5A059;
+          border-left: 4px solid #2E7D32;
+          padding: 14px 18px;
+          border-radius: 4px;
+          box-shadow: 0 4px 16px rgba(46, 125, 50, 0.12);
+          animation: slideDownToast 0.3s ease-out;
+        }
+        @keyframes slideDownToast {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .dispatch-toast-icon {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: #E8F5E9;
+          color: #2E7D32;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .dispatch-toast-content {
+          flex: 1;
+        }
+        .dispatch-toast-content h4 {
+          margin: 0 0 2px 0;
+          font-size: 14px;
+          color: #1F1A17;
+          font-weight: 600;
+        }
+        .dispatch-toast-content p {
+          margin: 0;
+          font-size: 12px;
+          color: #5C524B;
+        }
+        .dispatch-toast-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #8A817A;
+          padding: 4px;
+          border-radius: 4px;
+        }
+        .dispatch-toast-close:hover {
+          color: #1F1A17;
+          background: #EFEAE1;
+        }
+
+        /* DISPATCH MODAL & CONSOLE */
+        .dispatch-modal {
+          max-width: 680px;
+          width: 100%;
+        }
+        .modal-subtitle {
+          font-size: 11px;
+          color: var(--text-muted);
+          font-weight: normal;
+        }
+        .dispatch-destination-card {
+          background: #FAF6EF;
+          border: 1px solid var(--border-light);
+          border-radius: 4px;
+          padding: 12px 16px;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 16px;
+          margin-bottom: 8px;
+        }
+        .dest-name {
+          font-weight: 600;
+          font-size: 14px;
+          color: var(--text-dark);
+          margin-bottom: 2px;
+        }
+        .dest-address {
+          font-size: 12px;
+          color: var(--text-muted);
+          line-height: 1.4;
+          margin-bottom: 4px;
+        }
+        .dest-contact {
+          font-size: 11px;
+          color: var(--accent-terracotta);
+          display: flex;
+          gap: 10px;
+        }
+        .dest-right {
+          text-align: right;
+          flex-shrink: 0;
+        }
+        .order-items-count {
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--text-dark);
+        }
+        .order-status-tag {
+          font-size: 11px;
+          color: var(--accent-gold);
+          margin-top: 2px;
+        }
+        .label-with-action {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 6px;
+        }
+        .generate-awb-btn {
+          background: none;
+          border: 1px solid var(--border-gold);
+          color: var(--accent-terracotta);
+          font-size: 11px;
+          padding: 2px 8px;
+          border-radius: 3px;
+          cursor: pointer;
+          transition: var(--transition);
+        }
+        .generate-awb-btn:hover {
+          background: var(--bg-cream-tint);
+        }
+        .quick-presets {
+          display: flex;
+          gap: 4px;
+        }
+        .preset-pill {
+          background: #FAF6EF;
+          border: 1px solid var(--border-light);
+          font-size: 10px;
+          padding: 2px 6px;
+          border-radius: 3px;
+          cursor: pointer;
+          color: var(--text-muted);
+          transition: var(--transition);
+        }
+        .preset-pill:hover {
+          background: var(--accent-terracotta);
+          color: #FFFFFF;
+          border-color: var(--accent-terracotta);
+        }
+        .input-with-icon {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+        .input-with-icon .field-icon {
+          position: absolute;
+          left: 10px;
+          color: var(--text-muted);
+          pointer-events: none;
+        }
+        .input-with-icon .form-input {
+          padding-left: 32px;
+        }
+        .field-hint {
+          font-size: 11px;
+          color: var(--text-muted);
+          margin-top: 4px;
+          display: block;
+        }
+        .dispatch-email-card {
+          background: #FFFDF9;
+          border: 1px solid #E2CA9B;
+          border-radius: 4px;
+          padding: 12px 14px;
+          margin-top: 6px;
+        }
+        .email-toggle-label {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          cursor: pointer;
+        }
+        .email-toggle-label input[type="checkbox"] {
+          margin-top: 3px;
+          accent-color: var(--accent-terracotta);
+          width: 16px;
+          height: 16px;
+          cursor: pointer;
+        }
+        .email-toggle-title {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--text-dark);
+        }
+        .email-toggle-desc {
+          font-size: 11px;
+          color: var(--text-muted);
+          margin-top: 3px;
+          line-height: 1.4;
+        }
+        .dispatch-submit-btn {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        /* AUDIT TRACKING BANNER IN CARD */
+        .audit-tracking-banner {
+          background: #EBF3FC;
+          border: 1px solid #B8D5F8;
+          border-radius: 4px;
+          padding: 8px 10px;
+          display: flex;
+          align-items: flex-start;
+          gap: 8px;
+          font-size: 12px;
+          color: #1E4F8A;
+          margin-top: 6px;
+        }
+        .tracking-banner-info {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .tracking-main-line {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+        .meta-dot {
+          color: #8BA8CC;
+        }
+        .tracking-awb-tag {
+          font-family: monospace;
+          background: #FFFFFF;
+          padding: 1px 5px;
+          border-radius: 2px;
+          font-size: 11px;
+          border: 1px solid #D2E3F8;
+        }
+        .tracking-eta-line {
+          font-size: 11px;
+          color: #386497;
+        }
+        .ship-btn-active {
+          border-color: #2E7D32 !important;
+          color: #2E7D32 !important;
+        }
+        .ship-btn-active:hover {
+          background: #E8F5E9 !important;
+        }
+
+        /* OUTBOX MODAL & PREVIEW */
+        .outbox-modal {
+          max-width: 720px;
+          width: 100%;
+        }
+        .lightbox-body-outbox {
+          max-height: 60vh;
+          overflow-y: auto;
+          padding: 16px 24px;
+        }
+        .empty-outbox-state {
+          text-align: center;
+          padding: 40px 20px;
+        }
+        .empty-outbox-state h4 {
+          margin: 12px 0 6px 0;
+          color: var(--text-dark);
+        }
+        .empty-outbox-state p {
+          margin: 0;
+          font-size: 13px;
+          color: var(--text-muted);
+        }
+        .outbox-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .outbox-item-card {
+          background: #FAF6EF;
+          border: 1px solid var(--border-light);
+          border-radius: 4px;
+          padding: 12px 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          transition: var(--transition);
+        }
+        .outbox-item-card:hover {
+          border-color: var(--accent-terracotta);
+          background: #FFFFFF;
+        }
+        .outbox-item-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .outbox-badge {
+          font-size: 11px;
+          font-weight: 600;
+          padding: 2px 8px;
+          border-radius: 3px;
+        }
+        .outbox-badge.type-dispatch_notification {
+          background: #E8F5E9;
+          color: #2E7D32;
+        }
+        .outbox-badge.type-order_confirmation {
+          background: #FFF3E0;
+          color: #E65100;
+        }
+        .outbox-time {
+          font-size: 11px;
+          color: var(--text-muted);
+        }
+        .outbox-subject {
+          font-size: 13px;
+          color: var(--text-dark);
+        }
+        .outbox-details-row {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          font-size: 11px;
+          color: var(--text-muted);
+          flex-wrap: wrap;
+        }
+        .outbox-method-tag {
+          background: #EDE6D8;
+          padding: 1px 6px;
+          border-radius: 2px;
+          color: var(--text-dark);
+        }
+        .outbox-item-actions {
+          display: flex;
+          justify-content: flex-end;
+          margin-top: 4px;
+        }
+        .preview-email-btn {
+          font-size: 11px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          padding: 4px 10px;
+        }
+        .email-preview-modal {
+          max-width: 780px;
+          width: 100%;
+        }
+        .email-preview-frame-container {
+          padding: 12px 24px;
+          background: #F7F3EC;
+        }
+        .email-preview-iframe {
+          width: 100%;
+          height: 65vh;
+          border: 1px solid #E5DDCF;
+          border-radius: 4px;
+          background: #FAF6EF;
         }
 
         /* RESPONSIVE ADAPTATIONS */

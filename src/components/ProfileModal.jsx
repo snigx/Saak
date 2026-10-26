@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useShop } from '../context/ShopContext';
 import { 
   X, User, Mail, Lock, LogOut, Check, AlertCircle, 
   Sparkles, Shield, Package, KeyRound, Loader2, ArrowRight,
-  Clock, CheckCircle2 
+  Clock, CheckCircle2, Truck, ExternalLink, Copy
 } from 'lucide-react';
 
 export default function ProfileModal() {
@@ -15,6 +16,8 @@ export default function ProfileModal() {
     updateProfile, 
     logout 
   } = useAuth();
+
+  const { orders = [], formatPrice } = useShop();
 
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'security' | 'orders'
   
@@ -30,20 +33,27 @@ export default function ProfileModal() {
   const [nameInput, setNameInput] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
 
-  // Recent customer orders from local storage
-  const [recentOrders, setRecentOrders] = useState([]);
+  // Copied feedback for tracking AWB
+  const [copiedAwb, setCopiedAwb] = useState(null);
 
   useEffect(() => {
     if (user) {
       setNameInput(user.fullName || '');
-      try {
-        const stored = JSON.parse(localStorage.getItem('saak_orders') || '[]');
-        setRecentOrders(stored);
-      } catch (e) {
-        setRecentOrders([]);
-      }
     }
   }, [user, isProfileOpen]);
+
+  const handleCopyAwb = (awb, orderId) => {
+    navigator.clipboard.writeText(awb);
+    setCopiedAwb(orderId);
+    setTimeout(() => setCopiedAwb(null), 2000);
+  };
+
+  // Find user's orders by matching email or name, or fallback to all orders
+  const patronOrders = orders.filter(o => 
+    (o.customer_email && user?.email && o.customer_email.toLowerCase() === user.email.toLowerCase()) ||
+    (user?.fullName && o.customer_name && o.customer_name.toLowerCase().includes(user.fullName.toLowerCase()))
+  );
+  const displayedOrders = patronOrders.length > 0 ? patronOrders : orders;
 
   if (!isProfileOpen || !user) return null;
 
@@ -304,48 +314,149 @@ export default function ProfileModal() {
         {/* TAB 3: RECENT ORDERS */}
         {activeTab === 'orders' && (
           <div className="tab-content orders-content">
-            {recentOrders.length === 0 ? (
+            {displayedOrders.length === 0 ? (
               <div className="empty-orders-view">
-                <Package size={32} className="empty-icon" />
+                <Package size={36} className="empty-icon" />
                 <h4>No Atelier Orders Yet</h4>
-                <p>Pieces you order via direct UPI checkout will automatically appear here with their tracking and verification receipts.</p>
+                <p>Pieces you order via direct UPI checkout or Cash on Delivery will automatically appear here with their live handcrafting and courier dispatch status.</p>
               </div>
             ) : (
               <div className="orders-list">
-                {recentOrders.map((ord, idx) => (
-                  <div key={idx} className="order-item-card">
-                    <div className="order-item-header">
-                      <div>
-                        <span className="order-id">{ord.id}</span>
-                        <span className="order-date">
-                          {new Date(ord.created_at || Date.now()).toLocaleDateString('en-IN', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric'
-                          })}
+                {displayedOrders.map((ord, idx) => {
+                  const isDispatched = ord.fulfillment_status === 'dispatched' || Boolean(ord.tracking_number);
+                  const isDelivered = ord.fulfillment_status === 'delivered';
+                  const dispatch = ord.dispatch_details || {};
+                  const courier = dispatch.courier || (ord.tracking_number ? ord.tracking_number.split('#')[0].trim() : 'Blue Dart Express');
+                  const awb = dispatch.trackingNumber || (ord.tracking_number ? ord.tracking_number.split('#')[1]?.trim() : 'Pending');
+                  const trackingUrl = dispatch.trackingUrl || `https://www.bluedart.com/tracking?trackNumber=${awb}`;
+                  const estDelivery = dispatch.estimatedDelivery || '3-5 Business Days';
+
+                  return (
+                    <div key={idx} className="order-item-card">
+                      {/* Order Card Header */}
+                      <div className="order-item-header">
+                        <div>
+                          <span className="order-id">{ord.id}</span>
+                          <span className="order-date">
+                            {new Date(ord.created_at || Date.now()).toLocaleDateString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                        <span className={`order-status-badge ${isDispatched ? 'badge-dispatched' : 'badge-processing'}`}>
+                          {isDispatched ? (
+                            <>
+                              <Truck size={12} />
+                              <span>Dispatched ({courier})</span>
+                            </>
+                          ) : (
+                            <>
+                              <Clock size={12} />
+                              <span>In Process (Tailoring)</span>
+                            </>
+                          )}
                         </span>
                       </div>
-                      <span className="order-status-badge">
-                        <Clock size={12} />
-                        <span>UPI Verified (UTR: {ord.utr_number || 'Pending'})</span>
-                      </span>
-                    </div>
 
-                    <div className="order-products-summary">
-                      {ord.items && ord.items.map((it, iIdx) => (
-                        <div key={iIdx} className="order-line-item">
-                          <span>{it.name} ({it.selectedSize || 'Standard'}) x{it.quantity}</span>
-                          <span>₹{(it.price * it.quantity).toLocaleString('en-IN')}</span>
+                      {/* Visual Stepper */}
+                      <div className="order-stepper">
+                        <div className="step-item step-completed">
+                          <div className="step-dot"><Check size={10} /></div>
+                          <span className="step-label">Confirmed</span>
                         </div>
-                      ))}
-                    </div>
+                        <div className="step-line active"></div>
+                        <div className="step-item step-completed">
+                          <div className="step-dot"><Check size={10} /></div>
+                          <span className="step-label">In Process</span>
+                        </div>
+                        <div className={`step-line ${isDispatched ? 'active' : ''}`}></div>
+                        <div className={`step-item ${isDispatched ? 'step-completed' : 'step-pending'}`}>
+                          <div className="step-dot">
+                            {isDispatched ? <Truck size={10} /> : <Clock size={10} />}
+                          </div>
+                          <span className="step-label">Dispatched</span>
+                        </div>
+                        <div className={`step-line ${isDelivered ? 'active' : ''}`}></div>
+                        <div className={`step-item ${isDelivered ? 'step-completed' : 'step-pending'}`}>
+                          <div className="step-dot"><Check size={10} /></div>
+                          <span className="step-label">Delivered</span>
+                        </div>
+                      </div>
 
-                    <div className="order-footer-row">
-                      <span className="order-total-label">Total Amount Paid:</span>
-                      <strong className="order-total-val">₹{Number(ord.total_amount).toLocaleString('en-IN')}</strong>
+                      {/* DYNAMIC DISPATCH / IN-PROCESS CALLOUT (Requested by User) */}
+                      {isDispatched ? (
+                        <div className="patron-dispatch-box">
+                          <div className="dispatch-box-top">
+                            <div className="dispatch-courier-info">
+                              <Truck size={16} className="text-terracotta" />
+                              <div>
+                                <span className="courier-name">{courier}</span>
+                                <span className="delivery-est">Expected Delivery: <strong>{estDelivery}</strong></span>
+                              </div>
+                            </div>
+                            <a 
+                              href={trackingUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="track-external-btn"
+                            >
+                              <span>Track Package</span>
+                              <ExternalLink size={12} />
+                            </a>
+                          </div>
+
+                          <div className="awb-row">
+                            <span className="awb-label">Tracking / AWB:</span>
+                            <span className="awb-code">{awb}</span>
+                            <button 
+                              type="button" 
+                              onClick={() => handleCopyAwb(awb, ord.id)}
+                              className="copy-awb-btn"
+                              title="Copy AWB Number"
+                            >
+                              {copiedAwb === ord.id ? <Check size={12} color="#2E7D32" /> : <Copy size={12} />}
+                              <span>{copiedAwb === ord.id ? 'Copied' : 'Copy'}</span>
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="patron-inprocess-box">
+                          <div className="inprocess-header">
+                            <Clock size={14} className="text-terracotta" />
+                            <strong>Your order is in process, we will share the dispatch details shortly.</strong>
+                          </div>
+                          <p className="inprocess-desc">
+                            Our master tailors are inspecting your drapes and stitching the complimentary fall &amp; pico. As soon as Aprajita assigns the courier partner, your live tracking link will be visible right here and sent to your email.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Items List */}
+                      <div className="order-products-summary">
+                        {ord.items && ord.items.map((it, iIdx) => (
+                          <div key={iIdx} className="order-line-item">
+                            <span>{it.name} ({it.selectedSize || 'Standard'}) x{it.quantity}</span>
+                            <span>₹{((it.price || 0) * (it.quantity || 1)).toLocaleString('en-IN')}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Footer */}
+                      <div className="order-footer-row">
+                        <div className="order-delivery-tag">
+                          <span>Delivering to: {ord.city || 'India'}</span>
+                          {ord.payment_method && <span className="order-method">• {ord.payment_method}</span>}
+                        </div>
+                        <div className="order-total-block">
+                          <span className="order-total-label">Total Amount:</span>
+                          <strong className="order-total-val">₹{Number(ord.total_amount).toLocaleString('en-IN')}</strong>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -676,12 +787,172 @@ export default function ProfileModal() {
           display: inline-flex;
           align-items: center;
           gap: 5px;
-          background: #E8F5E9;
-          color: #2E7D32;
           font-size: 11px;
           font-weight: 600;
-          padding: 3px 8px;
+          padding: 4px 10px;
           border-radius: 2px;
+        }
+        .badge-processing {
+          background: #FFF4E5;
+          color: #B25E00;
+          border: 1px solid #FFE0B2;
+        }
+        .badge-dispatched {
+          background: #E8F5E9;
+          color: #2E7D32;
+          border: 1px solid #C8E6C9;
+        }
+        .order-stepper {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin: 14px 0 16px 0;
+          padding: 0 8px;
+        }
+        .step-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          z-index: 2;
+        }
+        .step-dot {
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 10px;
+          background: #EDE6DC;
+          color: #8C827A;
+          transition: var(--transition);
+        }
+        .step-item.step-completed .step-dot {
+          background: var(--accent-terracotta);
+          color: #FFFFFF;
+        }
+        .step-label {
+          font-size: 10px;
+          color: var(--text-muted);
+          font-weight: 500;
+          letter-spacing: 0.04em;
+        }
+        .step-item.step-completed .step-label {
+          color: var(--text-primary);
+          font-weight: 600;
+        }
+        .step-line {
+          flex: 1;
+          height: 2px;
+          background: #EDE6DC;
+          margin: 0 4px 14px 4px;
+        }
+        .step-line.active {
+          background: var(--accent-terracotta);
+        }
+        .patron-inprocess-box {
+          background: #FFFDF9;
+          border: 1px solid #E2CA9B;
+          border-left: 3px solid var(--accent-terracotta);
+          border-radius: 3px;
+          padding: 12px 14px;
+          margin-bottom: 14px;
+          text-align: left;
+        }
+        .inprocess-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+          color: var(--text-primary);
+          margin-bottom: 4px;
+        }
+        .inprocess-desc {
+          font-size: 11.5px;
+          line-height: 1.45;
+          color: var(--text-secondary);
+          margin: 0;
+        }
+        .patron-dispatch-box {
+          background: #F4FBF4;
+          border: 1px solid #C8E6C9;
+          border-left: 3px solid #2E7D32;
+          border-radius: 3px;
+          padding: 12px 14px;
+          margin-bottom: 14px;
+          text-align: left;
+        }
+        .dispatch-box-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 10px;
+        }
+        .dispatch-courier-info {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .courier-name {
+          font-size: 13px;
+          font-weight: 700;
+          color: #1F1A17;
+          display: block;
+        }
+        .delivery-est {
+          font-size: 11px;
+          color: #5C524B;
+        }
+        .track-external-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          background: #1F1A17;
+          color: #FAF6EF;
+          text-decoration: none;
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 0.05em;
+          padding: 6px 12px;
+          border-radius: 2px;
+          transition: var(--transition);
+        }
+        .track-external-btn:hover {
+          background: var(--accent-terracotta);
+        }
+        .awb-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 11.5px;
+          padding-top: 8px;
+          border-top: 1px dashed rgba(46, 125, 50, 0.2);
+        }
+        .awb-label {
+          color: #5C524B;
+        }
+        .awb-code {
+          font-family: monospace;
+          font-weight: 700;
+          font-size: 12px;
+          color: #1F1A17;
+          background: #FFFFFF;
+          padding: 2px 6px;
+          border-radius: 2px;
+          border: 1px solid #D7ECD8;
+        }
+        .copy-awb-btn {
+          background: none;
+          border: none;
+          display: inline-flex;
+          align-items: center;
+          gap: 3px;
+          font-size: 11px;
+          color: #2E7D32;
+          font-weight: 600;
+          cursor: pointer;
+          padding: 2px 6px;
         }
         .order-products-summary {
           display: flex;
@@ -701,11 +972,24 @@ export default function ProfileModal() {
           align-items: center;
           padding-top: 8px;
           border-top: 1px solid var(--border-light);
-          font-size: 13px;
+          font-size: 12px;
+        }
+        .order-delivery-tag {
+          color: var(--text-muted);
+          font-size: 11px;
+        }
+        .order-total-block {
+          text-align: right;
+        }
+        .order-total-label {
+          font-size: 11px;
+          color: var(--text-muted);
+          margin-right: 6px;
         }
         .order-total-val {
           color: var(--accent-terracotta);
-          font-size: 14px;
+          font-size: 13px;
+          font-weight: 700;
         }
         .profile-footer {
           padding: 16px 32px;

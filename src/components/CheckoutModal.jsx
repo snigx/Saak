@@ -733,6 +733,24 @@ export default function CheckoutModal() {
               )}
             </p>
 
+            {/* In-Process Callout Badge */}
+            <div className="order-in-process-callout">
+              <div className="in-process-badge">
+                <Clock size={13} className="text-gold" />
+                <span>ORDER STATUS: IN PROCESS</span>
+              </div>
+              <h4 className="in-process-title">Your order is in process, we will share the dispatch details shortly.</h4>
+              <p className="in-process-subtitle">
+                Our atelier artisans are hand-inspecting your pieces and tailoring the complimentary fall &amp; pico. As soon as Aprajita assigns your courier partner, you will receive an email with your live tracking AWB.
+              </p>
+              {shippingData.email && (
+                <div className="email-sent-tag">
+                  <Mail size={13} />
+                  <span>Order confirmation email sent to <strong>{shippingData.email}</strong></span>
+                </div>
+              )}
+            </div>
+
             {/* Order Card */}
             <div className="success-order-card">
               <div className="card-top">
@@ -1220,7 +1238,54 @@ export default function CheckoutModal() {
           color: var(--text-secondary);
           max-width: 520px;
           line-height: 1.5;
-          margin-bottom: 24px;
+          margin-bottom: 20px;
+        }
+        .order-in-process-callout {
+          background: #FFFDF9;
+          border: 1px solid #E2CA9B;
+          border-left: 4px solid var(--accent-terracotta);
+          border-radius: 4px;
+          padding: 16px 20px;
+          max-width: 500px;
+          width: 100%;
+          text-align: left;
+          margin-bottom: 20px;
+          box-shadow: 0 4px 16px rgba(163, 72, 53, 0.06);
+        }
+        .in-process-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: var(--accent-terracotta);
+          margin-bottom: 6px;
+        }
+        .in-process-title {
+          font-family: var(--font-serif);
+          font-size: 16px;
+          font-weight: 600;
+          color: var(--text-primary);
+          margin-bottom: 6px;
+          line-height: 1.35;
+        }
+        .in-process-subtitle {
+          font-size: 12px;
+          line-height: 1.5;
+          color: var(--text-secondary);
+          margin-bottom: 10px;
+        }
+        .email-sent-tag {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: #F4ECE1;
+          color: #7A3525;
+          padding: 6px 12px;
+          border-radius: 3px;
+          font-size: 11px;
         }
         .success-order-card {
           background: #FAF6EF;
