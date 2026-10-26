@@ -48,18 +48,10 @@ export default function Footer() {
               </svg>
             </a>
             <a 
-              href="https://wa.me/?text=Hello%20Saak%20Team!" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="social-circle"
-              aria-label="WhatsApp"
-            >
-              <MessageCircle size={16} />
-            </a>
-            <a 
               href="mailto:contact@saakbyaprajita.com" 
               className="social-circle"
               aria-label="Email"
+              title="Email Atelier"
             >
               <Mail size={16} />
             </a>
@@ -102,10 +94,6 @@ export default function Footer() {
             <li><a href="#mix-match-studio">Mix &amp; Match Styling Studio</a></li>
             <li><a href="#catalog-section">Sculpted Corsets &amp; Bustiers</a></li>
             <li><a href="#catalog-section">Curated Duos (Complete Looks)</a></li>
-            <li className="future-teaser">
-              <span className="teaser-pill">Coming Soon</span>
-              <span>The Lightweight Lehenga &amp; Cape Edit</span>
-            </li>
           </ul>
         </div>
 
@@ -117,13 +105,12 @@ export default function Footer() {
           </p>
 
           <a 
-            href="https://wa.me/?text=Hi%20Aprajita,%20I'd%20like%20to%20consult%20about%20customizing%20an%20outfit!" 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className="btn btn-outline-gold footer-whatsapp-btn"
+            href="mailto:contact@saakbyaprajita.com" 
+            className="btn btn-outline-gold footer-email-btn"
+            title="Email Atelier Concierge"
           >
-            <MessageCircle size={15} />
-            <span>WhatsApp Consultation</span>
+            <Mail size={15} />
+            <span>Email Concierge</span>
           </a>
 
           <div className="footer-admin-links">
@@ -303,36 +290,24 @@ export default function Footer() {
           color: var(--accent-gold);
           padding-left: 3px;
         }
-        .future-teaser {
-          margin-top: 6px;
-          font-size: 12px;
-          color: rgba(250, 246, 239, 0.5);
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-        .teaser-pill {
-          align-self: flex-start;
-          font-size: 9px;
-          font-weight: 700;
-          color: var(--accent-gold);
-          border: 1px solid rgba(197, 160, 89, 0.4);
-          padding: 1px 6px;
-          border-radius: 2px;
-        }
         .concierge-desc {
           font-size: 13px;
           color: rgba(250, 246, 239, 0.7);
           line-height: 1.5;
         }
-        .footer-whatsapp-btn {
+        .footer-email-btn {
           margin-top: 6px;
           color: #FAF6EF;
           border-color: var(--accent-gold);
           font-size: 12px;
           padding: 10px 16px;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          text-decoration: none;
+          transition: var(--transition);
         }
-        .footer-whatsapp-btn:hover {
+        .footer-email-btn:hover {
           background: var(--accent-gold);
           color: var(--bg-dark);
         }
