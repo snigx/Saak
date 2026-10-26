@@ -24,8 +24,15 @@ function mapUser(rawUser) {
 export async function getCurrentUser() {
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (!error && user) {
+      // 1. Check active session (which exchanges OAuth PKCE code from URL if returning from Google)
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (!sessionError && session?.user) {
+        return mapUser(session.user);
+      }
+
+      // 2. Fall back to getUser
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (!userError && user) {
         return mapUser(user);
       }
     } catch (err) {
@@ -142,23 +149,53 @@ export async function signInWithEmail(email, password) {
  */
 export async function signInWithGoogle() {
   if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin
-      }
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
 
-    if (error) throw error;
-    return data;
+      if (error) {
+        if (
+          error.message?.includes('provider is not enabled') ||
+          error.message?.includes('Unsupported provider') ||
+          error.message?.includes('validation_failed') ||
+          error.status === 400
+        ) {
+          throw new Error('GOOGLE_PROVIDER_NOT_ENABLED');
+        }
+        throw error;
+      }
+      return data;
+    } catch (err) {
+      if (err.message === 'GOOGLE_PROVIDER_NOT_ENABLED') {
+        throw err;
+      }
+      if (
+        err.message?.includes('provider is not enabled') ||
+        err.message?.includes('Unsupported provider') ||
+        err.status === 400
+      ) {
+        throw new Error('GOOGLE_PROVIDER_NOT_ENABLED');
+      }
+      throw err;
+    }
   }
 
   // Local Fallback Mock
-  // Provide seamless instant mock Google authentication
+  return signInWithDemoPatron();
+}
+
+/**
+ * Instant Patron One-Click Login (useful when Google OAuth is pending cloud setup)
+ */
+export async function signInWithDemoPatron() {
   const googleUser = {
-    id: `google_${Date.now()}`,
-    email: 'atelier.patron@gmail.com',
-    fullName: 'Atelier Muse',
+    id: `patron_${Date.now()}`,
+    email: 'patron.muse@gmail.com',
+    fullName: 'Atelier Patron',
     avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
     provider: 'google',
     createdAt: new Date().toISOString()

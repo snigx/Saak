@@ -13,7 +13,8 @@ export default function AuthModal() {
     setAuthModalView, 
     loginWithEmail, 
     registerWithEmail, 
-    loginWithGoogle 
+    loginWithGoogle,
+    loginWithDemoPatron
   } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -22,16 +23,22 @@ export default function AuthModal() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [googleNotice, setGoogleNotice] = useState(false);
 
   if (!isAuthModalOpen) return null;
 
   const handleGoogleAuth = async () => {
     setErrorMessage('');
+    setGoogleNotice(false);
     setIsSubmitting(true);
     try {
       await loginWithGoogle();
     } catch (err) {
-      setErrorMessage(err.message || 'Google authentication failed. Please try again.');
+      if (err.message === 'GOOGLE_PROVIDER_NOT_ENABLED') {
+        setGoogleNotice(true);
+      } else {
+        setErrorMessage(err.message || 'Google authentication failed. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -128,6 +135,27 @@ export default function AuthModal() {
             {authModalView === 'signin' ? 'Continue with Google' : 'Sign up with Google'}
           </span>
         </button>
+
+        {/* Google OAuth Provider Setup Notice */}
+        {googleNotice && (
+          <div className="google-setup-notice">
+            <div className="setup-notice-header">
+              <AlertCircle size={15} className="text-terracotta" />
+              <span>Google Provider Not Yet Enabled in Supabase</span>
+            </div>
+            <p className="setup-notice-desc">
+              To enable real Google accounts, turn on Google in <strong>Supabase Dashboard → Authentication → Providers → Google</strong> with your Google Cloud Client ID.
+            </p>
+            <button
+              type="button"
+              className="demo-patron-btn"
+              onClick={() => loginWithDemoPatron()}
+            >
+              <Sparkles size={14} className="text-gold" />
+              <span>Instant Patron Sign-In (Test Drive)</span>
+            </button>
+          </div>
+        )}
 
         {/* Divider */}
         <div className="auth-divider">
@@ -325,6 +353,52 @@ export default function AuthModal() {
         .google-auth-btn:hover {
           border-color: var(--text-primary);
           background: #F8F6F2;
+        }
+        .google-setup-notice {
+          margin-top: 12px;
+          background: #FFFDF9;
+          border: 1px dashed rgba(163, 72, 53, 0.4);
+          border-radius: 4px;
+          padding: 14px 16px;
+          text-align: left;
+        }
+        .setup-notice-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--accent-terracotta);
+          margin-bottom: 6px;
+        }
+        .setup-notice-desc {
+          font-size: 12px;
+          line-height: 1.45;
+          color: var(--text-secondary);
+          margin-bottom: 12px;
+        }
+        .setup-notice-desc strong {
+          color: var(--text-primary);
+        }
+        .demo-patron-btn {
+          width: 100%;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          background: #FAF6EF;
+          border: 1px solid rgba(197, 160, 89, 0.5);
+          color: var(--text-primary);
+          padding: 9px 12px;
+          border-radius: 3px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: var(--transition);
+        }
+        .demo-patron-btn:hover {
+          background: #F2ECE0;
+          border-color: var(--accent-gold);
         }
         .auth-divider {
           display: flex;

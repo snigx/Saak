@@ -4,6 +4,7 @@ import {
   signInWithEmail, 
   signUpWithEmail, 
   signInWithGoogle, 
+  signInWithDemoPatron,
   changePassword, 
   signOut, 
   updateUserProfile,
@@ -83,6 +84,13 @@ export function AuthProvider({ children }) {
     return resUser;
   };
 
+  const loginWithDemoPatron = async () => {
+    const resUser = await signInWithDemoPatron();
+    setUser(resUser);
+    setIsAuthModalOpen(false);
+    return resUser;
+  };
+
   const updatePassword = async (newPassword) => {
     return await changePassword(newPassword);
   };
@@ -115,6 +123,7 @@ export function AuthProvider({ children }) {
     loginWithEmail,
     registerWithEmail,
     loginWithGoogle,
+    loginWithDemoPatron,
     updatePassword,
     updateProfile,
     logout
