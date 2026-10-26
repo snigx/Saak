@@ -632,7 +632,7 @@ export default function CheckoutModal() {
                         <Clock size={18} className="text-gold" />
                         <div>
                           <strong>Complimentary Fall &amp; Pico Stitching</strong>
-                          <p>All festive preview benefits remain 100% complimentary on COD orders as well.</p>
+                          <p>Bespoke hand-stitching service included with your drape.</p>
                         </div>
                       </div>
                     </div>

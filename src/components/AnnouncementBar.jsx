@@ -9,15 +9,6 @@ export default function AnnouncementBar() {
   return (
     <div className="announcement-bar">
       <div className="container announcement-content">
-        <div className="announcement-left">
-          <span className="announcement-text">
-            <Sparkles size={13} className="text-gold" />
-            <span><strong>FESTIVE PREVIEW:</strong> Complimentary Pre-Stitched Fall &amp; Pico on all Tissue Sarees</span>
-          </span>
-          <span className="divider-dot">•</span>
-          <span className="announcement-subtext">Custom Colourways on Request &amp; Worldwide Shipping</span>
-        </div>
-
         <div className="announcement-right">
           {/* Atelier Admin Shortcut */}
           <button 
@@ -92,33 +83,13 @@ export default function AnnouncementBar() {
         .announcement-content {
           display: flex;
           align-items: center;
-          justify-content: space-between;
-          padding-top: 8px;
-          padding-bottom: 8px;
+          justify-content: flex-end;
+          padding-top: 6px;
+          padding-bottom: 6px;
           gap: 16px;
-        }
-        .announcement-left {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-        .announcement-text {
-          display: flex;
-          align-items: center;
-          gap: 6px;
         }
         .text-gold {
           color: var(--accent-gold);
-        }
-        .divider-dot {
-          color: var(--accent-gold);
-          opacity: 0.6;
-        }
-        .announcement-subtext {
-          color: rgba(250, 246, 239, 0.75);
         }
         .announcement-right {
           display: flex;
@@ -185,19 +156,12 @@ export default function AnnouncementBar() {
           background: var(--text-primary);
           color: #FAF6EF;
         }
-        @media (max-width: 900px) {
-          .announcement-subtext, .divider-dot {
-            display: none;
-          }
-        }
         @media (max-width: 650px) {
           .announcement-content {
-            padding-top: 6px;
-            padding-bottom: 6px;
+            padding-top: 5px;
+            padding-bottom: 5px;
             gap: 8px;
-          }
-          .announcement-text {
-            font-size: 11px;
+            justify-content: center;
           }
           .instagram-top-link span,
           .whatsapp-link span {
