@@ -126,10 +126,15 @@ export default function Navbar() {
           {/* Wishlist */}
           <button 
             onClick={() => setIsWishlistOpen(true)}
-            className="action-icon-btn"
-            title="Wishlist"
+            className={`action-icon-btn wishlist-nav-btn ${wishlist.length > 0 ? 'has-items' : ''}`}
+            title={`Curated Wishlist (${wishlist.length} saved)`}
+            aria-label="Wishlist"
           >
-            <Heart size={19} />
+            <Heart 
+              size={19} 
+              fill={wishlist.length > 0 ? "var(--accent-terracotta)" : "none"} 
+              color={wishlist.length > 0 ? "var(--accent-terracotta)" : "currentColor"} 
+            />
             {wishlist.length > 0 && (
               <span className="icon-badge">{wishlist.length}</span>
             )}
@@ -202,6 +207,14 @@ export default function Navbar() {
             onClick={() => handleNavClick('sets')}
           >
             Curated Duos (Save 10%)
+          </button>
+
+          <button 
+            className="mobile-nav-link"
+            onClick={() => { setMobileMenuOpen(false); setIsWishlistOpen(true); }}
+          >
+            <Heart size={16} fill={wishlist.length > 0 ? "var(--accent-terracotta)" : "none"} color={wishlist.length > 0 ? "var(--accent-terracotta)" : "currentColor"} />
+            <span>Curated Wishlist {wishlist.length > 0 ? `(${wishlist.length})` : ''}</span>
           </button>
 
           <div className="mobile-auth-divider"></div>
