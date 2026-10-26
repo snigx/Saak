@@ -3,7 +3,7 @@ import { useShop } from '../context/ShopContext';
 import { Sparkles, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 export default function Hero() {
-  const { setActiveCategory, addDuoToCart, products } = useShop();
+  const { setActiveCategory, addDuoToCart, products, setSelectedProduct, addToCart } = useShop();
 
   const handleExploreTissue = () => {
     setActiveCategory('tissue');
@@ -17,10 +17,20 @@ export default function Hero() {
   };
 
   const handleShopIconicDuo = () => {
-    const blackSaree = products.find(p => p.id === 'midnight-black-crepe');
+    // 1. Look for the curated Signature Duo product
+    const duoProduct = products.find(p => p.id === 'signature-duo-black-gold') 
+      || products.find(p => p.category === 'sets');
+
+    if (duoProduct) {
+      setSelectedProduct(duoProduct);
+      return;
+    }
+
+    // 2. Fallback: pair gold corset with available saree
     const goldCorset = products.find(p => p.id === 'the-gold-corset');
-    if (blackSaree && goldCorset) {
-      addDuoToCart(blackSaree, goldCorset);
+    const saree = products.find(p => p.category === 'sarees');
+    if (goldCorset && saree) {
+      addDuoToCart(saree, goldCorset);
     }
   };
 
@@ -94,7 +104,13 @@ export default function Hero() {
             <div className="hero-image-overlay"></div>
 
             {/* Floating Shoppable Duo Badge */}
-            <div className="hero-floating-card">
+            <div 
+              className="hero-floating-card" 
+              onClick={handleShopIconicDuo}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleShopIconicDuo(); }}
+            >
               <div className="floating-card-pill">
                 <Sparkles size={11} className="text-gold" />
                 <span>SIGNATURE DUO</span>
@@ -108,7 +124,8 @@ export default function Hero() {
                   <span className="discount-tag">Save 10%</span>
                 </div>
                 <button 
-                  onClick={handleShopIconicDuo}
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handleShopIconicDuo(); }}
                   className="btn btn-dark floating-buy-btn"
                 >
                   Shop The Set
@@ -258,6 +275,12 @@ export default function Hero() {
           border-radius: 4px;
           border: 1px solid var(--border-gold);
           box-shadow: var(--shadow-md);
+          cursor: pointer;
+          transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .hero-floating-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 16px 32px rgba(31, 26, 23, 0.16);
         }
         .floating-card-pill {
           display: inline-flex;
