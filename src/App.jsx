@@ -4,6 +4,7 @@ import { ShopProvider } from './context/ShopContext';
 import AnnouncementBar from './components/AnnouncementBar';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
+import BrandIntro from './components/BrandIntro';
 import MixMatchStudio from './components/MixMatchStudio';
 import ProductGrid from './components/ProductGrid';
 import InstagramFeed from './components/InstagramFeed';
@@ -31,6 +32,9 @@ export default function App() {
 
         {/* Editorial Hero */}
         <Hero />
+
+        {/* Brand Intro & Philosophy */}
+        <BrandIntro />
 
         {/* The Flagship Mix & Match Canvas */}
         <MixMatchStudio />

@@ -29,7 +29,7 @@ export default function Footer() {
             <span className="footer-brand-sub">by Aprajita</span>
           </div>
           <p className="footer-brand-desc">
-            Contemporary Indian fashion re-imagined for the young connoisseur. Specializing in crushed shimmer tissue sarees, fluid contemporary silhouettes, and handcrafted zardozi corsets.
+            Born from a desire to create something timeless and classic, deeply rooted in Indian tradition yet reimagined with a contemporary sensibility.
           </p>
 
           <div className="footer-social-row">
@@ -95,6 +95,7 @@ export default function Footer() {
             <li><a href="#mix-match-studio">Mix &amp; Match Styling Studio</a></li>
             <li><a href="#catalog-section">Sculpted Corsets &amp; Bustiers</a></li>
             <li><a href="#catalog-section">Curated Duos (Complete Looks)</a></li>
+            <li><a href="#about-saak">Our Story &amp; Philosophy</a></li>
             <li>
               <button 
                 type="button" 

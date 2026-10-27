@@ -41,6 +41,14 @@ export default function Navbar() {
     }
   };
 
+  const handleStoryScroll = () => {
+    setMobileMenuOpen(false);
+    const storyEl = document.getElementById('about-saak');
+    if (storyEl) {
+      storyEl.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <header className="navbar-header">
       <div className="container nav-container">
@@ -91,6 +99,12 @@ export default function Navbar() {
             onClick={() => handleNavClick('sets')}
           >
             Curated Duos
+          </button>
+          <button 
+            className="nav-link"
+            onClick={handleStoryScroll}
+          >
+            Our Story
           </button>
         </nav>
 
@@ -207,6 +221,12 @@ export default function Navbar() {
             onClick={() => handleNavClick('sets')}
           >
             Curated Duos (Save 10%)
+          </button>
+          <button 
+            className="mobile-nav-link"
+            onClick={handleStoryScroll}
+          >
+            Our Story (The SAAK Ethos)
           </button>
 
           <button 
