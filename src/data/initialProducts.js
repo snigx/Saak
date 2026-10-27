@@ -23,15 +23,15 @@ export const initialProducts = [
         '/assets/saak_muse_black_corset_side.jpg'
       ],
       flatlayPhotos: [
-        '/assets/saak_flatlay_copper_green.jpg'
+        'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/flatlays/black_crepe_gold_corset_flatlay.jpg'
       ],
       modelView: '/assets/saak_muse_black_saree_gold_corset.jpg',
-      flatlayView: '/assets/saak_flatlay_copper_green.jpg',
+      flatlayView: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/flatlays/black_crepe_gold_corset_flatlay.jpg',
       swatchZoom: '/assets/saak_muse_black_corset_side.jpg',
       gallery: [
         '/assets/saak_muse_black_saree_gold_corset.jpg',
         '/assets/saak_muse_black_corset_side.jpg',
-        '/assets/saak_flatlay_copper_green.jpg'
+        'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/flatlays/black_crepe_gold_corset_flatlay.jpg'
       ]
     },
     recommendedPairings: ['sunset-orange-tissue', 'olive-bloom-tissue', 'burnt-copper-tissue'],
@@ -154,15 +154,15 @@ export const initialProducts = [
         '/assets/saak_muse_black_corset_side.jpg'
       ],
       flatlayPhotos: [
-        '/assets/saak_flatlay_copper_green.jpg'
+        'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/flatlays/black_crepe_gold_corset_flatlay.jpg'
       ],
       modelView: '/assets/saak_muse_black_saree_gold_corset.jpg',
-      flatlayView: '/assets/saak_flatlay_copper_green.jpg',
+      flatlayView: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/flatlays/black_crepe_gold_corset_flatlay.jpg',
       swatchZoom: '/assets/saak_muse_black_corset_side.jpg',
       gallery: [
         '/assets/saak_muse_black_saree_gold_corset.jpg',
         '/assets/saak_muse_black_corset_side.jpg',
-        '/assets/saak_flatlay_copper_green.jpg'
+        'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/flatlays/black_crepe_gold_corset_flatlay.jpg'
       ]
     },
     recommendedPairings: [],

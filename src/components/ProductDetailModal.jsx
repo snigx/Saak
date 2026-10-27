@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useShop } from '../context/ShopContext';
 import { X, Heart, Sparkles, Check, ShoppingBag, ShieldCheck, Ruler, Palette, Edit3, ChevronLeft, ChevronRight, Camera, Layers, RotateCcw } from 'lucide-react';
 
@@ -15,12 +15,21 @@ export default function ProductDetailModal() {
     openPolicyModal
   } = useShop();
 
-  if (!selectedProduct) return null;
-
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [photoFilterTab, setPhotoFilterTab] = useState('all'); // 'all', 'model', 'flatlay'
-  const [selectedSize, setSelectedSize] = useState(selectedProduct.sizeOptions?.[0] || 'Standard');
+  const [selectedSize, setSelectedSize] = useState('Standard');
   const [isAdded, setIsAdded] = useState(false);
+
+  // Automatically reset to the primary On-Muse photo when modal opens or product changes
+  useEffect(() => {
+    if (selectedProduct) {
+      setActivePhotoIndex(0);
+      setPhotoFilterTab('all');
+      setSelectedSize(selectedProduct.sizeOptions?.[0] || 'Standard');
+    }
+  }, [selectedProduct?.id]);
+
+  if (!selectedProduct) return null;
 
   const isWishlisted = wishlist.includes(selectedProduct.id);
 
