@@ -48,10 +48,10 @@ export default function Footer() {
               </svg>
             </a>
             <a 
-              href="mailto:contact@saakbyaprajita.com" 
+              href="mailto:Saakbyaprajita@gmail.com" 
               className="social-circle"
-              aria-label="Email"
-              title="Email Atelier"
+              aria-label="Email Saakbyaprajita@gmail.com"
+              title="Email Saak by Aprajita"
             >
               <Mail size={16} />
             </a>
@@ -64,6 +64,14 @@ export default function Footer() {
             className="footer-insta-tag"
           >
             <span>Instagram: <strong>@saakbyaprajita</strong></span>
+          </a>
+
+          <a 
+            href="mailto:Saakbyaprajita@gmail.com"
+            className="footer-insta-tag"
+            style={{ marginTop: '4px' }}
+          >
+            <span>Email: <strong>Saakbyaprajita@gmail.com</strong></span>
           </a>
         </div>
 
@@ -94,12 +102,12 @@ export default function Footer() {
           </p>
 
           <a 
-            href="mailto:contact@saakbyaprajita.com" 
+            href="mailto:Saakbyaprajita@gmail.com" 
             className="btn btn-outline-gold footer-email-btn"
-            title="Email Support"
+            title="Email Saakbyaprajita@gmail.com"
           >
             <Mail size={15} />
-            <span>Email Support</span>
+            <span>Saakbyaprajita@gmail.com</span>
           </a>
 
           <div className="footer-policy-quicklink">

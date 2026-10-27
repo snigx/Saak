@@ -10,7 +10,7 @@
 const OUTBOX_STORAGE_KEY = 'saak_outbox_emails';
 
 // Sender configuration (Can be set via .env or defaults to Aprajita's Atelier)
-const SENDER_EMAIL = import.meta.env.VITE_SENDER_EMAIL || 'orders@saakbyaprajita.com';
+const SENDER_EMAIL = import.meta.env.VITE_SENDER_EMAIL || 'Saakbyaprajita@gmail.com';
 const SENDER_NAME = 'Saak by Aprajita Atelier';
 const RESEND_API_KEY = import.meta.env.VITE_RESEND_API_KEY || null;
 const EMAIL_WEBHOOK_URL = import.meta.env.VITE_EMAIL_WEBHOOK_URL || null;
@@ -179,7 +179,7 @@ export function generateOrderConfirmationHtml(order) {
             <td style="background: #F2ECE0; padding: 24px 32px; text-align: center; border-top: 1px solid #E5DDCF;">
               <p style="margin: 0 0 10px 0; font-size: 13px; color: #4A423D; line-height: 1.5;">
                 Need custom styling assistance or bespoke blouse adjustments?<br />
-                Our support team is available on WhatsApp at <strong style="color: #A34835;">+91 62676 64409</strong>.
+                Our support team is available on WhatsApp at <strong style="color: #A34835;">+91 62676 64409</strong> or via email at <strong style="color: #A34835;">Saakbyaprajita@gmail.com</strong>.
               </p>
               <div style="margin-top: 14px; font-size: 11px; color: #8A817A;">
                 © ${new Date().getFullYear()} Saak by Aprajita. Fluid Drapes &amp; Sculpted Statements.

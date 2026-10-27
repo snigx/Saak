@@ -270,7 +270,7 @@ export default function RefundPolicyModal() {
               </div>
               <div className="contact-line">
                 <span className="contact-label">Email:</span>
-                <a href="mailto:contact@saakbyaprajita.com" className="contact-val link">contact@saakbyaprajita.com</a>
+                <a href="mailto:Saakbyaprajita@gmail.com" className="contact-val link">Saakbyaprajita@gmail.com</a>
               </div>
               <div className="contact-line">
                 <span className="contact-label">WhatsApp:</span>
