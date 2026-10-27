@@ -42,6 +42,49 @@ export const initialProducts = [
     featured: true
   },
   {
+    id: 'the-ivory-raw-silk-blouse',
+    name: 'The Ivory Raw Silk Sculpted Blouse',
+    category: 'blouses',
+    subCategory: 'blouse',
+    price: 3850,
+    originalPrice: 4400,
+    tag: 'Essential Minimalist',
+    tagColor: '#C5A059',
+    description: 'A masterclass in understated elegance. Tailored from premium pure raw silk in warm champagne ivory, featuring a sculpted plunging V-neckline, broad comfortable straps, and neat under-bust darting. Designed as the ultimate versatile companion to contrast and elevate fluid metallic tissue sarees.',
+    fabric: 'Pure Raw Silk / Dupion with Subtle Slub Texture',
+    drapeStyle: 'Sleeveless Tailored V-Neck Blouse',
+    drapeWeight: 'Lightweight & Structured',
+    zariWork: 'Minimalist Clean Edges with Gold Stitch Accents',
+    isCustomColorAvailable: true,
+    availableCustomColors: [
+      { name: 'Champagne Ivory', hex: '#F7F3EA' },
+      { name: 'Warm Sand', hex: '#E5DAC8' },
+      { name: 'Midnight Black', hex: '#1F1A17' }
+    ],
+    sizeOptions: ['XS (Bust 32)', 'S (Bust 34)', 'M (Bust 36)', 'L (Bust 38)', 'XL (Bust 40)', 'Custom Bespoke'],
+    isPadded: true,
+    hasMargins: true,
+    images: {
+      modelPhotos: [
+        `${CDN_BASE}/blouses/the-ivory-raw-silk-blouse/model_front.jpg`
+      ],
+      flatlayPhotos: [
+        `${CDN_BASE}/blouses/the-ivory-raw-silk-blouse/flatlay.jpg`
+      ],
+      modelView: `${CDN_BASE}/blouses/the-ivory-raw-silk-blouse/model_front.jpg`,
+      flatlayView: `${CDN_BASE}/blouses/the-ivory-raw-silk-blouse/flatlay.jpg`,
+      swatchZoom: `${CDN_BASE}/blouses/the-ivory-raw-silk-blouse/flatlay.jpg`,
+      gallery: [
+        `${CDN_BASE}/blouses/the-ivory-raw-silk-blouse/model_front.jpg`,
+        `${CDN_BASE}/blouses/the-ivory-raw-silk-blouse/flatlay.jpg`
+      ]
+    },
+    recommendedPairings: ['sunset-orange-tissue', 'olive-bloom-tissue'],
+    bundleDiscountPercent: 10,
+    inStock: true,
+    featured: true
+  },
+  {
     id: 'sunset-orange-tissue',
     name: 'Sunset Orange Shimmer Tissue Saree',
     category: 'sarees',
@@ -86,7 +129,7 @@ export const initialProducts = [
         `${CDN_BASE}/sarees/sunset-orange-tissue/swatch_texture.jpg`
       ]
     },
-    recommendedPairings: ['the-gold-corset'],
+    recommendedPairings: ['the-gold-corset', 'the-ivory-raw-silk-blouse'],
     bundleDiscountPercent: 10,
     inStock: true,
     featured: true
@@ -129,7 +172,7 @@ export const initialProducts = [
         `${CDN_BASE}/sarees/olive-bloom-tissue/swatch_swirl.jpg`
       ]
     },
-    recommendedPairings: ['the-gold-corset'],
+    recommendedPairings: ['the-gold-corset', 'the-ivory-raw-silk-blouse'],
     bundleDiscountPercent: 10,
     inStock: true,
     featured: true

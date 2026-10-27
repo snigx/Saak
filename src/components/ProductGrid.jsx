@@ -66,7 +66,7 @@ export default function ProductGrid() {
               className={`filter-pill ${activeCategory === 'corset' ? 'active' : ''}`}
               onClick={() => setActiveCategory('corset')}
             >
-              Sculpted Corsets
+              Corsets &amp; Blouses
             </button>
             <button 
               className={`filter-pill ${activeCategory === 'sets' ? 'active' : ''}`}

@@ -3,6 +3,29 @@ import { useShop } from '../context/ShopContext';
 import { Sparkles, Check, ArrowRight, ShieldCheck, Heart } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
+const COMBINATION_ASSETS = {
+  'sunset-orange-tissue_the-gold-corset': {
+    model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/sunset-orange-tissue_the-gold-corset_model.jpg',
+    flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/sunset-orange-tissue_the-gold-corset_flatlay.jpg',
+    styling: "Aprajita's Styling: Sunset Orange Drape + Heavy Zardozi Corset"
+  },
+  'sunset-orange-tissue_the-ivory-raw-silk-blouse': {
+    model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/sunset-orange-tissue_the-ivory-raw-silk-blouse_model.jpg',
+    flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/sunset-orange-tissue_the-ivory-raw-silk-blouse_flatlay.jpg',
+    styling: "Aprajita's Styling: Sunset Orange Shimmer + Minimalist Ivory Raw Silk V-Neck"
+  },
+  'olive-bloom-tissue_the-gold-corset': {
+    model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/olive-bloom-tissue_the-gold-corset_model.jpg',
+    flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/olive-bloom-tissue_the-gold-corset_flatlay.jpg',
+    styling: "Aprajita's Styling: Olive Sage Shimmer + Sculpted Antique Gold Corset"
+  },
+  'olive-bloom-tissue_the-ivory-raw-silk-blouse': {
+    model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/olive-bloom-tissue_the-ivory-raw-silk-blouse_model.jpg',
+    flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/olive-bloom-tissue_the-ivory-raw-silk-blouse_flatlay.jpg',
+    styling: "Aprajita's Styling: Olive Bloom Tissue + Tailored Ivory Raw Silk V-Neck"
+  }
+};
+
 export default function MixMatchStudio() {
   const { products, addDuoToCart, addToCart, formatPrice, toggleWishlist, wishlist } = useShop();
 
@@ -15,6 +38,16 @@ export default function MixMatchStudio() {
 
   const selectedSaree = sarees.find(s => s.id === selectedSareeId) || sarees[0];
   const selectedBlouse = blouses.find(b => b.id === selectedBlouseId) || blouses[0];
+
+  const comboKey = `${selectedSaree?.id}_${selectedBlouse?.id}`;
+  const currentCombo = COMBINATION_ASSETS[comboKey];
+
+  const currentPreviewImage = viewMode === 'model'
+    ? (currentCombo?.model || selectedSaree?.images.modelView)
+    : (currentCombo?.flatlay || selectedSaree?.images.flatlayView);
+
+  const stylingNote = currentCombo?.styling 
+    || `Aprajita's Styling: ${selectedSaree?.name} + ${selectedBlouse?.name}`;
 
   const originalTotal = (selectedSaree?.price || 0) + (selectedBlouse?.price || 0);
   const bundleDiscount = Math.round(originalTotal * 0.1); // 10%
@@ -47,7 +80,7 @@ export default function MixMatchStudio() {
           </div>
           <h2 className="studio-title">Mix &amp; Match Studio</h2>
           <p className="studio-subtitle">
-            Pair our fluid minimalist sarees with heavy statement corsets. Experience the contrast in real-time and unlock a <strong>10% Duo Privilege</strong>.
+            Pair our fluid minimalist sarees with heavy statement corsets or tailored silk blouses. Experience the contrast in real-time and unlock a <strong>10% Duo Privilege</strong>.
           </p>
         </div>
 
@@ -119,18 +152,15 @@ export default function MixMatchStudio() {
 
               <div className="preview-image-container">
                 <img 
-                  src={
-                    viewMode === 'model' 
-                      ? (selectedSaree?.images.modelView || '/assets/saak_muse_black_saree_gold_corset.jpg')
-                      : (selectedSaree?.images.flatlayView || '/assets/saak_folded_copper_tissue.jpg')
-                  } 
-                  alt={selectedSaree?.name || "Draped Look Preview"}
+                  key={`${comboKey}_${viewMode}`}
+                  src={currentPreviewImage} 
+                  alt={`${selectedSaree?.name} with ${selectedBlouse?.name}`}
                   className="preview-main-img"
                 />
 
                 <div className="preview-styling-chip">
                   <Sparkles size={12} className="text-gold" />
-                  <span>Aprajita's Styling: Lightweight Drape + Heavy Zardozi Corset</span>
+                  <span>{stylingNote}</span>
                 </div>
               </div>
 
@@ -155,7 +185,7 @@ export default function MixMatchStudio() {
               <span className="step-num">02</span>
               <div>
                 <h3 className="column-title">Pair With Blouse</h3>
-                <span className="column-hint">Ornate boned corsets &amp; bustiers</span>
+                <span className="column-hint">Ornate boned corsets &amp; raw silk blouses</span>
               </div>
             </div>
 
@@ -186,7 +216,9 @@ export default function MixMatchStudio() {
                         <span className="item-fabric">{blouse.fabric}</span>
                         <span className="item-price">{formatPrice(blouse.price)}</span>
                       </div>
-                      <span className="mini-badge-gold">Padded Boned Fit</span>
+                      <span className="mini-badge-gold">
+                        {blouse.subCategory === 'corset' ? 'Padded Boned Fit' : 'Tailored V-Neck'}
+                      </span>
                     </div>
                   </div>
                 );
@@ -212,7 +244,7 @@ export default function MixMatchStudio() {
               </div>
 
               <p className="bundle-perk-note">
-                Includes complimentary pre-stitched fall/pico + in-built corset padded cups.
+                Includes complimentary pre-stitched fall/pico + tailored blouse fit.
               </p>
 
               <button 
@@ -235,7 +267,7 @@ export default function MixMatchStudio() {
                   onClick={() => selectedBlouse && addToCart(selectedBlouse)}
                   className="buy-single-link"
                 >
-                  Buy Corset Only ({formatPrice(selectedBlouse?.price)})
+                  Buy {selectedBlouse?.subCategory === 'corset' ? 'Corset' : 'Blouse'} Only ({formatPrice(selectedBlouse?.price)})
                 </button>
               </div>
             </div>

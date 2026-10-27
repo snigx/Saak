@@ -85,7 +85,7 @@ export default function Navbar() {
             className={`nav-link ${activeCategory === 'corset' ? 'active' : ''}`}
             onClick={() => handleNavClick('corset')}
           >
-            Sculpted Corsets
+            Corsets &amp; Blouses
           </button>
           <button 
             className={`nav-link studio-nav-pill ${activeCategory === 'studio' ? 'active' : ''}`}
@@ -207,7 +207,7 @@ export default function Navbar() {
             className={`mobile-nav-link ${activeCategory === 'corset' ? 'active' : ''}`}
             onClick={() => handleNavClick('corset')}
           >
-            Sculpted Corsets (Heavy Zardozi)
+            Corsets &amp; Blouses (Heavy Zardozi &amp; Raw Silk)
           </button>
           <button 
             className="mobile-nav-link mobile-studio-link"
