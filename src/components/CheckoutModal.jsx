@@ -5,7 +5,8 @@ import { useShop } from '../context/ShopContext';
 import { 
   X, Check, ShieldCheck, ArrowRight, ArrowLeft, Copy, 
   Smartphone, Sparkles, MessageCircle, AlertCircle, ShoppingBag,
-  Upload, Clock, CheckCircle2, Loader2, Banknote, PhoneCall 
+  Upload, Clock, CheckCircle2, Loader2, Banknote, PhoneCall,
+  Truck, ExternalLink, Mail 
 } from 'lucide-react';
 import { saveOrderToDb } from '../services/ordersService';
 import { uploadImageBlob } from '../services/storageService';
@@ -22,7 +23,8 @@ export default function CheckoutModal() {
     clearCart,
     atelierUpiId,
     setAtelierUpiId,
-    refreshOrders 
+    refreshOrders,
+    orders = []
   } = useShop();
 
   const { user } = useAuth();
@@ -53,9 +55,17 @@ export default function CheckoutModal() {
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [utrNumber, setUtrNumber] = useState('');
   const [copiedUpi, setCopiedUpi] = useState(false);
+  const [copiedSuccessAwb, setCopiedSuccessAwb] = useState(false);
   const [paymentScreenshot, setPaymentScreenshot] = useState(null);
   const [paymentScreenshotFile, setPaymentScreenshotFile] = useState(null);
   const [isVerifying, setIsVerifying] = useState(false);
+
+  const handleCopySuccessAwb = (awbCode) => {
+    if (!awbCode) return;
+    navigator.clipboard.writeText(awbCode);
+    setCopiedSuccessAwb(true);
+    setTimeout(() => setCopiedSuccessAwb(false), 2000);
+  };
 
   // Guardrail: Disallow letters in phone input in real time
   const handlePhoneChange = (e) => {
@@ -330,30 +340,6 @@ export default function CheckoutModal() {
       if (clearCart) clearCart();
     }
   };
-
-  // WhatsApp formatted message for direct client-to-Aprajita confirmation
-  const orderSummaryText = cart.map(i => `• ${i.name} (${i.selectedSize}${i.customColor ? `, Shade: ${i.customColor}` : ''}) x${i.quantity} = ₹${i.price * i.quantity}`).join('\n');
-  const whatsappReceiptMessage = encodeURIComponent(
-    paymentMethod === 'cod'
-      ? `✨ *NEW CASH ON DELIVERY (COD) ORDER: ${orderId}*\n\n` +
-        `*Client:* ${shippingData.fullName}\n` +
-        `*Phone:* ${shippingData.phone}\n` +
-        `*Delivery Address:*\n${shippingData.address}, ${shippingData.city}, ${shippingData.state} - ${shippingData.pincode}\n\n` +
-        `*Items Ordered:*\n${orderSummaryText}\n\n` +
-        `*Amount Payable upon Delivery:* ₹${cartTotal.toLocaleString('en-IN')}\n` +
-        `*Payment Mode:* Cash on Delivery (Doorstep Cash / UPI)\n` +
-        `${shippingData.stylingNotes ? `*Tailoring Note:* ${shippingData.stylingNotes}\n` : ''}\n` +
-        `Please confirm my delivery schedule and dispatch timeline from Saak Atelier!`
-      : `✨ *NEW ORDER CONFIRMATION: ${orderId}*\n\n` +
-        `*Client:* ${shippingData.fullName}\n` +
-        `*Phone:* ${shippingData.phone}\n` +
-        `*Delivery Address:*\n${shippingData.address}, ${shippingData.city}, ${shippingData.state} - ${shippingData.pincode}\n\n` +
-        `*Items Ordered:*\n${orderSummaryText}\n\n` +
-        `*Total Paid via UPI:* ₹${cartTotal.toLocaleString('en-IN')}\n` +
-        `*UPI UTR / Ref No:* ${utrNumber}\n` +
-        `${shippingData.stylingNotes ? `*Tailoring Note:* ${shippingData.stylingNotes}\n` : ''}\n` +
-        `Please confirm the order and dispatch timeline from Saak Atelier!`
-  );
 
   return (
     <div className="modal-overlay" onClick={() => setIsCheckoutOpen(false)}>
@@ -869,97 +855,164 @@ export default function CheckoutModal() {
         )}
 
         {/* ========================================================================= */}
-        {/* STEP 3: ORDER SUCCESS & WHATSAPP CONFIRMATION */}
+        {/* STEP 3: ORDER SUCCESS & TRACKING DETAILS */}
         {/* ========================================================================= */}
-        {currentStep === 'success' && (
-          <div className="success-step-container">
-            <div className="success-icon-bubble">
-              <Check size={36} color="#FFFFFF" />
-            </div>
+        {currentStep === 'success' && (() => {
+          const currentOrder = (orders || []).find(o => o.id === orderId);
+          const isDispatched = currentOrder?.fulfillment_status === 'dispatched' || currentOrder?.fulfillment_status === 'shipped' || Boolean(currentOrder?.dispatch_details?.trackingNumber);
+          const dispatchDetails = currentOrder?.dispatch_details || {};
+          const courierName = dispatchDetails.courier || (currentOrder?.tracking_number ? currentOrder.tracking_number.split('#')[0].trim() : 'Insured Courier Partner');
+          const trackingAwb = dispatchDetails.trackingNumber || (currentOrder?.tracking_number ? currentOrder.tracking_number.split('#')[1]?.trim() : '');
+          const trackingUrl = dispatchDetails.trackingUrl || (trackingAwb ? `https://www.google.com/search?q=${encodeURIComponent(courierName + ' tracking ' + trackingAwb)}` : '');
+          const estimatedDelivery = dispatchDetails.estimatedDelivery || '3-5 Business Days';
 
-            <span className="success-sub">THANK YOU, {shippingData.fullName.toUpperCase()}</span>
-            <h3 className="success-title">
-              {paymentMethod === 'cod' 
-                ? 'Your Cash on Delivery Order is Confirmed!' 
-                : 'Your Saak Creation is Being Prepared!'}
-            </h3>
-            <p className="success-msg">
-              {paymentMethod === 'cod' ? (
-                <>
-                  Order <strong>#{orderId}</strong> has been logged for Cash on Delivery. Amount to pay upon arrival: <strong>₹{cartTotal.toLocaleString('en-IN')}</strong>. Our concierge will contact you on <strong>{shippingData.phone}</strong> to confirm your delivery availability.
-                </>
-              ) : (
-                <>
-                  We have received your payment reference <strong>UTR: {utrNumber}</strong> for Order <strong>#{orderId}</strong>. Our atelier master dyers and tailors have begun preparing your ensemble.
-                </>
-              )}
-            </p>
-
-            {/* In-Process Callout Badge */}
-            <div className="order-in-process-callout">
-              <div className="in-process-badge">
-                <Clock size={13} className="text-gold" />
-                <span>ORDER STATUS: IN PROCESS</span>
+          return (
+            <div className="success-step-container">
+              <div className="success-icon-bubble">
+                <Check size={36} color="#FFFFFF" />
               </div>
-              <h4 className="in-process-title">Your order is in process, we will share the dispatch details shortly.</h4>
-              <p className="in-process-subtitle">
-                Our atelier artisans are hand-inspecting your pieces and tailoring the complimentary fall &amp; pico. As soon as Aprajita assigns your courier partner, you will receive an email with your live tracking AWB.
+
+              <span className="success-sub">THANK YOU, {shippingData.fullName.toUpperCase()}</span>
+              <h3 className="success-title">
+                {paymentMethod === 'cod' 
+                  ? 'Your Cash on Delivery Order is Confirmed!' 
+                  : 'Your Saak Creation is Being Prepared!'}
+              </h3>
+              <p className="success-msg">
+                {paymentMethod === 'cod' ? (
+                  <>
+                    Order <strong>#{orderId}</strong> has been logged for Cash on Delivery. Amount to pay upon arrival: <strong>₹{cartTotal.toLocaleString('en-IN')}</strong>. Our concierge will contact you on <strong>{shippingData.phone}</strong> to confirm your delivery availability.
+                  </>
+                ) : (
+                  <>
+                    We have received your payment reference <strong>UTR: {utrNumber}</strong> for Order <strong>#{orderId}</strong>. Our atelier master dyers and tailors have begun preparing your ensemble.
+                  </>
+                )}
               </p>
-              {shippingData.email && (
-                <div className="email-sent-tag">
-                  <Mail size={13} />
-                  <span>Order confirmation email sent to <strong>{shippingData.email}</strong></span>
+
+              {/* Order Card */}
+              <div className="success-order-card">
+                <div className="card-top">
+                  <span>Order Reference: <strong>#{orderId}</strong></span>
+                  <span>
+                    {paymentMethod === 'cod' ? 'Pay on Delivery: ' : 'Total Paid: '}
+                    <strong>₹{cartTotal.toLocaleString('en-IN')}</strong>
+                  </span>
+                </div>
+                <div className="card-deliver">
+                  <span>Delivery To:</span>
+                  <strong>{shippingData.address}, {shippingData.city} - {shippingData.pincode}</strong>
+                </div>
+              </div>
+
+              {/* Consignment & Tracking Details (Replaces WhatsApp block) */}
+              {isDispatched ? (
+                <div className="success-tracking-block dispatched">
+                  <div className="tracking-header">
+                    <div className="tracking-badge dispatched-badge">
+                      <Truck size={14} />
+                      <span>ORDER DISPATCHED</span>
+                    </div>
+                    {dispatchDetails.dispatched_at && (
+                      <span className="dispatch-time-meta">
+                        Dispatched {new Date(dispatchDetails.dispatched_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="tracking-details-grid">
+                    <div className="tracking-cell">
+                      <span className="tracking-cell-label">Courier Partner</span>
+                      <span className="tracking-cell-val font-medium">{courierName}</span>
+                    </div>
+                    <div className="tracking-cell">
+                      <span className="tracking-cell-label">Waybill / AWB No.</span>
+                      <div className="tracking-awb-wrap">
+                        <span className="tracking-cell-val font-mono">{trackingAwb || 'Provided on Dispatch'}</span>
+                        {trackingAwb && (
+                          <button 
+                            type="button" 
+                            onClick={() => handleCopySuccessAwb(trackingAwb)}
+                            className="copy-awb-btn"
+                            title="Copy AWB Number"
+                          >
+                            {copiedSuccessAwb ? <Check size={12} color="#15803d" /> : <Copy size={12} />}
+                            <span>{copiedSuccessAwb ? 'Copied' : 'Copy'}</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="tracking-cell">
+                      <span className="tracking-cell-label">Estimated Delivery</span>
+                      <span className="tracking-cell-val">{estimatedDelivery}</span>
+                    </div>
+                  </div>
+
+                  {trackingUrl && (
+                    <a 
+                      href={trackingUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="btn btn-primary track-consignment-btn"
+                    >
+                      <Truck size={16} />
+                      <span>Track Consignment Live</span>
+                      <ExternalLink size={14} />
+                    </a>
+                  )}
+
+                  {shippingData.email && (
+                    <div className="tracking-email-note">
+                      <Mail size={12} />
+                      <span>Tracking link &amp; status updates also emailed to <strong>{shippingData.email}</strong></span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="success-tracking-block pending">
+                  <div className="tracking-header">
+                    <div className="tracking-badge pending-badge">
+                      <Clock size={13} />
+                      <span>AWAITING DISPATCH</span>
+                    </div>
+                  </div>
+
+                  <div className="tracking-pending-content">
+                    <div className="tracking-pending-icon">
+                      <Truck size={22} className="text-gold" />
+                    </div>
+                    <div className="tracking-pending-info">
+                      <h4 className="tracking-pending-title">
+                        Tracking details will be shared as soon as it is available.
+                      </h4>
+                      <p className="tracking-pending-desc">
+                        Our atelier artisans are hand-inspecting your pieces and tailoring the complimentary fall &amp; pico. Once handed over to our insured courier partner, your live tracking details and AWB will appear right here.
+                      </p>
+                    </div>
+                  </div>
+
+                  {shippingData.email && (
+                    <div className="tracking-email-note">
+                      <Mail size={12} />
+                      <span>Order confirmation &amp; live tracking will be emailed to <strong>{shippingData.email}</strong></span>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
 
-            {/* Order Card */}
-            <div className="success-order-card">
-              <div className="card-top">
-                <span>Order Reference: <strong>#{orderId}</strong></span>
-                <span>
-                  {paymentMethod === 'cod' ? 'Pay on Delivery: ' : 'Total Paid: '}
-                  <strong>₹{cartTotal.toLocaleString('en-IN')}</strong>
-                </span>
-              </div>
-              <div className="card-deliver">
-                <span>Delivery To:</span>
-                <strong>{shippingData.address}, {shippingData.city} - {shippingData.pincode}</strong>
-              </div>
-            </div>
-
-            {/* Direct WhatsApp Concierge Action */}
-            <div className="whatsapp-action-block">
-              <p className="wa-prompt">
-                To receive real-time saree weaving videos, custom blouse fitting notes, or direct dispatch tracking:
-              </p>
-              <a 
-                href={`https://wa.me/?text=${whatsappReceiptMessage}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-primary whatsapp-order-btn"
+              <button 
+                type="button"
+                onClick={() => {
+                  setIsCheckoutOpen(false);
+                  setCurrentStep('shipping');
+                }}
+                className="btn btn-outline close-success-btn"
               >
-                <MessageCircle size={18} />
-                <span>
-                  {paymentMethod === 'cod' 
-                    ? 'Send COD Order Details to Aprajita on WhatsApp' 
-                    : 'Send Order & Receipt to Aprajita on WhatsApp'}
-                </span>
-              </a>
+                Continue Exploring Collection
+              </button>
             </div>
-
-            <button 
-              type="button"
-              onClick={() => {
-                setIsCheckoutOpen(false);
-                setCurrentStep('shipping');
-              }}
-              className="btn btn-outline close-success-btn"
-            >
-              Continue Exploring Collection
-            </button>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       <style>{`
@@ -1417,63 +1470,16 @@ export default function CheckoutModal() {
           line-height: 1.5;
           margin-bottom: 20px;
         }
-        .order-in-process-callout {
-          background: #FFFDF9;
-          border: 1px solid #E2CA9B;
-          border-left: 4px solid var(--accent-terracotta);
-          border-radius: 4px;
-          padding: 16px 20px;
-          max-width: 500px;
-          width: 100%;
-          text-align: left;
-          margin-bottom: 20px;
-          box-shadow: 0 4px 16px rgba(163, 72, 53, 0.06);
-        }
-        .in-process-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 11px;
-          font-weight: 700;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          color: var(--accent-terracotta);
-          margin-bottom: 6px;
-        }
-        .in-process-title {
-          font-family: var(--font-serif);
-          font-size: 16px;
-          font-weight: 600;
-          color: var(--text-primary);
-          margin-bottom: 6px;
-          line-height: 1.35;
-        }
-        .in-process-subtitle {
-          font-size: 12px;
-          line-height: 1.5;
-          color: var(--text-secondary);
-          margin-bottom: 10px;
-        }
-        .email-sent-tag {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          background: #F4ECE1;
-          color: #7A3525;
-          padding: 6px 12px;
-          border-radius: 3px;
-          font-size: 11px;
-        }
         .success-order-card {
           background: #FAF6EF;
           border: 1px solid var(--border-gold);
           border-radius: 4px;
           padding: 16px;
-          max-width: 480px;
+          max-width: 500px;
           width: 100%;
           font-size: 12px;
           text-align: left;
-          margin-bottom: 24px;
+          margin-bottom: 16px;
         }
         .card-top {
           display: flex;
@@ -1482,36 +1488,180 @@ export default function CheckoutModal() {
           padding-bottom: 8px;
           margin-bottom: 8px;
         }
-        .whatsapp-action-block {
-          background: #F4FBF4;
-          border: 1px solid #C8E6C9;
+
+        /* Success Tracking Details Card (Replaces WhatsApp block) */
+        .success-tracking-block {
           border-radius: 4px;
-          padding: 20px;
-          max-width: 520px;
+          padding: 18px 20px;
+          max-width: 500px;
           width: 100%;
-          margin-bottom: 20px;
+          text-align: left;
+          margin-bottom: 22px;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
         }
-        .wa-prompt {
-          font-size: 12px;
+        .success-tracking-block.pending {
+          background: #FFFDF9;
+          border: 1px solid #E6D7C3;
+          border-left: 4px solid var(--accent-terracotta);
+        }
+        .success-tracking-block.dispatched {
+          background: #F8FAF7;
+          border: 1px solid #C8E6C9;
+          border-left: 4px solid #2E7D32;
+        }
+        .tracking-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 10px;
+        }
+        .tracking-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          padding: 4px 8px;
+          border-radius: 3px;
+        }
+        .tracking-badge.pending-badge {
+          background: #FAF0E6;
+          color: var(--accent-terracotta);
+        }
+        .tracking-badge.dispatched-badge {
+          background: #E8F5E9;
           color: #2E7D32;
-          margin-bottom: 12px;
-          line-height: 1.4;
         }
-        .whatsapp-order-btn {
+        .dispatch-time-meta {
+          font-size: 11px;
+          color: var(--text-muted);
+        }
+        .tracking-pending-content {
+          display: flex;
+          gap: 14px;
+          align-items: flex-start;
+          margin: 10px 0 12px 0;
+        }
+        .tracking-pending-icon {
+          width: 38px;
+          height: 38px;
+          border-radius: 50%;
+          background: #FAF4E8;
+          border: 1px solid #E2CA9B;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .tracking-pending-info {
+          flex: 1;
+        }
+        .tracking-pending-title {
+          font-family: var(--font-serif);
+          font-size: 15px;
+          font-weight: 600;
+          color: var(--text-primary);
+          margin-bottom: 5px;
+          line-height: 1.35;
+        }
+        .tracking-pending-desc {
+          font-size: 12px;
+          line-height: 1.5;
+          color: var(--text-secondary);
+          margin: 0;
+        }
+        .tracking-details-grid {
+          display: grid;
+          grid-template-columns: 1fr 1.2fr 1fr;
+          gap: 10px;
+          background: #FFFFFF;
+          border: 1px solid #E0ECE0;
+          border-radius: 4px;
+          padding: 12px 14px;
+          margin: 12px 0;
+        }
+        @media (max-width: 540px) {
+          .tracking-details-grid {
+            grid-template-columns: 1fr;
+            gap: 8px;
+          }
+        }
+        .tracking-cell {
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+        }
+        .tracking-cell-label {
+          font-size: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: var(--text-muted);
+          font-weight: 600;
+        }
+        .tracking-cell-val {
+          font-size: 13px;
+          color: var(--text-primary);
+        }
+        .tracking-cell-val.font-medium {
+          font-weight: 600;
+        }
+        .tracking-cell-val.font-mono {
+          font-family: monospace;
+          letter-spacing: 0.04em;
+        }
+        .tracking-awb-wrap {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .copy-awb-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          background: #F4F4F4;
+          border: 1px solid #DDD;
+          border-radius: 3px;
+          padding: 2px 6px;
+          font-size: 10px;
+          cursor: pointer;
+          color: var(--text-secondary);
+          transition: all 0.2s;
+        }
+        .copy-awb-btn:hover {
+          background: #EAEAEA;
+          color: var(--text-primary);
+        }
+        .track-consignment-btn {
           width: 100%;
-          background: #25D366;
-          border-color: #25D366;
+          background: var(--accent-terracotta);
+          border-color: var(--accent-terracotta);
           color: #FFFFFF;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
           font-size: 13px;
+          font-weight: 600;
           text-decoration: none;
-          padding: 12px;
+          padding: 11px;
+          border-radius: 3px;
+          margin-top: 10px;
+          transition: background 0.2s;
         }
-        .whatsapp-order-btn:hover {
-          background: #1EBE5D;
+        .track-consignment-btn:hover {
+          background: #8A3B2B;
+        }
+        .tracking-email-note {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 11px;
+          color: var(--text-muted);
+          margin-top: 10px;
+          padding-top: 8px;
+          border-top: 1px dashed rgba(0, 0, 0, 0.08);
         }
         .close-success-btn {
           font-size: 12px;
