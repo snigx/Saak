@@ -25,8 +25,6 @@ export default function AtelierAdminModal() {
     formatPrice 
   } = useShop();
 
-  if (!isAtelierModalOpen) return null;
-
   // Active Tab: 'inventory', 'orders', or 'editor'
   const [activeTab, setActiveTab] = useState(adminActiveTab || (editingProduct ? 'editor' : 'inventory'));
 
@@ -287,6 +285,8 @@ export default function AtelierAdminModal() {
     setEditingProduct(null);
     setActiveTab('editor');
   };
+
+  if (!isAtelierModalOpen) return null;
 
   return (
     <div className="modal-overlay" onClick={() => setIsAtelierModalOpen(false)}>

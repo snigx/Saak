@@ -29,8 +29,6 @@ export default function CheckoutModal() {
 
   const { user } = useAuth();
 
-  if (!isCheckoutOpen) return null;
-
   // Step 1: 'shipping', Step 2: 'payment', Step 3: 'success'
   const [currentStep, setCurrentStep] = useState('shipping');
 
@@ -340,6 +338,8 @@ export default function CheckoutModal() {
       if (clearCart) clearCart();
     }
   };
+
+  if (!isCheckoutOpen) return null;
 
   return (
     <div className="modal-overlay" onClick={() => setIsCheckoutOpen(false)}>
