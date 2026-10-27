@@ -320,7 +320,7 @@ export default function CheckoutModal() {
         paymentScreenshotUrl: null,
         paymentStatus: 'cod_pending',
         fulfillmentStatus: 'unfulfilled',
-        adminNotes: 'Order placed via Cash on Delivery. Awaiting concierge phone confirmation before handcrafting fall & pico.'
+        adminNotes: 'Order placed via Cash on Delivery. Awaiting phone confirmation before handcrafting fall & pico.'
       });
       if (refreshOrders) refreshOrders();
     } catch (err) {
@@ -786,8 +786,8 @@ export default function CheckoutModal() {
                       <div className="cod-perk-item">
                         <PhoneCall size={18} className="text-gold" />
                         <div>
-                          <strong>Concierge Drape Verification Call</strong>
-                          <p>Our atelier team will contact <strong>{shippingData.phone}</strong> to re-confirm your delivery date and tailoring measurements before hand-finishing.</p>
+                          <strong>Order Confirmation Call</strong>
+                          <p>Our team will call <strong>{shippingData.phone}</strong> to confirm your delivery details and order before shipping.</p>
                         </div>
                       </div>
 
@@ -903,7 +903,7 @@ export default function CheckoutModal() {
               <p className="success-msg">
                 {paymentMethod === 'cod' ? (
                   <>
-                    Order <strong>#{orderId}</strong> has been logged for Cash on Delivery. Amount to pay upon arrival: <strong>₹{cartTotal.toLocaleString('en-IN')}</strong>. Our concierge will contact you on <strong>{shippingData.phone}</strong> to confirm your delivery availability.
+                    Order <strong>#{orderId}</strong> has been logged for Cash on Delivery. Amount to pay upon arrival: <strong>₹{cartTotal.toLocaleString('en-IN')}</strong>. Our team will call you on <strong>{shippingData.phone}</strong> to confirm your delivery availability.
                   </>
                 ) : (
                   <>

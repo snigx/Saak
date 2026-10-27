@@ -109,20 +109,20 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* Col 4: Atelier Concierge */}
+        {/* Col 4: Styling & Support */}
         <div className="footer-col concierge-col">
-          <h4 className="footer-col-title">Bespoke Concierge</h4>
+          <h4 className="footer-col-title">Styling &amp; Support</h4>
           <p className="concierge-desc">
-            Planning your bridesmaid troupe, college farewell, or need custom colourways? Speak directly with Aprajita’s styling atelier.
+            Planning your bridesmaid troupe, college farewell, or need custom colourways? Speak directly with Aprajita’s styling team.
           </p>
 
           <a 
             href="mailto:contact@saakbyaprajita.com" 
             className="btn btn-outline-gold footer-email-btn"
-            title="Email Atelier Concierge"
+            title="Email Support"
           >
             <Mail size={15} />
-            <span>Email Concierge</span>
+            <span>Email Support</span>
           </a>
 
           <div className="footer-admin-links">

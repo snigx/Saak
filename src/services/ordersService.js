@@ -206,7 +206,7 @@ export const SAMPLE_ORDERS = [
     fulfillment_status: 'unfulfilled',
     verified_at: null,
     verified_by: null,
-    admin_notes: 'Cash on Delivery order. Awaiting concierge phone confirmation before hand-finishing fall & pico.',
+    admin_notes: 'Cash on Delivery order. Awaiting phone confirmation before hand-finishing fall & pico.',
     created_at: new Date(Date.now() - 3600000 * 2).toISOString()
   }
 ];

@@ -242,7 +242,7 @@ export default function AdminOrdersView() {
       msg = `✨ *SAAK ATELIER • CASH ON DELIVERY CONFIRMATION*\n\n` +
         `Namaste ${order.customer_name},\n\n` +
         `We have received your Cash on Delivery order *#${order.id}* for *₹${Number(order.total_amount).toLocaleString('en-IN')}*.\n\n` +
-        `Our concierge is reaching out to confirm your delivery address in ${order.city} and personalize your saree fall & pico measurements before dispatch.\n\n` +
+        `Our team is reaching out to confirm your delivery address in ${order.city} and saree fall & pico preferences before dispatch.\n\n` +
         `*Amount Payable upon Arrival:* ₹${Number(order.total_amount).toLocaleString('en-IN')}\n\n` +
         `Warm regards,\nAprajita | Saak Atelier`;
     } else if (order.payment_status === 'succeeded') {
@@ -260,7 +260,7 @@ export default function AdminOrdersView() {
         `Our bank reconciliation system was unable to verify the UPI transaction reference: *${order.utr_number}*.\n` +
         `*Reason:* ${order.failure_reason || 'Payment not credited or declined by issuing bank'}.\n\n` +
         `Kindly reply to this message with your payment screenshot or UPI bank confirmation slip so our team can assist you immediately.\n\n` +
-        `Warm regards,\nSaak Concierge Support`;
+        `Warm regards,\nSaak Customer Support`;
     } else {
       msg = `⏳ *SAAK ATELIER • ORDER ACKNOWLEDGEMENT*\n\n` +
         `Namaste ${order.customer_name},\n\n` +
@@ -777,7 +777,7 @@ export default function AdminOrdersView() {
                         onClick={() => {
                           updateOrderStatus(order.id, {
                             payment_status: 'cod_confirmed',
-                            admin_notes: `Concierge phone confirmation completed on ${new Date().toLocaleDateString('en-IN')}. Ready for handcrafting fall & pico.`
+                            admin_notes: `Order phone confirmation completed on ${new Date().toLocaleDateString('en-IN')}. Ready for handcrafting fall & pico.`
                           });
                         }}
                         title="Mark phone call confirmation completed with client"

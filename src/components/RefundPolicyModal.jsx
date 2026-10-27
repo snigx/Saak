@@ -118,7 +118,7 @@ export default function RefundPolicyModal() {
             className={`policy-nav-chip ${activeSection === 'sec-contact' ? 'active' : ''}`}
             onClick={() => scrollToSection('sec-contact')}
           >
-            8. Contact Concierge
+            8. Contact Support
           </button>
         </div>
 
@@ -175,7 +175,7 @@ export default function RefundPolicyModal() {
                   <Clock size={18} />
                 </div>
                 <h4>3. Notify in 48 Hours</h4>
-                <p>Contact our concierge within 48 hours of delivery with your Order # and video/photo proof.</p>
+                <p>Contact our support team within 48 hours of delivery with your Order # and video/photo proof.</p>
               </div>
             </div>
             <div className="packaging-note">
@@ -257,7 +257,7 @@ export default function RefundPolicyModal() {
           <section id="sec-contact" className="policy-section contact-card">
             <div className="section-head">
               <span className="section-num">08</span>
-              <h3 className="section-heading">Contact Us &amp; Concierge Desk</h3>
+              <h3 className="section-heading">Contact Us &amp; Support</h3>
             </div>
             <p className="section-para">
               For return, exchange or refund assistance, our atelier team is here to support you:
