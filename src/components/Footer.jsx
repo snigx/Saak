@@ -86,30 +86,7 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* Col 3: Curations & Future Horizon */}
-        {/* Col 3: Curations & Policies */}
-        <div className="footer-col">
-          <h4 className="footer-col-title">Curated Edits</h4>
-          <ul className="footer-links-list">
-            <li><a href="#catalog-section">The Tissue Series (Shimmer Drapes)</a></li>
-            <li><a href="#mix-match-studio">Mix &amp; Match Styling Studio</a></li>
-            <li><a href="#catalog-section">Sculpted Corsets &amp; Bustiers</a></li>
-            <li><a href="#catalog-section">Curated Duos (Complete Looks)</a></li>
-            <li><a href="#about-saak">Our Story &amp; Philosophy</a></li>
-            <li>
-              <button 
-                type="button" 
-                onClick={openPolicyModal} 
-                className="footer-policy-link-btn"
-                title="View SAAK Returns, Exchanges & Refunds Policy"
-              >
-                Returns, Exchanges &amp; Refunds
-              </button>
-            </li>
-          </ul>
-        </div>
-
-        {/* Col 4: Styling & Support */}
+        {/* Col 3: Styling & Support */}
         <div className="footer-col concierge-col">
           <h4 className="footer-col-title">Styling &amp; Support</h4>
           <p className="concierge-desc">
@@ -124,6 +101,17 @@ export default function Footer() {
             <Mail size={15} />
             <span>Email Support</span>
           </a>
+
+          <div className="footer-policy-quicklink">
+            <button 
+              type="button" 
+              onClick={openPolicyModal} 
+              className="footer-policy-link-btn"
+              title="View SAAK Returns, Exchanges & Refunds Policy"
+            >
+              Returns, Exchanges &amp; Refunds →
+            </button>
+          </div>
 
           <div className="footer-admin-links">
             <button 
@@ -208,9 +196,12 @@ export default function Footer() {
         }
         .footer-main-grid {
           display: grid;
-          grid-template-columns: 1.3fr 1.2fr 1fr 1fr;
+          grid-template-columns: 1.4fr 1.2fr 1fr;
           gap: 40px;
           padding: 64px 24px;
+        }
+        .footer-policy-quicklink {
+          margin-top: 8px;
         }
         .footer-col {
           display: flex;
