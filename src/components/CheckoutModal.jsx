@@ -6,7 +6,7 @@ import {
   X, Check, ShieldCheck, ArrowRight, ArrowLeft, Copy, 
   Smartphone, Sparkles, MessageCircle, AlertCircle, ShoppingBag,
   Upload, Clock, CheckCircle2, Loader2, Banknote, PhoneCall,
-  Truck, ExternalLink, Mail 
+  Truck, ExternalLink, Mail, RotateCcw 
 } from 'lucide-react';
 import { saveOrderToDb } from '../services/ordersService';
 import { uploadImageBlob } from '../services/storageService';
@@ -24,7 +24,8 @@ export default function CheckoutModal() {
     atelierUpiId,
     setAtelierUpiId,
     refreshOrders,
-    orders = []
+    orders = [],
+    openPolicyModal 
   } = useShop();
 
   const { user } = useAuth();
@@ -567,6 +568,13 @@ export default function CheckoutModal() {
                   <span>Continue to Payment Method</span>
                   <ArrowRight size={16} />
                 </button>
+
+                <div className="checkout-policy-reassurance">
+                  <ShieldCheck size={14} className="text-gold" />
+                  <span>
+                    48-Hour Defect Guarantee • <button type="button" onClick={openPolicyModal} className="policy-inline-trigger">Returns &amp; Exchange Policy</button>
+                  </span>
+                </div>
               </div>
             </div>
           </form>
@@ -744,6 +752,13 @@ export default function CheckoutModal() {
                         </>
                       )}
                     </button>
+
+                    <div className="checkout-policy-agreement">
+                      <RotateCcw size={12} className="text-gold" />
+                      <span>
+                        By confirming, you review our <button type="button" onClick={openPolicyModal} className="policy-inline-trigger">Returns, Exchanges &amp; Refunds Policy</button>.
+                      </span>
+                    </div>
                   </form>
                 </div>
               </div>
@@ -847,6 +862,13 @@ export default function CheckoutModal() {
                         </>
                       )}
                     </button>
+
+                    <div className="checkout-policy-agreement">
+                      <RotateCcw size={12} className="text-gold" />
+                      <span>
+                        By placing your order, you review our <button type="button" onClick={openPolicyModal} className="policy-inline-trigger">Returns, Exchanges &amp; Refunds Policy</button>.
+                      </span>
+                    </div>
                   </div>
                 </div>
               </form>
@@ -999,6 +1021,13 @@ export default function CheckoutModal() {
                   )}
                 </div>
               )}
+
+              <div className="success-policy-note">
+                <RotateCcw size={12} className="text-gold" />
+                <span>
+                  Questions regarding delivery or unboxing? <button type="button" onClick={openPolicyModal} className="policy-inline-trigger">Read Return &amp; Exchange Policy</button>
+                </span>
+              </div>
 
               <button 
                 type="button"
@@ -1877,6 +1906,54 @@ export default function CheckoutModal() {
             grid-template-columns: 1fr;
             gap: 12px;
           }
+        }
+
+        .checkout-policy-reassurance {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          font-size: 11px;
+          color: var(--text-muted);
+          margin-top: 12px;
+          text-align: center;
+        }
+        .checkout-policy-agreement {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          font-size: 11px;
+          color: var(--text-muted);
+          margin-top: 10px;
+          text-align: center;
+        }
+        .policy-inline-trigger {
+          background: none;
+          border: none;
+          padding: 0;
+          color: var(--accent-terracotta);
+          text-decoration: underline;
+          cursor: pointer;
+          font-size: inherit;
+          font-family: inherit;
+          font-weight: 600;
+          transition: color 0.15s;
+        }
+        .policy-inline-trigger:hover {
+          color: #8A3B2B;
+        }
+        .success-policy-note {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 11.5px;
+          color: var(--text-secondary);
+          margin-bottom: 16px;
+          background: #FAF6EF;
+          border: 1px solid var(--border-light);
+          padding: 6px 14px;
+          border-radius: 20px;
         }
 
         @media (max-width: 540px) {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
-import { X, Trash2, Plus, Minus, ShoppingBag, Sparkles, ArrowRight, ShieldCheck, Check } from 'lucide-react';
+import { X, Trash2, Plus, Minus, ShoppingBag, Sparkles, ArrowRight, ShieldCheck, Check, RotateCcw } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function CartDrawer() {
@@ -13,7 +13,8 @@ export default function CartDrawer() {
     formatPrice, 
     cartTotal,
     cartSavings,
-    openCheckout
+    openCheckout,
+    openPolicyModal
   } = useShop();
 
   const [isCheckingOut, setIsCheckingOut] = useState(false);
@@ -199,6 +200,11 @@ export default function CartDrawer() {
                 </>
               )}
             </button>
+
+            <div className="cart-policy-badge">
+              <RotateCcw size={11} className="text-gold" />
+              <span>48h Defect Coverage • <button type="button" onClick={openPolicyModal} className="cart-policy-link">Returns &amp; Refund Policy</button></span>
+            </div>
           </div>
         )}
       </div>
@@ -490,6 +496,30 @@ export default function CartDrawer() {
           width: 100%;
           padding: 14px;
           font-size: 13px;
+        }
+        .cart-policy-badge {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 5px;
+          font-size: 10.5px;
+          color: var(--text-muted);
+          text-align: center;
+          margin-top: -2px;
+        }
+        .cart-policy-link {
+          background: none;
+          border: none;
+          padding: 0;
+          color: var(--accent-terracotta);
+          text-decoration: underline;
+          cursor: pointer;
+          font-size: inherit;
+          font-family: inherit;
+          font-weight: 600;
+        }
+        .cart-policy-link:hover {
+          color: #8A3B2B;
         }
       `}</style>
     </div>

@@ -43,6 +43,22 @@ export function ShopProvider({ children }) {
   const [isAtelierModalOpen, setIsAtelierModalOpen] = useState(false);
   const [customShadeProduct, setCustomShadeProduct] = useState(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
+
+  const openPolicyModal = () => setIsPolicyModalOpen(true);
+
+  // Auto-open policy modal if URL hash matches
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.toLowerCase();
+      if (hash === '#returns-policy' || hash === '#refund-policy' || hash === '#policy' || hash === '#refunds') {
+        setIsPolicyModalOpen(true);
+      }
+    };
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
   const [atelierUpiId, setAtelierUpiId] = useState(() => {
     try {
       const saved = localStorage.getItem('saak_upi_id');
@@ -363,6 +379,9 @@ export function ShopProvider({ children }) {
       isCheckoutOpen,
       setIsCheckoutOpen,
       openCheckout,
+      isPolicyModalOpen,
+      setIsPolicyModalOpen,
+      openPolicyModal,
       atelierUpiId,
       setAtelierUpiId,
       clearCart,

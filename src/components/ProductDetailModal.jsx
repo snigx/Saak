@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
-import { X, Heart, Sparkles, Check, ShoppingBag, ShieldCheck, Ruler, Palette, Edit3, ChevronLeft, ChevronRight, Camera, Layers } from 'lucide-react';
+import { X, Heart, Sparkles, Check, ShoppingBag, ShieldCheck, Ruler, Palette, Edit3, ChevronLeft, ChevronRight, Camera, Layers, RotateCcw } from 'lucide-react';
 
 export default function ProductDetailModal() {
   const { 
@@ -11,7 +11,8 @@ export default function ProductDetailModal() {
     toggleWishlist, 
     wishlist,
     setCustomShadeProduct,
-    openEditProduct
+    openEditProduct,
+    openPolicyModal
   } = useShop();
 
   if (!selectedProduct) return null;
@@ -322,6 +323,15 @@ export default function ProductDetailModal() {
                 <Sparkles size={14} className="text-gold" />
                 <span>Complimentary Fall &amp; Pico Stitching Included</span>
               </div>
+              <button 
+                type="button" 
+                onClick={openPolicyModal} 
+                className="perk-item perk-policy-btn"
+                title="View SAAK Returns, Exchanges &amp; Refunds Policy"
+              >
+                <RotateCcw size={14} className="text-gold" />
+                <span>Returns &amp; Exchange Policy (48h Coverage)</span>
+              </button>
             </div>
 
             {/* Atelier Admin Direct Edit */}
@@ -725,6 +735,23 @@ export default function ProductDetailModal() {
           display: flex;
           align-items: center;
           gap: 6px;
+        }
+        .perk-policy-btn {
+          background: none;
+          border: none;
+          padding: 0;
+          cursor: pointer;
+          font-family: inherit;
+          text-align: left;
+          text-decoration: underline;
+          text-decoration-color: rgba(197, 160, 89, 0.4);
+          text-underline-offset: 3px;
+          color: var(--text-secondary);
+          transition: all 0.2s;
+        }
+        .perk-policy-btn:hover {
+          color: var(--accent-terracotta);
+          text-decoration-color: var(--accent-terracotta);
         }
         .detail-admin-edit-box {
           margin-top: 14px;

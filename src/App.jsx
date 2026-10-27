@@ -16,6 +16,7 @@ import AtelierAdminModal from './components/AtelierAdminModal';
 import CheckoutModal from './components/CheckoutModal';
 import AuthModal from './components/AuthModal';
 import ProfileModal from './components/ProfileModal';
+import RefundPolicyModal from './components/RefundPolicyModal';
 
 export default function App() {
   return (
@@ -52,6 +53,7 @@ export default function App() {
         <CheckoutModal />
         <AuthModal />
         <ProfileModal />
+        <RefundPolicyModal />
       </div>
     </ShopProvider>
   </AuthProvider>

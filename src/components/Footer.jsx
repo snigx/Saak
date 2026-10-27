@@ -3,7 +3,7 @@ import { useShop } from '../context/ShopContext';
 import { Sparkles, MessageCircle, Mail, ShieldCheck, Heart } from 'lucide-react';
 
 export default function Footer() {
-  const { setIsAtelierModalOpen, openOrdersAdmin } = useShop();
+  const { setIsAtelierModalOpen, openOrdersAdmin, openPolicyModal } = useShop();
 
   return (
     <footer className="atelier-footer">
@@ -87,6 +87,7 @@ export default function Footer() {
         </div>
 
         {/* Col 3: Curations & Future Horizon */}
+        {/* Col 3: Curations & Policies */}
         <div className="footer-col">
           <h4 className="footer-col-title">Curated Edits</h4>
           <ul className="footer-links-list">
@@ -94,6 +95,16 @@ export default function Footer() {
             <li><a href="#mix-match-studio">Mix &amp; Match Styling Studio</a></li>
             <li><a href="#catalog-section">Sculpted Corsets &amp; Bustiers</a></li>
             <li><a href="#catalog-section">Curated Duos (Complete Looks)</a></li>
+            <li>
+              <button 
+                type="button" 
+                onClick={openPolicyModal} 
+                className="footer-policy-link-btn"
+                title="View SAAK Returns, Exchanges & Refunds Policy"
+              >
+                Returns, Exchanges &amp; Refunds
+              </button>
+            </li>
           </ul>
         </div>
 
@@ -139,6 +150,14 @@ export default function Footer() {
             <span>Pure Handcrafted Heritage</span>
             <span>•</span>
             <span>Worldwide Insured Shipping</span>
+            <span>•</span>
+            <button 
+              type="button" 
+              onClick={openPolicyModal} 
+              className="bottom-policy-link"
+            >
+              Returns, Exchanges &amp; Refunds
+            </button>
           </div>
         </div>
       </div>
@@ -340,7 +359,36 @@ export default function Footer() {
         }
         .bottom-badges {
           display: flex;
+          align-items: center;
           gap: 8px;
+        }
+        .footer-policy-link-btn {
+          background: none;
+          border: none;
+          padding: 0;
+          color: rgba(250, 246, 239, 0.7);
+          font-family: inherit;
+          font-size: 13px;
+          cursor: pointer;
+          text-align: left;
+          transition: color 0.2s;
+        }
+        .footer-policy-link-btn:hover {
+          color: var(--accent-gold);
+        }
+        .bottom-policy-link {
+          background: none;
+          border: none;
+          padding: 0;
+          color: rgba(250, 246, 239, 0.7);
+          font-family: inherit;
+          font-size: 11px;
+          cursor: pointer;
+          text-decoration: underline;
+          transition: color 0.2s;
+        }
+        .bottom-policy-link:hover {
+          color: var(--accent-gold);
         }
         @media (max-width: 992px) {
           .footer-main-grid {
