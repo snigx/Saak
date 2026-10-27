@@ -1,399 +1,561 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useShop } from '../context/ShopContext';
-import { Sparkles, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+
+const heroSlides = [
+  {
+    id: 1,
+    num: '01',
+    image: '/assets/hero_roots_reimagined.jpg',
+    alt: 'SAAK by Aprajita — Our Roots Reimagined in Indian Heritage',
+    eyebrow: 'TIMELESS INDIAN WEAVES • CONTEMPORARY SILHOUETTES',
+    headline: ['Our roots,', 'reimagined.'],
+    tagline: 'By us, for you.',
+    ctaText: 'EXPLORE THE COLLECTION',
+    actionType: 'catalog',
+  },
+  {
+    id: 2,
+    num: '02',
+    image: '/assets/hero_black_gold_duo.jpg',
+    alt: 'Midnight Black Crepe Saree & Antique Gold Zardozi Corset',
+    eyebrow: 'SIGNATURE ATELIER DUO • SCULPTED CORSETRY',
+    headline: ['Understated Drapes.', 'Sculpted Statements.'],
+    tagline: 'Fluid minimalist drape meets ornate royal corsetry.',
+    ctaText: 'SHOP THE ICONIC DUO',
+    actionType: 'duo',
+  },
+  {
+    id: 3,
+    num: '03',
+    image: '/assets/hero_sunset_tissue.jpg',
+    alt: 'Crushed Metallic Sunset Shimmer Tissue Saree',
+    eyebrow: 'THE TISSUE SERIES • FEATHERLIGHT FORM',
+    headline: ['Sunlit Shimmer.', 'Liquid Copper Weaves.'],
+    tagline: 'Woven with metallic sheen for effortless modern celebrations.',
+    ctaText: 'DISCOVER TISSUE SAREES',
+    actionType: 'tissue',
+  },
+];
 
 export default function Hero() {
-  const { setActiveCategory, addDuoToCart, products, setSelectedProduct, addToCart } = useShop();
+  const { setActiveCategory, addDuoToCart, products, setSelectedProduct } = useShop();
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
 
-  const handleExploreTissue = () => {
-    setActiveCategory('tissue');
-    const catalogEl = document.getElementById('catalog-section');
-    if (catalogEl) catalogEl.scrollIntoView({ behavior: 'smooth' });
+  // Auto-advance slides every 7 seconds when not paused
+  useEffect(() => {
+    if (isPaused) return;
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 7000);
+    return () => clearInterval(interval);
+  }, [isPaused, currentSlide]);
+
+  const handleNext = () => {
+    setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
   };
 
-  const handleStudioScroll = () => {
-    const studioEl = document.getElementById('mix-match-studio');
-    if (studioEl) studioEl.scrollIntoView({ behavior: 'smooth' });
+  const handlePrev = () => {
+    setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
   };
 
-  const handleShopIconicDuo = () => {
-    // 1. Look for the curated Signature Duo product
-    const duoProduct = products.find(p => p.id === 'signature-duo-black-gold') 
-      || products.find(p => p.category === 'sets');
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
 
-    if (duoProduct) {
-      setSelectedProduct(duoProduct);
+  const handleTouchMove = (e) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    const diff = touchStartX.current - touchEndX.current;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) handleNext();
+      else handlePrev();
+    }
+  };
+
+  const handleCtaClick = (actionType) => {
+    if (actionType === 'duo') {
+      const duoProduct = products.find((p) => p.id === 'signature-duo-black-gold') 
+        || products.find((p) => p.category === 'sets');
+      if (duoProduct) {
+        setSelectedProduct(duoProduct);
+        return;
+      }
+      const goldCorset = products.find((p) => p.id === 'the-gold-corset');
+      const saree = products.find((p) => p.category === 'sarees');
+      if (goldCorset && saree) {
+        addDuoToCart(saree, goldCorset);
+        return;
+      }
+    }
+
+    if (actionType === 'tissue') {
+      setActiveCategory('tissue');
+      const catalogEl = document.getElementById('catalog-section');
+      if (catalogEl) catalogEl.scrollIntoView({ behavior: 'smooth' });
       return;
     }
 
-    // 2. Fallback: pair gold corset with available saree
-    const goldCorset = products.find(p => p.id === 'the-gold-corset');
-    const saree = products.find(p => p.category === 'sarees');
-    if (goldCorset && saree) {
-      addDuoToCart(saree, goldCorset);
+    // Default 'catalog' or explore
+    const catalogEl = document.getElementById('catalog-section');
+    if (catalogEl) {
+      catalogEl.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
+  const active = heroSlides[currentSlide];
+
   return (
-    <section className="hero-section">
-      <div className="container hero-grid">
-        {/* Left Editorial Narrative */}
-        <div className="hero-content">
-          <div className="hero-eyebrow">
-            <span className="eyebrow-badge">
-              <Sparkles size={12} className="text-gold" />
-              <span>THE FESTIVE ATELIER</span>
-            </span>
-            <span className="eyebrow-line"></span>
+    <section 
+      className="hero-editorial-opening"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      aria-label="SAAK Editorial Opening Carousel"
+    >
+      {/* Background Slides with Crossfade */}
+      <div className="hero-slides-layer">
+        {heroSlides.map((slide, index) => (
+          <div 
+            key={slide.id}
+            className={`hero-bg-slide ${index === currentSlide ? 'active' : ''}`}
+            aria-hidden={index !== currentSlide}
+          >
+            <img 
+              src={slide.image} 
+              alt={slide.alt} 
+              className="hero-slide-image"
+              loading={index === 0 ? 'eager' : 'lazy'}
+            />
+          </div>
+        ))}
+        {/* Cinematic Atmospheric Vignette Gradients */}
+        <div className="hero-cinematic-overlay" />
+      </div>
+
+      {/* Foreground Content Container */}
+      <div className="container hero-editorial-container">
+        <div className="hero-editorial-content" key={active.id}>
+          {/* Eyebrow Label */}
+          <div className="hero-eyebrow-text">
+            <span>{active.eyebrow}</span>
           </div>
 
-          <h1 className="hero-title">
-            Understated Drapes. <br />
-            <span className="hero-title-italic">Sculpted Statements.</span>
+          {/* Main Headline */}
+          <h1 className="hero-editorial-title">
+            {active.headline[0]} <br />
+            {active.headline[1]}
           </h1>
 
-          <p className="hero-description">
-            Fluid crushed metallic shimmer tissue and pure crepe drapes, paired with hand-embroidered antique gold zardozi corsets. Effortless modern luxury crafted for the women of today.
+          {/* Italic Accent Tagline */}
+          <p className="hero-editorial-tagline">
+            {active.tagline}
           </p>
 
-          <div className="hero-ctas">
-            <button onClick={handleExploreTissue} className="btn btn-primary">
-              <span>The Tissue Series</span>
-              <ArrowRight size={16} />
+          {/* Sleek Ghost Action Button */}
+          <div className="hero-action-row">
+            <button 
+              type="button"
+              onClick={() => handleCtaClick(active.actionType)}
+              className="hero-editorial-btn"
+            >
+              <span>{active.ctaText}</span>
+              <ArrowRight size={16} className="btn-arrow-icon" />
             </button>
-            <button onClick={handleStudioScroll} className="btn btn-outline-gold studio-cta-btn">
-              <Sparkles size={15} className="text-gold" />
-              <span>Mix &amp; Match Studio</span>
-            </button>
-          </div>
-
-          {/* Key Brand Pillars */}
-          <div className="hero-features-list">
-            <div className="feature-item">
-              <CheckCircle2 size={16} className="feature-icon" />
-              <div>
-                <strong>Featherlight Drapes</strong>
-                <span>Fluid tissue &amp; pure crepe</span>
-              </div>
-            </div>
-            <div className="feature-item">
-              <CheckCircle2 size={16} className="feature-icon" />
-              <div>
-                <strong>Sculpted Corset Fit</strong>
-                <span>Padded boning, zero jewelry needed</span>
-              </div>
-            </div>
-            <div className="feature-item">
-              <CheckCircle2 size={16} className="feature-icon" />
-              <div>
-                <strong>Custom Colourways</strong>
-                <span>Tailored shades on request</span>
-              </div>
-            </div>
           </div>
         </div>
 
-        {/* Right High-Fashion Visual & Muse Showcase */}
-        <div className="hero-visual-wrapper">
-          <div className="hero-image-frame">
-            <img 
-              src="/assets/saak_muse_black_saree_gold_corset.jpg" 
-              alt="Aprajita in Midnight Black Crepe Saree & Gold Zardozi Corset"
-              className="hero-main-image"
-            />
-            <div className="hero-image-overlay"></div>
+        {/* Editorial Bottom Navigation Bar */}
+        <div className="hero-bottom-bar">
+          {/* Slide Indicator: 01 —— 02 03 */}
+          <div className="hero-pagination-cluster">
+            {heroSlides.map((slide, idx) => {
+              const isActive = idx === currentSlide;
+              return (
+                <div key={slide.id} className="pagination-step-item">
+                  <button 
+                    type="button"
+                    onClick={() => setCurrentSlide(idx)}
+                    className={`pagination-num-btn ${isActive ? 'active' : ''}`}
+                    title={`Slide ${slide.num}`}
+                  >
+                    {slide.num}
+                  </button>
 
-            {/* Floating Shoppable Duo Badge */}
-            <div 
-              className="hero-floating-card" 
-              onClick={handleShopIconicDuo}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleShopIconicDuo(); }}
-            >
-              <div className="floating-card-pill">
-                <Sparkles size={11} className="text-gold" />
-                <span>SIGNATURE DUO</span>
-              </div>
-              <h4 className="floating-card-title">Black Crepe + Gold Corset</h4>
-              <p className="floating-card-subtitle">Fluid minimalist drape meets ornate royal corsetry.</p>
-              <div className="floating-card-footer">
-                <div className="floating-price">
-                  <span className="price-current">₹8,460</span>
-                  <span className="price-old">₹9,400</span>
-                  <span className="discount-tag">Save 10%</span>
+                  {/* Horizontal Progress Track for Active Slide */}
+                  {isActive && (
+                    <div className="pagination-track-line">
+                      <div 
+                        className={`pagination-track-fill ${isPaused ? 'paused' : ''}`}
+                        key={`fill-${currentSlide}`}
+                      />
+                    </div>
+                  )}
                 </div>
-                <button 
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); handleShopIconicDuo(); }}
-                  className="btn btn-dark floating-buy-btn"
-                >
-                  Shop The Set
-                </button>
-              </div>
-            </div>
+              );
+            })}
           </div>
 
-          {/* Ambient Decorative Badge */}
-          <div className="hero-texture-tag">
-            <span>SUNLIT CRUSHED TISSUE &amp; ZARDOZI ATELIER</span>
+          {/* Minimalist Arrow Controls */}
+          <div className="hero-arrows-cluster">
+            <button 
+              type="button" 
+              onClick={handlePrev} 
+              className="hero-arrow-btn"
+              aria-label="Previous Slide"
+              title="Previous"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <button 
+              type="button" 
+              onClick={handleNext} 
+              className="hero-arrow-btn"
+              aria-label="Next Slide"
+              title="Next"
+            >
+              <ChevronRight size={20} />
+            </button>
           </div>
         </div>
       </div>
 
       <style>{`
-        .hero-section {
-          padding: 48px 0 64px 0;
-          background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
-          border-bottom: 1px solid var(--border-subtle);
+        .hero-editorial-opening {
           position: relative;
+          width: 100%;
+          min-height: 84vh;
+          max-height: 900px;
+          display: flex;
+          align-items: center;
           overflow: hidden;
+          background: #191412;
         }
-        .hero-grid {
-          display: grid;
-          grid-template-columns: 1.1fr 0.9fr;
-          gap: 56px;
-          align-items: center;
+
+        /* Full-Bleed Background Slides */
+        .hero-slides-layer {
+          position: absolute;
+          inset: 0;
+          z-index: 1;
         }
-        .hero-eyebrow {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 20px;
+
+        .hero-bg-slide {
+          position: absolute;
+          inset: 0;
+          opacity: 0;
+          visibility: hidden;
+          transition: opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1), transform 1.6s ease-out;
+          transform: scale(1.04);
         }
-        .eyebrow-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          background: rgba(163, 72, 53, 0.08);
-          border: 1px solid rgba(163, 72, 53, 0.2);
-          color: var(--accent-terracotta);
-          padding: 5px 12px;
-          font-size: 11px;
-          font-weight: 700;
-          letter-spacing: 0.12em;
-          border-radius: 2px;
+
+        .hero-bg-slide.active {
+          opacity: 1;
+          visibility: visible;
+          transform: scale(1);
         }
-        .eyebrow-line {
-          height: 1px;
-          flex-grow: 1;
-          background: linear-gradient(90deg, rgba(163, 72, 53, 0.25) 0%, transparent 100%);
-        }
-        .hero-title {
-          font-size: clamp(38px, 4.8vw, 58px);
-          line-height: 1.12;
-          color: var(--text-primary);
-          margin-bottom: 20px;
-          font-weight: 500;
-        }
-        .hero-title-italic {
-          font-style: italic;
-          color: var(--accent-terracotta);
-        }
-        .hero-description {
-          font-size: 16px;
-          color: var(--text-secondary);
-          line-height: 1.68;
-          max-width: 540px;
-          margin-bottom: 32px;
-        }
-        .hero-ctas {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          margin-bottom: 44px;
-          flex-wrap: wrap;
-        }
-        .studio-cta-btn {
-          background: rgba(255, 255, 255, 0.8);
-        }
-        .hero-features-list {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 16px;
-          padding-top: 24px;
-          border-top: 1px solid var(--border-subtle);
-        }
-        .feature-item {
-          display: flex;
-          align-items: flex-start;
-          gap: 8px;
-        }
-        .feature-icon {
-          color: var(--accent-terracotta);
-          flex-shrink: 0;
-          margin-top: 2px;
-        }
-        .feature-item div {
-          display: flex;
-          flex-direction: column;
-        }
-        .feature-item strong {
-          font-size: 12px;
-          color: var(--text-primary);
-        }
-        .feature-item span {
-          font-size: 11px;
-          color: var(--text-muted);
-        }
-        .hero-visual-wrapper {
-          position: relative;
-        }
-        .hero-image-frame {
-          position: relative;
-          border-radius: 4px;
-          overflow: hidden;
-          box-shadow: var(--shadow-lg);
-          border: 1px solid var(--border-subtle);
-          aspect-ratio: 4/4.8;
-          background: #EAE3D6;
-        }
-        .hero-main-image {
+
+        .hero-slide-image {
           width: 100%;
           height: 100%;
           object-fit: cover;
-          object-position: top center;
-          transition: transform 0.6s ease;
+          object-position: center right;
+          display: block;
         }
-        .hero-main-image:hover {
-          transform: scale(1.02);
-        }
-        .hero-image-overlay {
+
+        /* Cinematic Gradient Overlays: Ensure crisp contrast on the left without hiding the muse on the right */
+        .hero-cinematic-overlay {
           position: absolute;
           inset: 0;
-          background: linear-gradient(180deg, transparent 60%, rgba(26, 22, 20, 0.6) 100%);
+          background: 
+            linear-gradient(to right, rgba(20, 16, 14, 0.88) 0%, rgba(20, 16, 14, 0.65) 38%, rgba(20, 16, 14, 0.25) 65%, rgba(20, 16, 14, 0.05) 100%),
+            linear-gradient(to top, rgba(20, 16, 14, 0.78) 0%, rgba(20, 16, 14, 0.2) 28%, transparent 60%);
           pointer-events: none;
         }
-        .hero-floating-card {
-          position: absolute;
-          bottom: 20px;
-          left: 20px;
-          right: 20px;
-          background: rgba(255, 255, 255, 0.94);
-          backdrop-filter: blur(12px);
-          padding: 18px 20px;
-          border-radius: 4px;
-          border: 1px solid var(--border-gold);
-          box-shadow: var(--shadow-md);
-          cursor: pointer;
-          transition: transform 0.25s ease, box-shadow 0.25s ease;
+
+        /* Content Container */
+        .hero-editorial-container {
+          position: relative;
+          z-index: 2;
+          width: 100%;
+          min-height: 84vh;
+          max-height: 900px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          padding-top: 40px;
+          padding-bottom: 64px;
         }
-        .hero-floating-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 16px 32px rgba(31, 26, 23, 0.16);
+
+        .hero-editorial-content {
+          max-width: 580px;
+          animation: heroFadeSlideIn 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
-        .floating-card-pill {
+
+        @keyframes heroFadeSlideIn {
+          from {
+            opacity: 0;
+            transform: translateY(18px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        /* Eyebrow */
+        .hero-eyebrow-text {
+          font-family: var(--font-sans);
+          font-size: 11.5px;
+          font-weight: 600;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          color: rgba(240, 235, 227, 0.9);
+          margin-bottom: 24px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        /* Main Editorial Title */
+        .hero-editorial-title {
+          font-family: var(--font-serif);
+          font-size: clamp(40px, 5.2vw, 64px);
+          line-height: 1.12;
+          font-weight: 400;
+          color: #FAF7F2;
+          letter-spacing: -0.015em;
+          margin-bottom: 22px;
+          text-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+        }
+
+        /* Tagline in Italic Serif */
+        .hero-editorial-tagline {
+          font-family: var(--font-serif);
+          font-size: clamp(22px, 2.4vw, 29px);
+          font-style: italic;
+          font-weight: 400;
+          line-height: 1.4;
+          color: #F0EAE1;
+          margin-bottom: 38px;
+          text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Action Row & Sleek Button */
+        .hero-action-row {
+          display: flex;
+          align-items: center;
+        }
+
+        .hero-editorial-btn {
           display: inline-flex;
           align-items: center;
-          gap: 4px;
-          font-size: 10px;
-          font-weight: 700;
-          letter-spacing: 0.1em;
-          color: var(--accent-gold);
-          margin-bottom: 6px;
+          gap: 12px;
+          padding: 14px 30px;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.75);
+          color: #FFFFFF;
+          font-family: var(--font-sans);
+          font-size: 11.5px;
+          font-weight: 600;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          border-radius: 1px;
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          cursor: pointer;
+          transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .floating-card-title {
-          font-family: var(--font-serif);
-          font-size: 17px;
-          color: var(--text-primary);
-          margin-bottom: 2px;
+
+        .hero-editorial-btn:hover {
+          background: rgba(255, 255, 255, 0.22);
+          border-color: #FFFFFF;
+          transform: translateY(-2px);
+          box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
         }
-        .floating-card-subtitle {
-          font-size: 12px;
-          color: var(--text-secondary);
-          margin-bottom: 12px;
+
+        .btn-arrow-icon {
+          transition: transform 0.3s ease;
         }
-        .floating-card-footer {
+
+        .hero-editorial-btn:hover .btn-arrow-icon {
+          transform: translateX(5px);
+        }
+
+        /* Bottom Bar: Indicators & Arrows */
+        .hero-bottom-bar {
+          position: absolute;
+          bottom: 28px;
+          left: 0;
+          right: 0;
           display: flex;
           align-items: center;
           justify-content: space-between;
+          padding-left: inherit;
+          padding-right: inherit;
+          pointer-events: auto;
         }
-        .floating-price {
+
+        /* Slide Indicator: 01 —— 02 03 */
+        .hero-pagination-cluster {
           display: flex;
-          align-items: baseline;
-          gap: 6px;
+          align-items: center;
+          gap: 18px;
         }
-        .price-current {
-          font-size: 18px;
+
+        .pagination-step-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .pagination-num-btn {
+          background: none;
+          border: none;
+          color: rgba(255, 255, 255, 0.45);
+          font-family: var(--font-sans);
+          font-size: 13px;
+          font-weight: 500;
+          letter-spacing: 0.08em;
+          cursor: pointer;
+          padding: 4px 2px;
+          transition: color 0.3s ease;
+        }
+
+        .pagination-num-btn:hover {
+          color: rgba(255, 255, 255, 0.85);
+        }
+
+        .pagination-num-btn.active {
+          color: #FAF7F2;
           font-weight: 700;
-          color: var(--accent-terracotta);
         }
-        .price-old {
-          font-size: 12px;
-          color: var(--text-muted);
-          text-decoration: line-through;
-        }
-        .discount-tag {
-          font-size: 10px;
-          font-weight: 700;
-          color: #2E7D32;
-          background: rgba(46, 125, 50, 0.1);
-          padding: 1px 5px;
+
+        .pagination-track-line {
+          width: 52px;
+          height: 2px;
+          background: rgba(255, 255, 255, 0.28);
+          position: relative;
+          overflow: hidden;
           border-radius: 2px;
         }
-        .floating-buy-btn {
-          padding: 8px 16px;
-          font-size: 12px;
+
+        .pagination-track-fill {
+          position: absolute;
+          top: 0;
+          left: 0;
+          bottom: 0;
+          width: 100%;
+          background: #FFFFFF;
+          transform: translateX(-100%);
+          animation: fillProgress 7s linear forwards;
         }
-        .hero-texture-tag {
-          margin-top: 14px;
-          text-align: right;
-          font-size: 10px;
-          letter-spacing: 0.16em;
-          color: var(--accent-terracotta);
-          font-weight: 600;
+
+        .pagination-track-fill.paused {
+          animation-play-state: paused;
         }
-        @media (max-width: 992px) {
-          .hero-grid {
-            grid-template-columns: 1fr;
-            gap: 40px;
+
+        @keyframes fillProgress {
+          from {
+            transform: translateX(-100%);
           }
-          .hero-features-list {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
+          to {
+            transform: translateX(0%);
           }
         }
+
+        /* Minimalist Arrow Buttons */
+        .hero-arrows-cluster {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .hero-arrow-btn {
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.25);
+          color: rgba(255, 255, 255, 0.8);
+          width: 38px;
+          height: 38px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          backdrop-filter: blur(6px);
+        }
+
+        .hero-arrow-btn:hover {
+          background: rgba(255, 255, 255, 0.25);
+          border-color: #FFFFFF;
+          color: #FFFFFF;
+          transform: scale(1.05);
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 900px) {
+          .hero-editorial-opening {
+            min-height: 72vh;
+          }
+          .hero-editorial-container {
+            min-height: 72vh;
+            padding-bottom: 74px;
+          }
+          .hero-editorial-content {
+            max-width: 480px;
+          }
+          .hero-slide-image {
+            object-position: 70% center;
+          }
+          .hero-cinematic-overlay {
+            background: 
+              linear-gradient(to right, rgba(20, 16, 14, 0.92) 0%, rgba(20, 16, 14, 0.72) 55%, rgba(20, 16, 14, 0.4) 100%),
+              linear-gradient(to top, rgba(20, 16, 14, 0.85) 0%, transparent 50%);
+          }
+        }
+
         @media (max-width: 640px) {
-          .hero-section {
-            padding: 36px 0 32px;
+          .hero-editorial-opening {
+            min-height: 580px;
           }
-          .hero-title {
-            font-size: clamp(28px, 7.5vw, 40px);
+          .hero-editorial-container {
+            min-height: 580px;
+            padding-top: 24px;
+            padding-bottom: 64px;
+          }
+          .hero-slide-image {
+            object-position: 78% center;
+          }
+          .hero-eyebrow-text {
+            font-size: 10px;
+            letter-spacing: 0.16em;
+            margin-bottom: 16px;
+          }
+          .hero-editorial-title {
+            font-size: 34px;
             margin-bottom: 14px;
           }
-          .hero-description {
-            font-size: 14px;
-            margin-bottom: 24px;
+          .hero-editorial-tagline {
+            font-size: 20px;
+            margin-bottom: 28px;
           }
-          .hero-ctas {
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 30px;
-          }
-          .hero-ctas .btn {
+          .hero-editorial-btn {
             width: 100%;
+            justify-content: center;
+            padding: 13px 20px;
           }
-          .hero-features-list {
-            grid-template-columns: 1fr;
-            gap: 10px;
-            padding-top: 18px;
+          .hero-bottom-bar {
+            bottom: 18px;
           }
-          .hero-floating-card {
-            left: 12px;
-            right: 12px;
-            bottom: 12px;
-            padding: 12px 14px;
-          }
-          .floating-card-title {
-            font-size: 15px;
-          }
-          .floating-card-subtitle {
-            font-size: 11px;
-            margin-bottom: 8px;
-          }
-          .floating-buy-btn {
-            padding: 6px 12px;
-            font-size: 11px;
+          .pagination-track-line {
+            width: 32px;
           }
         }
       `}</style>
