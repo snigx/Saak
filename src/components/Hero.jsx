@@ -1,227 +1,127 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import { useShop } from '../context/ShopContext';
-import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, ChevronDown, Sparkles } from 'lucide-react';
 
-const heroSlides = [
-  {
-    id: 1,
-    num: '01',
-    image: '/assets/hero_roots_reimagined.jpg',
-    alt: 'SAAK by Aprajita — Our Roots Reimagined in Indian Heritage',
-    eyebrow: 'TIMELESS INDIAN WEAVES • CONTEMPORARY SILHOUETTES',
-    headline: ['Our roots,', 'reimagined.'],
-    tagline: 'By us, for you.',
-    ctaText: 'EXPLORE THE COLLECTION',
-    actionType: 'catalog',
-  },
-  {
-    id: 2,
-    num: '02',
-    image: '/assets/hero_black_gold_duo.jpg',
-    alt: 'Midnight Black Crepe Saree & Antique Gold Zardozi Corset',
-    eyebrow: 'SIGNATURE ATELIER DUO • SCULPTED CORSETRY',
-    headline: ['Understated Drapes.', 'Sculpted Statements.'],
-    tagline: 'Fluid minimalist drape meets ornate royal corsetry.',
-    ctaText: 'SHOP THE ICONIC DUO',
-    actionType: 'duo',
-  },
-  {
-    id: 3,
-    num: '03',
-    image: '/assets/hero_sunset_tissue.jpg',
-    alt: 'Crushed Metallic Sunset Shimmer Tissue Saree',
-    eyebrow: 'THE TISSUE SERIES • FEATHERLIGHT FORM',
-    headline: ['Sunlit Shimmer.', 'Liquid Copper Weaves.'],
-    tagline: 'Woven with metallic sheen for effortless modern celebrations.',
-    ctaText: 'DISCOVER TISSUE SAREES',
-    actionType: 'tissue',
-  },
-];
+// Hero image hosted in Supabase Blob Storage CDN (Zero local git bloat)
+const HERO_BLOB_IMAGE_URL = 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/hero/original_model_black_saree.jpg';
 
 export default function Hero() {
-  const { setActiveCategory, addDuoToCart, products, setSelectedProduct } = useShop();
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const touchStartX = useRef(0);
-  const touchEndX = useRef(0);
+  const { setSelectedProduct, products, addDuoToCart } = useShop();
 
-  // Auto-advance slides every 7 seconds when not paused
-  useEffect(() => {
-    if (isPaused) return;
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
-    }, 7000);
-    return () => clearInterval(interval);
-  }, [isPaused, currentSlide]);
-
-  const handleNext = () => {
-    setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
-  };
-
-  const handlePrev = () => {
-    setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
-  };
-
-  const handleTouchStart = (e) => {
-    touchStartX.current = e.touches[0].clientX;
-  };
-
-  const handleTouchMove = (e) => {
-    touchEndX.current = e.touches[0].clientX;
-  };
-
-  const handleTouchEnd = () => {
-    const diff = touchStartX.current - touchEndX.current;
-    if (Math.abs(diff) > 50) {
-      if (diff > 0) handleNext();
-      else handlePrev();
-    }
-  };
-
-  const handleCtaClick = (actionType) => {
-    if (actionType === 'duo') {
-      const duoProduct = products.find((p) => p.id === 'signature-duo-black-gold') 
-        || products.find((p) => p.category === 'sets');
-      if (duoProduct) {
-        setSelectedProduct(duoProduct);
-        return;
-      }
-      const goldCorset = products.find((p) => p.id === 'the-gold-corset');
-      const saree = products.find((p) => p.category === 'sarees');
-      if (goldCorset && saree) {
-        addDuoToCart(saree, goldCorset);
-        return;
-      }
-    }
-
-    if (actionType === 'tissue') {
-      setActiveCategory('tissue');
-      const catalogEl = document.getElementById('catalog-section');
-      if (catalogEl) catalogEl.scrollIntoView({ behavior: 'smooth' });
-      return;
-    }
-
-    // Default 'catalog' or explore
+  const handleExplore = () => {
     const catalogEl = document.getElementById('catalog-section');
     if (catalogEl) {
       catalogEl.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
-  const active = heroSlides[currentSlide];
+  const handleScrollDown = () => {
+    const storyEl = document.getElementById('about-saak');
+    if (storyEl) {
+      storyEl.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      handleExplore();
+    }
+  };
+
+  const handleShopIconicDuo = () => {
+    const duoProduct = products.find((p) => p.id === 'signature-duo-black-gold') 
+      || products.find((p) => p.category === 'sets');
+    if (duoProduct) {
+      setSelectedProduct(duoProduct);
+      return;
+    }
+    const goldCorset = products.find((p) => p.id === 'the-gold-corset');
+    const saree = products.find((p) => p.category === 'sarees');
+    if (goldCorset && saree) {
+      addDuoToCart(saree, goldCorset);
+    }
+  };
 
   return (
-    <section 
-      className="hero-editorial-opening"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      aria-label="SAAK Editorial Opening Carousel"
-    >
-      {/* Background Slides with Crossfade */}
+    <section className="hero-editorial-opening" aria-label="SAAK Editorial Opening Page">
+      {/* Background Layer with Original Model & Matching Heritage Architecture from Blob Storage */}
       <div className="hero-slides-layer">
-        {heroSlides.map((slide, index) => (
-          <div 
-            key={slide.id}
-            className={`hero-bg-slide ${index === currentSlide ? 'active' : ''}`}
-            aria-hidden={index !== currentSlide}
-          >
-            <img 
-              src={slide.image} 
-              alt={slide.alt} 
-              className="hero-slide-image"
-              loading={index === 0 ? 'eager' : 'lazy'}
-            />
-          </div>
-        ))}
+        <div className="hero-bg-slide active">
+          <img 
+            src={HERO_BLOB_IMAGE_URL} 
+            alt="SAAK by Aprajita — Midnight Black Saree & Sculpted Gold Corset" 
+            className="hero-slide-image"
+            loading="eager"
+            fetchPriority="high"
+          />
+        </div>
         {/* Cinematic Atmospheric Vignette Gradients */}
         <div className="hero-cinematic-overlay" />
       </div>
 
       {/* Foreground Content Container */}
       <div className="container hero-editorial-container">
-        <div className="hero-editorial-content" key={active.id}>
+        <div className="hero-editorial-content">
           {/* Eyebrow Label */}
           <div className="hero-eyebrow-text">
-            <span>{active.eyebrow}</span>
+            <span>TIMELESS INDIAN WEAVES • CONTEMPORARY SILHOUETTES</span>
           </div>
 
           {/* Main Headline */}
           <h1 className="hero-editorial-title">
-            {active.headline[0]} <br />
-            {active.headline[1]}
+            Our roots, <br />
+            reimagined.
           </h1>
 
           {/* Italic Accent Tagline */}
           <p className="hero-editorial-tagline">
-            {active.tagline}
+            By us, for you.
           </p>
 
           {/* Sleek Ghost Action Button */}
           <div className="hero-action-row">
             <button 
               type="button"
-              onClick={() => handleCtaClick(active.actionType)}
+              onClick={handleExplore}
               className="hero-editorial-btn"
             >
-              <span>{active.ctaText}</span>
+              <span>EXPLORE THE COLLECTION</span>
               <ArrowRight size={16} className="btn-arrow-icon" />
+            </button>
+
+            {/* Quick Shoppable Tag for the Draped Outfit */}
+            <button
+              type="button"
+              onClick={handleShopIconicDuo}
+              className="hero-duo-quick-tag"
+              title="Shop the Black Crepe & Gold Corset Duo"
+            >
+              <Sparkles size={13} className="text-gold" />
+              <span>Shop This Look: Black Crepe + Gold Corset</span>
             </button>
           </div>
         </div>
 
-        {/* Editorial Bottom Navigation Bar */}
+        {/* Editorial Bottom Bar */}
         <div className="hero-bottom-bar">
-          {/* Slide Indicator: 01 —— 02 03 */}
+          {/* Left Slide / Atelier Indicator */}
           <div className="hero-pagination-cluster">
-            {heroSlides.map((slide, idx) => {
-              const isActive = idx === currentSlide;
-              return (
-                <div key={slide.id} className="pagination-step-item">
-                  <button 
-                    type="button"
-                    onClick={() => setCurrentSlide(idx)}
-                    className={`pagination-num-btn ${isActive ? 'active' : ''}`}
-                    title={`Slide ${slide.num}`}
-                  >
-                    {slide.num}
-                  </button>
-
-                  {/* Horizontal Progress Track for Active Slide */}
-                  {isActive && (
-                    <div className="pagination-track-line">
-                      <div 
-                        className={`pagination-track-fill ${isPaused ? 'paused' : ''}`}
-                        key={`fill-${currentSlide}`}
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            <div className="pagination-step-item">
+              <span className="pagination-num-text active">01</span>
+              <div className="pagination-track-line">
+                <div className="pagination-track-fill" />
+              </div>
+              <span className="pagination-label-text">SAAK ATELIER • SIGNATURE DUO</span>
+            </div>
           </div>
 
-          {/* Minimalist Arrow Controls */}
-          <div className="hero-arrows-cluster">
+          {/* Right Scroll Indicator */}
+          <div className="hero-scroll-cluster">
             <button 
               type="button" 
-              onClick={handlePrev} 
-              className="hero-arrow-btn"
-              aria-label="Previous Slide"
-              title="Previous"
+              onClick={handleScrollDown} 
+              className="hero-scroll-btn"
+              aria-label="Scroll down to explore story"
+              title="Discover Our Story"
             >
-              <ChevronLeft size={20} />
-            </button>
-            <button 
-              type="button" 
-              onClick={handleNext} 
-              className="hero-arrow-btn"
-              aria-label="Next Slide"
-              title="Next"
-            >
-              <ChevronRight size={20} />
+              <span className="scroll-hint-text">OUR STORY</span>
+              <ChevronDown size={16} className="scroll-chevron-icon" />
             </button>
           </div>
         </div>
@@ -232,14 +132,14 @@ export default function Hero() {
           position: relative;
           width: 100%;
           min-height: 84vh;
-          max-height: 900px;
+          max-height: 920px;
           display: flex;
           align-items: center;
           overflow: hidden;
           background: #191412;
         }
 
-        /* Full-Bleed Background Slides */
+        /* Full-Bleed Background Layer */
         .hero-slides-layer {
           position: absolute;
           inset: 0;
@@ -249,16 +149,6 @@ export default function Hero() {
         .hero-bg-slide {
           position: absolute;
           inset: 0;
-          opacity: 0;
-          visibility: hidden;
-          transition: opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1), transform 1.6s ease-out;
-          transform: scale(1.04);
-        }
-
-        .hero-bg-slide.active {
-          opacity: 1;
-          visibility: visible;
-          transform: scale(1);
         }
 
         .hero-slide-image {
@@ -269,13 +159,13 @@ export default function Hero() {
           display: block;
         }
 
-        /* Cinematic Gradient Overlays: Ensure crisp contrast on the left without hiding the muse on the right */
+        /* Cinematic Atmospheric Gradient Overlays */
         .hero-cinematic-overlay {
           position: absolute;
           inset: 0;
           background: 
-            linear-gradient(to right, rgba(20, 16, 14, 0.88) 0%, rgba(20, 16, 14, 0.65) 38%, rgba(20, 16, 14, 0.25) 65%, rgba(20, 16, 14, 0.05) 100%),
-            linear-gradient(to top, rgba(20, 16, 14, 0.78) 0%, rgba(20, 16, 14, 0.2) 28%, transparent 60%);
+            linear-gradient(to right, rgba(20, 16, 14, 0.90) 0%, rgba(20, 16, 14, 0.68) 36%, rgba(20, 16, 14, 0.22) 65%, rgba(20, 16, 14, 0.05) 100%),
+            linear-gradient(to top, rgba(20, 16, 14, 0.82) 0%, rgba(20, 16, 14, 0.2) 28%, transparent 60%);
           pointer-events: none;
         }
 
@@ -285,7 +175,7 @@ export default function Hero() {
           z-index: 2;
           width: 100%;
           min-height: 84vh;
-          max-height: 900px;
+          max-height: 920px;
           display: flex;
           flex-direction: column;
           justify-content: center;
@@ -301,7 +191,7 @@ export default function Hero() {
         @keyframes heroFadeSlideIn {
           from {
             opacity: 0;
-            transform: translateY(18px);
+            transform: translateY(16px);
           }
           to {
             opacity: 1;
@@ -351,6 +241,8 @@ export default function Hero() {
         .hero-action-row {
           display: flex;
           align-items: center;
+          gap: 18px;
+          flex-wrap: wrap;
         }
 
         .hero-editorial-btn {
@@ -388,7 +280,31 @@ export default function Hero() {
           transform: translateX(5px);
         }
 
-        /* Bottom Bar: Indicators & Arrows */
+        .hero-duo-quick-tag {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          background: rgba(26, 22, 20, 0.65);
+          border: 1px solid rgba(197, 160, 89, 0.4);
+          padding: 12px 18px;
+          border-radius: 2px;
+          color: #F0EAE1;
+          font-size: 12px;
+          font-weight: 500;
+          letter-spacing: 0.04em;
+          cursor: pointer;
+          backdrop-filter: blur(6px);
+          transition: all 0.3s ease;
+        }
+
+        .hero-duo-quick-tag:hover {
+          background: rgba(163, 72, 53, 0.35);
+          border-color: var(--accent-terracotta);
+          color: #FFFFFF;
+          transform: translateY(-2px);
+        }
+
+        /* Bottom Bar */
         .hero-bottom-bar {
           position: absolute;
           bottom: 28px;
@@ -402,11 +318,11 @@ export default function Hero() {
           pointer-events: auto;
         }
 
-        /* Slide Indicator: 01 —— 02 03 */
+        /* Left Atelier Indicator */
         .hero-pagination-cluster {
           display: flex;
           align-items: center;
-          gap: 18px;
+          gap: 16px;
         }
 
         .pagination-step-item {
@@ -415,32 +331,18 @@ export default function Hero() {
           gap: 12px;
         }
 
-        .pagination-num-btn {
-          background: none;
-          border: none;
-          color: rgba(255, 255, 255, 0.45);
+        .pagination-num-text {
           font-family: var(--font-sans);
           font-size: 13px;
-          font-weight: 500;
-          letter-spacing: 0.08em;
-          cursor: pointer;
-          padding: 4px 2px;
-          transition: color 0.3s ease;
-        }
-
-        .pagination-num-btn:hover {
-          color: rgba(255, 255, 255, 0.85);
-        }
-
-        .pagination-num-btn.active {
-          color: #FAF7F2;
           font-weight: 700;
+          letter-spacing: 0.08em;
+          color: #FAF7F2;
         }
 
         .pagination-track-line {
           width: 52px;
           height: 2px;
-          background: rgba(255, 255, 255, 0.28);
+          background: rgba(255, 255, 255, 0.3);
           position: relative;
           overflow: hidden;
           border-radius: 2px;
@@ -448,55 +350,59 @@ export default function Hero() {
 
         .pagination-track-fill {
           position: absolute;
-          top: 0;
-          left: 0;
-          bottom: 0;
-          width: 100%;
+          inset: 0;
           background: #FFFFFF;
-          transform: translateX(-100%);
-          animation: fillProgress 7s linear forwards;
         }
 
-        .pagination-track-fill.paused {
-          animation-play-state: paused;
+        .pagination-label-text {
+          font-size: 11px;
+          letter-spacing: 0.16em;
+          color: rgba(255, 255, 255, 0.65);
+          text-transform: uppercase;
+          font-weight: 500;
         }
 
-        @keyframes fillProgress {
-          from {
-            transform: translateX(-100%);
-          }
-          to {
-            transform: translateX(0%);
-          }
-        }
-
-        /* Minimalist Arrow Buttons */
-        .hero-arrows-cluster {
+        /* Right Scroll Button */
+        .hero-scroll-cluster {
           display: flex;
           align-items: center;
-          gap: 12px;
         }
 
-        .hero-arrow-btn {
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.25);
-          color: rgba(255, 255, 255, 0.8);
-          width: 38px;
-          height: 38px;
-          display: flex;
+        .hero-scroll-btn {
+          background: none;
+          border: none;
+          color: rgba(255, 255, 255, 0.7);
+          display: inline-flex;
           align-items: center;
-          justify-content: center;
-          border-radius: 50%;
+          gap: 6px;
           cursor: pointer;
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
           transition: all 0.3s ease;
-          backdrop-filter: blur(6px);
+          padding: 6px 10px;
         }
 
-        .hero-arrow-btn:hover {
-          background: rgba(255, 255, 255, 0.25);
-          border-color: #FFFFFF;
+        .hero-scroll-btn:hover {
           color: #FFFFFF;
-          transform: scale(1.05);
+          transform: translateY(2px);
+        }
+
+        .scroll-chevron-icon {
+          animation: bounceDown 2s infinite;
+        }
+
+        @keyframes bounceDown {
+          0%, 20%, 50%, 80%, 100% {
+            transform: translateY(0);
+          }
+          40% {
+            transform: translateY(4px);
+          }
+          60% {
+            transform: translateY(2px);
+          }
         }
 
         /* Responsive Breakpoints */
@@ -512,11 +418,11 @@ export default function Hero() {
             max-width: 480px;
           }
           .hero-slide-image {
-            object-position: 70% center;
+            object-position: 72% center;
           }
           .hero-cinematic-overlay {
             background: 
-              linear-gradient(to right, rgba(20, 16, 14, 0.92) 0%, rgba(20, 16, 14, 0.72) 55%, rgba(20, 16, 14, 0.4) 100%),
+              linear-gradient(to right, rgba(20, 16, 14, 0.92) 0%, rgba(20, 16, 14, 0.74) 55%, rgba(20, 16, 14, 0.4) 100%),
               linear-gradient(to top, rgba(20, 16, 14, 0.85) 0%, transparent 50%);
           }
         }
@@ -546,13 +452,25 @@ export default function Hero() {
             font-size: 20px;
             margin-bottom: 28px;
           }
+          .hero-action-row {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+          }
           .hero-editorial-btn {
             width: 100%;
             justify-content: center;
             padding: 13px 20px;
           }
+          .hero-duo-quick-tag {
+            width: 100%;
+            justify-content: center;
+          }
           .hero-bottom-bar {
             bottom: 18px;
+          }
+          .pagination-label-text {
+            display: none;
           }
           .pagination-track-line {
             width: 32px;
