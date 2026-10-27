@@ -480,10 +480,13 @@ export default function CartDrawer() {
           color: var(--text-secondary);
         }
         .subtotal-val {
-          font-family: var(--font-serif);
-          font-size: 24px;
+          font-family: var(--font-sans);
+          font-size: 22px;
           font-weight: 700;
           color: var(--accent-terracotta);
+          letter-spacing: -0.01em;
+          font-variant-numeric: tabular-nums lining-nums;
+          font-feature-settings: "tnum" 1, "lnum" 1;
         }
         .perk-reassurance {
           display: flex;

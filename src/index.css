@@ -52,6 +52,22 @@ h1, h2, h3, h4, .font-serif {
   letter-spacing: -0.01em;
 }
 
+/* Global Price & Currency Typography - Modern Clean Lining Numerals */
+.subtotal-val,
+.cart-total-text,
+.item-price-current,
+.current-price,
+.card-current-price,
+.detail-price,
+.floating-price,
+.studio-price,
+[class*="price"],
+[class*="subtotal-val"] {
+  font-family: var(--font-sans) !important;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
 /* Smooth Container */
 .container {
   max-width: 1320px;
