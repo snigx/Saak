@@ -9,7 +9,7 @@ export default function MixMatchStudio() {
   const sarees = products.filter(p => p.category === 'sarees');
   const blouses = products.filter(p => p.category === 'blouses');
 
-  const [selectedSareeId, setSelectedSareeId] = useState('midnight-black-crepe');
+  const [selectedSareeId, setSelectedSareeId] = useState('sunset-orange-tissue');
   const [selectedBlouseId, setSelectedBlouseId] = useState('the-gold-corset');
   const [viewMode, setViewMode] = useState('model'); // 'model' or 'flatlay'
 

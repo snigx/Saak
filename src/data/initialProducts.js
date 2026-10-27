@@ -1,3 +1,5 @@
+const CDN_BASE = 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media';
+
 export const initialProducts = [
   {
     id: 'the-gold-corset',
@@ -19,22 +21,22 @@ export const initialProducts = [
     hasMargins: true,
     images: {
       modelPhotos: [
-        '/assets/saak_muse_black_saree_gold_corset.jpg',
-        '/assets/saak_muse_black_corset_side.jpg'
+        `${CDN_BASE}/blouses/the-gold-corset/model_front.jpg`,
+        `${CDN_BASE}/blouses/the-gold-corset/model_side.jpg`
       ],
       flatlayPhotos: [
-        'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/flatlays/black_crepe_gold_corset_flatlay.jpg'
+        `${CDN_BASE}/blouses/the-gold-corset/flatlay.jpg`
       ],
-      modelView: '/assets/saak_muse_black_saree_gold_corset.jpg',
-      flatlayView: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/flatlays/black_crepe_gold_corset_flatlay.jpg',
-      swatchZoom: '/assets/saak_muse_black_corset_side.jpg',
+      modelView: `${CDN_BASE}/blouses/the-gold-corset/model_front.jpg`,
+      flatlayView: `${CDN_BASE}/blouses/the-gold-corset/flatlay.jpg`,
+      swatchZoom: `${CDN_BASE}/blouses/the-gold-corset/model_side.jpg`,
       gallery: [
-        '/assets/saak_muse_black_saree_gold_corset.jpg',
-        '/assets/saak_muse_black_corset_side.jpg',
-        'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/flatlays/black_crepe_gold_corset_flatlay.jpg'
+        `${CDN_BASE}/blouses/the-gold-corset/model_front.jpg`,
+        `${CDN_BASE}/blouses/the-gold-corset/model_side.jpg`,
+        `${CDN_BASE}/blouses/the-gold-corset/flatlay.jpg`
       ]
     },
-    recommendedPairings: ['sunset-orange-tissue', 'olive-bloom-tissue', 'burnt-copper-tissue'],
+    recommendedPairings: ['sunset-orange-tissue', 'olive-bloom-tissue'],
     bundleDiscountPercent: 10,
     inStock: true,
     featured: true
@@ -65,21 +67,23 @@ export const initialProducts = [
     sizeOptions: ['Standard 6-Yard', 'Pre-Pleated Fall & Pico (+₹450)'],
     images: {
       modelPhotos: [
-        '/assets/muse_sunset_tissue.jpg',
-        '/assets/muse_sunset_tissue_2.jpg'
+        `${CDN_BASE}/sarees/sunset-orange-tissue/model_front.jpg`,
+        `${CDN_BASE}/sarees/sunset-orange-tissue/model_drape.jpg`,
+        `${CDN_BASE}/sarees/sunset-orange-tissue/model_copper.jpg`
       ],
       flatlayPhotos: [
-        '/assets/saak_folded_copper_tissue.jpg',
-        '/assets/saak_flatlay_copper_green.jpg'
+        `${CDN_BASE}/sarees/sunset-orange-tissue/flatlay_folded.jpg`,
+        `${CDN_BASE}/sarees/sunset-orange-tissue/swatch_texture.jpg`
       ],
-      modelView: '/assets/muse_sunset_tissue.jpg',
-      flatlayView: '/assets/saak_folded_copper_tissue.jpg',
-      swatchZoom: '/assets/saak_flatlay_copper_green.jpg',
+      modelView: `${CDN_BASE}/sarees/sunset-orange-tissue/model_front.jpg`,
+      flatlayView: `${CDN_BASE}/sarees/sunset-orange-tissue/flatlay_folded.jpg`,
+      swatchZoom: `${CDN_BASE}/sarees/sunset-orange-tissue/swatch_texture.jpg`,
       gallery: [
-        '/assets/muse_sunset_tissue.jpg',
-        '/assets/muse_sunset_tissue_2.jpg',
-        '/assets/saak_folded_copper_tissue.jpg',
-        '/assets/saak_flatlay_copper_green.jpg'
+        `${CDN_BASE}/sarees/sunset-orange-tissue/model_front.jpg`,
+        `${CDN_BASE}/sarees/sunset-orange-tissue/model_drape.jpg`,
+        `${CDN_BASE}/sarees/sunset-orange-tissue/model_copper.jpg`,
+        `${CDN_BASE}/sarees/sunset-orange-tissue/flatlay_folded.jpg`,
+        `${CDN_BASE}/sarees/sunset-orange-tissue/swatch_texture.jpg`
       ]
     },
     recommendedPairings: ['the-gold-corset'],
@@ -110,21 +114,19 @@ export const initialProducts = [
     sizeOptions: ['Standard 6-Yard', 'Pre-Pleated Fall & Pico (+₹450)'],
     images: {
       modelPhotos: [
-        '/assets/muse_olive_tissue.jpg'
+        `${CDN_BASE}/sarees/olive-bloom-tissue/model_front.jpg`
       ],
       flatlayPhotos: [
-        '/assets/saak_green_tissue_drape.jpg',
-        '/assets/saak_green_tissue_swirl.jpg',
-        '/assets/saak_flatlay_copper_green.jpg'
+        `${CDN_BASE}/sarees/olive-bloom-tissue/flatlay_drape.jpg`,
+        `${CDN_BASE}/sarees/olive-bloom-tissue/swatch_swirl.jpg`
       ],
-      modelView: '/assets/muse_olive_tissue.jpg',
-      flatlayView: '/assets/saak_green_tissue_drape.jpg',
-      swatchZoom: '/assets/saak_green_tissue_swirl.jpg',
+      modelView: `${CDN_BASE}/sarees/olive-bloom-tissue/model_front.jpg`,
+      flatlayView: `${CDN_BASE}/sarees/olive-bloom-tissue/flatlay_drape.jpg`,
+      swatchZoom: `${CDN_BASE}/sarees/olive-bloom-tissue/swatch_swirl.jpg`,
       gallery: [
-        '/assets/muse_olive_tissue.jpg',
-        '/assets/saak_green_tissue_drape.jpg',
-        '/assets/saak_green_tissue_swirl.jpg',
-        '/assets/saak_flatlay_copper_green.jpg'
+        `${CDN_BASE}/sarees/olive-bloom-tissue/model_front.jpg`,
+        `${CDN_BASE}/sarees/olive-bloom-tissue/flatlay_drape.jpg`,
+        `${CDN_BASE}/sarees/olive-bloom-tissue/swatch_swirl.jpg`
       ]
     },
     recommendedPairings: ['the-gold-corset'],
@@ -150,67 +152,24 @@ export const initialProducts = [
     sizeOptions: ['Waist 26 + Bust 32', 'Waist 28 + Bust 34', 'Waist 30 + Bust 36', 'Waist 32 + Bust 38', 'Custom Measurements'],
     images: {
       modelPhotos: [
-        '/assets/saak_muse_black_saree_gold_corset.jpg',
-        '/assets/saak_muse_black_corset_side.jpg'
+        `${CDN_BASE}/sets/signature-duo-black-gold/model_front.jpg`,
+        `${CDN_BASE}/sets/signature-duo-black-gold/model_side.jpg`
       ],
       flatlayPhotos: [
-        'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/flatlays/black_crepe_gold_corset_flatlay.jpg'
+        `${CDN_BASE}/sets/signature-duo-black-gold/flatlay.jpg`
       ],
-      modelView: '/assets/saak_muse_black_saree_gold_corset.jpg',
-      flatlayView: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/flatlays/black_crepe_gold_corset_flatlay.jpg',
-      swatchZoom: '/assets/saak_muse_black_corset_side.jpg',
+      modelView: `${CDN_BASE}/sets/signature-duo-black-gold/model_front.jpg`,
+      flatlayView: `${CDN_BASE}/sets/signature-duo-black-gold/flatlay.jpg`,
+      swatchZoom: `${CDN_BASE}/sets/signature-duo-black-gold/model_side.jpg`,
       gallery: [
-        '/assets/saak_muse_black_saree_gold_corset.jpg',
-        '/assets/saak_muse_black_corset_side.jpg',
-        'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/flatlays/black_crepe_gold_corset_flatlay.jpg'
+        `${CDN_BASE}/sets/signature-duo-black-gold/model_front.jpg`,
+        `${CDN_BASE}/sets/signature-duo-black-gold/model_side.jpg`,
+        `${CDN_BASE}/sets/signature-duo-black-gold/flatlay.jpg`
       ]
     },
     recommendedPairings: [],
     bundleDiscountPercent: 10,
     inStock: true,
     featured: true
-  },
-  {
-    id: 'burnt-copper-tissue',
-    name: 'Burnt Copper Metallic Tissue Saree',
-    category: 'sarees',
-    subCategory: 'tissue',
-    price: 4900,
-    originalPrice: 5600,
-    tag: 'Festive Classic',
-    tagColor: '#8C3B2B',
-    description: 'Warm burnt copper and rust crushed tissue that catches golden hour light with unmatched luxury. Framed with an antique silver-gold zari border that drapes like liquid metal.',
-    fabric: 'Dual-Tone Crushed Metallic Tissue',
-    drapeStyle: 'Classic 6-Yard',
-    drapeWeight: 'Light & Fluid',
-    zariWork: 'Dual-Tone Antique Border',
-    isCustomColorAvailable: true,
-    availableCustomColors: [
-      { name: 'Burnt Copper', hex: '#8C3B2B' },
-      { name: 'Olive Green', hex: '#5B664B' },
-      { name: 'Ivory Shimmer', hex: '#FAF6EF' }
-    ],
-    sizeOptions: ['Standard 6-Yard', 'Pre-Pleated Fall & Pico (+₹450)'],
-    images: {
-      modelPhotos: [
-        '/assets/muse_copper_tissue.jpg'
-      ],
-      flatlayPhotos: [
-        '/assets/saak_folded_copper_tissue.jpg',
-        '/assets/saak_flatlay_copper_green.jpg'
-      ],
-      modelView: '/assets/muse_copper_tissue.jpg',
-      flatlayView: '/assets/saak_folded_copper_tissue.jpg',
-      swatchZoom: '/assets/saak_flatlay_copper_green.jpg',
-      gallery: [
-        '/assets/muse_copper_tissue.jpg',
-        '/assets/saak_folded_copper_tissue.jpg',
-        '/assets/saak_flatlay_copper_green.jpg'
-      ]
-    },
-    recommendedPairings: ['the-gold-corset'],
-    bundleDiscountPercent: 10,
-    inStock: true,
-    featured: false
   }
 ];
