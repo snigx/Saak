@@ -3,7 +3,7 @@ import { useShop } from '../context/ShopContext';
 import { ArrowRight, ChevronDown, Sparkles } from 'lucide-react';
 
 // Hero image hosted in Supabase Blob Storage CDN (Zero local git bloat)
-const HERO_BLOB_IMAGE_URL = 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/hero/model_black_saree_heritage.jpg';
+const HERO_BLOB_IMAGE_URL = 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/hero/model_black_saree_modern.jpg';
 
 export default function Hero() {
   const { setSelectedProduct, products, addDuoToCart } = useShop();
