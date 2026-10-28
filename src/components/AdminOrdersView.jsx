@@ -5,7 +5,7 @@ import {
   MessageCircle, ExternalLink, Receipt, Truck, Download, 
   ShieldCheck, AlertCircle, Clock, PlusCircle, RefreshCw,
   Trash2, Sparkles, ChevronRight, CheckCheck, Printer,
-  FileText, Banknote, PhoneCall, Mail, Send
+  FileText, Banknote, PhoneCall, Mail, Send, CheckCircle
 } from 'lucide-react';
 import InstagramIcon from './InstagramIcon';
 import { getOutboxEmails } from '../services/emailService';
@@ -14,7 +14,9 @@ export default function AdminOrdersView() {
   const { 
     orders = [], 
     updateOrderStatus, 
+    confirmOrder,
     dispatchOrder,
+    deliverOrder,
     deleteOrder, 
     resetOrders, 
     refreshOrders, 
@@ -80,14 +82,46 @@ export default function AdminOrdersView() {
   };
 
   // Status transitions
-  const handleMarkSucceeded = (order) => {
-    updateOrderStatus(order.id, {
-      payment_status: 'succeeded',
-      failure_reason: null,
-      verified_at: new Date().toISOString(),
-      verified_by: 'Aprajita (Atelier Founder)',
-      admin_notes: `Payment verified by admin on ${new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.`
+  const handleMarkSucceeded = async (order) => {
+    if (confirmOrder) {
+      await confirmOrder(order.id, `Payment verified by admin on ${new Date().toLocaleDateString('en-IN')}`, true);
+    } else {
+      updateOrderStatus(order.id, {
+        payment_status: 'succeeded',
+        failure_reason: null,
+        fulfillment_status: 'processing',
+        verified_at: new Date().toISOString(),
+        verified_by: 'Aprajita (Atelier Founder)',
+        admin_notes: `Payment verified by admin on ${new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.`
+      });
+    }
+    setOutboxEmails(getOutboxEmails());
+    setDispatchToast({
+      title: 'Order Confirmed!',
+      msg: order.customer_email 
+        ? `Payment verified & Order Confirmed email dispatched to ${order.customer_email}!` 
+        : 'Payment verified and marked succeeded.'
     });
+    setTimeout(() => setDispatchToast(null), 5000);
+  };
+
+  const handleMarkDelivered = async (order) => {
+    if (deliverOrder) {
+      await deliverOrder(order.id, true);
+    } else {
+      updateOrderStatus(order.id, {
+        fulfillment_status: 'delivered',
+        delivered_at: new Date().toISOString()
+      });
+    }
+    setOutboxEmails(getOutboxEmails());
+    setDispatchToast({
+      title: 'Order Delivered!',
+      msg: order.customer_email 
+        ? `Order marked delivered & delivery celebration email dispatched to ${order.customer_email}!` 
+        : 'Order marked delivered.'
+    });
+    setTimeout(() => setDispatchToast(null), 5000);
   };
 
   const handleConfirmFailed = () => {
@@ -833,6 +867,25 @@ export default function AdminOrdersView() {
                         <Truck size={14} />
                         <span>Update Tracking</span>
                       </button>
+                    )}
+
+                    {/* Mark Delivered button (when dispatched but not yet delivered) */}
+                    {isShipped && order.fulfillment_status !== 'delivered' && (
+                      <button 
+                        className="btn btn-outline deliver-btn"
+                        onClick={() => handleMarkDelivered(order)}
+                        title="Mark order as delivered and send delivery celebration email"
+                        style={{ borderColor: '#2E7D32', color: '#2E7D32' }}
+                      >
+                        <CheckCircle size={14} />
+                        <span>Mark Delivered</span>
+                      </button>
+                    )}
+
+                    {order.fulfillment_status === 'delivered' && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '6px 12px', fontSize: '11px', fontWeight: 600, background: '#E8F5E9', color: '#2E7D32', borderRadius: '4px' }}>
+                        <CheckCheck size={14} /> Delivered
+                      </span>
                     )}
                   </div>
 

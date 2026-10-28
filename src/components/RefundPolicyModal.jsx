@@ -647,6 +647,36 @@ export default function RefundPolicyModal() {
           from { transform: translateY(16px); opacity: 0; }
           to { transform: translateY(0); opacity: 1; }
         }
+
+        @media (max-width: 600px) {
+          .policy-modal {
+            width: 95%;
+            max-width: 95%;
+            max-height: 94vh;
+          }
+          .policy-modal-header {
+            padding: 18px 16px 14px 16px;
+          }
+          .policy-title {
+            font-size: 20px;
+          }
+          .policy-nav-strip {
+            padding: 8px 14px;
+          }
+          .policy-modal-body {
+            padding: 16px 14px;
+            gap: 18px;
+          }
+          .policy-modal-footer {
+            padding: 12px 14px;
+            flex-direction: column;
+            gap: 10px;
+          }
+          .policy-done-btn {
+            width: 100%;
+            justify-content: center;
+          }
+        }
       `}</style>
     </div>
   );

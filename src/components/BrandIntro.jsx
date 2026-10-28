@@ -64,7 +64,7 @@ export default function BrandIntro() {
             {/* Primary Atelier Frame */}
             <div className="main-frame">
               <img 
-                src="/assets/saak_earthy_heritage_1791662639874.jpg" 
+                src="/assets/saak_muse_black_corset_side.jpg" 
                 alt="SAAK by Aprajita — Indian Textile Heritage" 
                 className="main-frame-img"
               />
@@ -388,36 +388,48 @@ export default function BrandIntro() {
         @media (max-width: 1024px) {
           .intro-container {
             grid-template-columns: 1fr;
-            gap: 48px;
+            gap: 40px;
           }
           .visual-composition {
             margin: 0 auto;
-          }
-          .inset-frame {
-            left: -12px;
-          }
-          .pillars-floating-card {
-            right: -12px;
+            max-width: 100%;
           }
         }
 
-        @media (max-width: 640px) {
+        @media (max-width: 768px) {
           .brand-intro-section {
-            padding: 60px 0 72px 0;
+            padding: 56px 0 64px 0;
+          }
+          .intro-headline {
+            font-size: 28px;
+            line-height: 1.25;
           }
           .intro-lead {
-            font-size: 17px;
+            font-size: 16px;
+            line-height: 1.6;
+          }
+          .intro-body {
+            font-size: 14px;
+            line-height: 1.65;
           }
           .intro-quote-card {
-            padding: 18px 20px;
+            padding: 16px 18px;
+            margin: 20px 0;
+          }
+          .intro-quote-text {
+            font-size: 13.5px;
           }
           .inset-frame {
-            display: none;
+            display: none !important;
           }
           .pillars-floating-card {
             position: static;
-            margin-top: 16px;
+            margin-top: 14px;
+            width: 100%;
             max-width: 100%;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-gold);
+            padding: 16px;
           }
         }
       `}</style>

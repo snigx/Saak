@@ -163,20 +163,24 @@ export default function AnnouncementBar() {
             gap: 8px;
             justify-content: center;
           }
+          .atelier-btn {
+            display: none !important;
+          }
           .instagram-top-link span,
           .whatsapp-link span {
-            display: none;
-          }
-          .atelier-btn span {
-            display: none;
+            display: inline-block;
           }
           .announcement-right {
-            gap: 10px;
+            gap: 12px;
+            justify-content: center;
           }
         }
         @media (max-width: 420px) {
-          .instagram-top-link {
+          .instagram-top-link span {
             display: none;
+          }
+          .whatsapp-link span {
+            font-size: 10px;
           }
         }
       `}</style>

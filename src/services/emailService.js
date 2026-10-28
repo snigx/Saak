@@ -1,25 +1,68 @@
 /**
  * SAAK BY APRAJITA — BESPOKE EMAIL NOTIFICATION SERVICE
- * Handles luxury transactional emails:
- * 1. Order Confirmation ("Your order is in process, dispatch details shortly")
- * 2. Dispatch & Tracking Notification (Courier partner, AWB, live tracking link, estimated delivery)
+ * Handles luxury transactional emails across the full customer lifecycle:
+ * 1. Order Placed ("Your booking is received, payment verification in progress")
+ * 2. Order Confirmed ("Your payment is verified and ensemble is in handcrafting")
+ * 3. Order Dispatched & Tracking ("Dispatched from atelier with courier & AWB tracking")
+ * 4. Order Delivered ("Your bespoke parcel has arrived, styling & care notes")
  * 
- * Supports Resend, Webhooks, EmailJS, and a built-in Atelier Outbox with HTML preview.
+ * Delivers via /api/send-email (Gmail SMTP with App Password) with built-in Atelier Outbox preview.
  */
 
 const OUTBOX_STORAGE_KEY = 'saak_outbox_emails';
 
-// Sender configuration (Can be set via .env or defaults to Aprajita's Atelier)
-const SENDER_EMAIL = import.meta.env.VITE_SENDER_EMAIL || 'Saakbyaprajita@gmail.com';
-const SENDER_NAME = 'Saak by Aprajita Atelier';
-const RESEND_API_KEY = import.meta.env.VITE_RESEND_API_KEY || null;
-const EMAIL_WEBHOOK_URL = import.meta.env.VITE_EMAIL_WEBHOOK_URL || null;
+// Sender configuration
+export const SENDER_EMAIL = 'Saakbyaprajita@gmail.com';
+export const SENDER_NAME = 'Saak by Aprajita Atelier';
 
 /**
- * Generate luxury responsive HTML for Order Confirmation Email
+ * Common HTML email header wrapper
  */
-export function generateOrderConfirmationHtml(order) {
-  const itemsListHtml = (order.items || []).map(item => `
+function renderEmailHeader(subtitle, title, refText) {
+  return `
+    <!-- Atelier Header -->
+    <tr>
+      <td style="background: linear-gradient(135deg, #1F1A17 0%, #2A221E 100%); padding: 36px 32px; text-align: center; border-bottom: 2px solid #C5A059;">
+        <div style="color: #C5A059; font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 8px; font-weight: 600;">
+          ${subtitle}
+        </div>
+        <h1 style="color: #FAF6EF; font-family: Georgia, serif; font-size: 28px; margin: 0 0 6px 0; font-weight: 400; letter-spacing: 0.04em;">
+          Saak by Aprajita
+        </h1>
+        <div style="color: #D6CBC0; font-size: 12px; font-style: italic;">
+          Fluid Drapes &amp; Sculpted Statements
+        </div>
+        ${refText ? `<div style="color: #E2CA9B; font-size: 11px; margin-top: 10px; font-family: monospace; letter-spacing: 0.08em;">${refText}</div>` : ''}
+      </td>
+    </tr>
+  `;
+}
+
+/**
+ * Common HTML email footer wrapper
+ */
+function renderEmailFooter() {
+  return `
+    <!-- Footer / Atelier Concierge -->
+    <tr>
+      <td style="background: #F2ECE0; padding: 24px 32px; text-align: center; border-top: 1px solid #E5DDCF;">
+        <p style="margin: 0 0 10px 0; font-size: 13px; color: #4A423D; line-height: 1.5;">
+          Need bespoke styling assistance or drape adjustments?<br />
+          Our atelier concierge is available on WhatsApp at <strong style="color: #A34835;">+91 62676 64409</strong> or via email at <strong style="color: #A34835;">Saakbyaprajita@gmail.com</strong>.
+        </p>
+        <div style="margin-top: 14px; font-size: 11px; color: #8A817A;">
+          © ${new Date().getFullYear()} Saak by Aprajita. Fluid Drapes &amp; Sculpted Statements.
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+/**
+ * Items list table rows HTML
+ */
+function renderItemsListRows(items = []) {
+  return items.map(item => `
     <tr>
       <td style="padding: 14px 0; border-bottom: 1px solid #EFEAE1; vertical-align: middle;">
         <div style="font-weight: 600; font-size: 14px; color: #1F1A17; margin-bottom: 3px;">
@@ -40,13 +83,18 @@ export function generateOrderConfirmationHtml(order) {
       </td>
     </tr>
   `).join('');
+}
 
+// =============================================================================
+// 1. ORDER PLACED EMAIL TEMPLATE
+// =============================================================================
+export function generateOrderPlacedHtml(order) {
   return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Your Saak by Aprajita Order is Confirmed</title>
+  <title>Order Placed — Saak by Aprajita</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body style="margin: 0; padding: 0; background-color: #F7F3EC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1F1A17; -webkit-font-smoothing: antialiased;">
@@ -55,35 +103,22 @@ export function generateOrderConfirmationHtml(order) {
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #FAF6EF; border: 1px solid #E5DDCF; border-radius: 6px; overflow: hidden; box-shadow: 0 12px 36px rgba(31,26,23,0.06); max-width: 600px; width: 100%;">
           
-          <!-- Atelier Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, #1F1A17 0%, #2A221E 100%); padding: 36px 32px; text-align: center; border-bottom: 2px solid #C5A059;">
-              <div style="color: #C5A059; font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 8px; font-weight: 600;">
-                Bespoke Festive Atelier
-              </div>
-              <h1 style="color: #FAF6EF; font-family: Georgia, serif; font-size: 28px; margin: 0 0 6px 0; font-weight: 400; letter-spacing: 0.04em;">
-                Saak by Aprajita
-              </h1>
-              <div style="color: #D6CBC0; font-size: 12px; font-style: italic;">
-                Fluid Drapes &amp; Sculpted Statements
-              </div>
-            </td>
-          </tr>
+          ${renderEmailHeader('Bespoke Festive Atelier', 'Saak by Aprajita', `Order Reference: ${order.id}`)}
 
-          <!-- In-Process Notice Callout (Requested by User) -->
+          <!-- Status Notice Callout -->
           <tr>
             <td style="padding: 28px 32px 0 32px;">
-              <table width="100%" cellpadding="0" cellspacing="0" style="background: #F4ECE1; border: 1px solid #E2CA9B; border-left: 4px solid #A34835; border-radius: 4px; padding: 18px 20px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: #F4ECE1; border: 1px solid #E2CA9B; border-left: 4px solid #C5A059; border-radius: 4px; padding: 18px 20px;">
                 <tr>
                   <td>
                     <div style="color: #A34835; font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 6px;">
-                      ⏳ ORDER STATUS: IN PROCESS
+                      ✨ ORDER RECEIVED
                     </div>
-                    <div style="font-size: 15px; font-weight: 600; color: #1F1A17; margin-bottom: 6px; font-family: Georgia, serif;">
-                      Your order is in process. We will share the dispatch details shortly.
+                    <div style="font-size: 16px; font-weight: 600; color: #1F1A17; margin-bottom: 6px; font-family: Georgia, serif;">
+                      Thank you for placing your order with Saak by Aprajita
                     </div>
                     <div style="font-size: 13px; line-height: 1.5; color: #5C524B;">
-                      Dear ${order.customer_name || 'Patron'}, Aprajita’s atelier has received your booking. Our artisans are currently inspecting your chosen pieces, preparing the hand-finished fall &amp; pico, and hand-packing your bespoke ensemble.
+                      Dear ${order.customer_name || 'Patron'}, we have received your booking. Our studio team is currently reviewing your payment details. You will receive an official confirmation email as soon as our artisans begin hand-finishing your ensemble.
                     </div>
                   </td>
                 </tr>
@@ -108,11 +143,11 @@ export function generateOrderConfirmationHtml(order) {
                 <tr>
                   <td>
                     <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #8A817A;">Payment Method:</span>
-                    <span style="font-size: 13px; color: #1F1A17; margin-left: 6px;">${order.payment_method || 'Dynamic UPI'} (${order.payment_status === 'succeeded' ? 'Verified' : 'Pending Verification'})</span>
+                    <span style="font-size: 13px; color: #1F1A17; margin-left: 6px;">${order.payment_method || 'Dynamic UPI'}</span>
                   </td>
                   <td style="text-align: right;">
                     <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #8A817A;">UTR / Reference:</span>
-                    <span style="font-size: 12px; color: #A34835; font-family: monospace; margin-left: 6px;">${order.utr_number || 'N/A'}</span>
+                    <span style="font-size: 12px; color: #A34835; font-family: monospace; margin-left: 6px;">${order.utr_number || 'Pending'}</span>
                   </td>
                 </tr>
               </table>
@@ -134,7 +169,7 @@ export function generateOrderConfirmationHtml(order) {
                   </tr>
                 </thead>
                 <tbody>
-                  ${itemsListHtml}
+                  ${renderItemsListRows(order.items)}
                 </tbody>
                 <tfoot>
                   <tr>
@@ -155,7 +190,7 @@ export function generateOrderConfirmationHtml(order) {
             <td style="padding: 24px 32px;">
               <div style="background: #FFFFFF; border: 1px solid #EDE5D8; border-radius: 4px; padding: 16px 20px;">
                 <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #8A817A; font-weight: 600; margin-bottom: 6px;">
-                  📦 Shipping Destination
+                  📦 Delivery Destination
                 </div>
                 <div style="font-size: 14px; font-weight: 600; color: #1F1A17; margin-bottom: 4px;">
                   ${order.customer_name}
@@ -174,18 +209,7 @@ export function generateOrderConfirmationHtml(order) {
             </td>
           </tr>
 
-          <!-- Footer / Atelier Concierge -->
-          <tr>
-            <td style="background: #F2ECE0; padding: 24px 32px; text-align: center; border-top: 1px solid #E5DDCF;">
-              <p style="margin: 0 0 10px 0; font-size: 13px; color: #4A423D; line-height: 1.5;">
-                Need custom styling assistance or bespoke blouse adjustments?<br />
-                Our support team is available on WhatsApp at <strong style="color: #A34835;">+91 62676 64409</strong> or via email at <strong style="color: #A34835;">Saakbyaprajita@gmail.com</strong>.
-              </p>
-              <div style="margin-top: 14px; font-size: 11px; color: #8A817A;">
-                © ${new Date().getFullYear()} Saak by Aprajita. Fluid Drapes &amp; Sculpted Statements.
-              </div>
-            </td>
-          </tr>
+          ${renderEmailFooter()}
 
         </table>
       </td>
@@ -196,9 +220,91 @@ export function generateOrderConfirmationHtml(order) {
   `;
 }
 
-/**
- * Generate luxury responsive HTML for Order Dispatched & Tracking Email
- */
+// =============================================================================
+// 2. ORDER CONFIRMED EMAIL TEMPLATE
+// =============================================================================
+export function generateOrderConfirmedHtml(order) {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Order Confirmed & In Handcrafting — Saak by Aprajita</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #F7F3EC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1F1A17; -webkit-font-smoothing: antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F7F3EC; padding: 36px 12px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #FAF6EF; border: 1px solid #E5DDCF; border-radius: 6px; overflow: hidden; box-shadow: 0 12px 36px rgba(31,26,23,0.06); max-width: 600px; width: 100%;">
+          
+          ${renderEmailHeader('Atelier Handcrafting Confirmation', 'Saak by Aprajita', `Order Reference: ${order.id}`)}
+
+          <!-- Status Callout -->
+          <tr>
+            <td style="padding: 28px 32px 0 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: #F4ECE1; border: 1px solid #E2CA9B; border-left: 4px solid #A34835; border-radius: 4px; padding: 18px 20px;">
+                <tr>
+                  <td>
+                    <div style="color: #A34835; font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 6px;">
+                      💛 PAYMENT VERIFIED • ORDER CONFIRMED
+                    </div>
+                    <div style="font-size: 16px; font-weight: 600; color: #1F1A17; margin-bottom: 6px; font-family: Georgia, serif;">
+                      Your bespoke ensemble is now in handcrafting
+                    </div>
+                    <div style="font-size: 13px; line-height: 1.5; color: #5C524B;">
+                      Dear ${order.customer_name || 'Patron'}, your payment of <strong>₹${Number(order.total_amount).toLocaleString('en-IN')}</strong> has been successfully verified by Aprajita. Our master artisans are now inspecting your fabrics, preparing the hand-stitched fall &amp; pico, and hand-packing your luxury keepsake box.
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Items Overview -->
+          <tr>
+            <td style="padding: 16px 32px 0 32px;">
+              <h3 style="font-family: Georgia, serif; font-size: 18px; margin: 0 0 12px 0; color: #1F1A17; font-weight: 400; border-bottom: 1px solid #E5DDCF; padding-bottom: 8px;">
+                Confirmed Items
+              </h3>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tbody>
+                  ${renderItemsListRows(order.items)}
+                </tbody>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Next Steps Timeline Box -->
+          <tr>
+            <td style="padding: 24px 32px;">
+              <div style="background: #FFFFFF; border: 1px solid #EDE5D8; border-radius: 4px; padding: 18px 20px;">
+                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #8A817A; font-weight: 600; margin-bottom: 10px;">
+                  🗓️ What Happens Next?
+                </div>
+                <div style="font-size: 13px; color: #4A423D; line-height: 1.6;">
+                  1. <strong>Handcrafting:</strong> 24-48 hours for hand-finishing fall &amp; pico.<br />
+                  2. <strong>Dispatch:</strong> Shipped via premium insured air courier with live tracking.<br />
+                  3. <strong>Notification:</strong> You will receive an SMS and email with courier AWB tracking as soon as it leaves our studio.
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          ${renderEmailFooter()}
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+}
+
+// =============================================================================
+// 3. ORDER DISPATCHED EMAIL TEMPLATE
+// =============================================================================
 export function generateDispatchNotificationHtml(order, dispatchDetails) {
   const courier = dispatchDetails.courier || 'Blue Dart Express';
   const trackingNumber = dispatchDetails.trackingNumber || dispatchDetails.tracking_number || 'Pending';
@@ -220,22 +326,9 @@ export function generateDispatchNotificationHtml(order, dispatchDetails) {
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #FAF6EF; border: 1px solid #E5DDCF; border-radius: 6px; overflow: hidden; box-shadow: 0 12px 36px rgba(31,26,23,0.06); max-width: 600px; width: 100%;">
           
-          <!-- Atelier Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, #1F1A17 0%, #2A221E 100%); padding: 36px 32px; text-align: center; border-bottom: 2px solid #C5A059;">
-              <div style="color: #C5A059; font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 8px; font-weight: 600;">
-                Atelier Shipment Notification
-              </div>
-              <h1 style="color: #FAF6EF; font-family: Georgia, serif; font-size: 28px; margin: 0 0 6px 0; font-weight: 400; letter-spacing: 0.04em;">
-                Your Order is on the Way
-              </h1>
-              <div style="color: #D6CBC0; font-size: 12px; font-style: italic;">
-                Order Reference: ${order.id}
-              </div>
-            </td>
-          </tr>
+          ${renderEmailHeader('Atelier Shipment Notification', 'Saak by Aprajita', `Order Reference: ${order.id}`)}
 
-          <!-- Main Announcement Card -->
+          <!-- Announcement -->
           <tr>
             <td style="padding: 32px 32px 16px 32px;">
               <div style="text-align: center; margin-bottom: 24px;">
@@ -303,31 +396,17 @@ export function generateDispatchNotificationHtml(order, dispatchDetails) {
               <!-- Items in this shipment -->
               <div style="background: #FFFFFF; border: 1px solid #EDE5D8; border-radius: 4px; padding: 16px 20px;">
                 <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #8A817A; font-weight: 600; margin-bottom: 8px;">
-                  Items In This Package (${(order.items || []).length}):
+                  Delivering To:
                 </div>
-                ${(order.items || []).map(it => `
-                  <div style="font-size: 13px; color: #1F1A17; margin-bottom: 4px;">
-                    • <strong>${it.name}</strong> (${it.selectedSize || 'Standard'}) x${it.quantity || 1}
-                  </div>
-                `).join('')}
-                <div style="font-size: 12px; color: #7A726D; margin-top: 10px; padding-top: 8px; border-top: 1px solid #EFEAE1;">
-                  Delivering to: ${order.shipping_address}, ${order.city}, ${order.state} — ${order.pincode}
+                <div style="font-size: 13px; color: #1F1A17; line-height: 1.5;">
+                  <strong>${order.customer_name}</strong><br />
+                  ${order.shipping_address}, ${order.city}, ${order.state} — ${order.pincode}
                 </div>
               </div>
             </td>
           </tr>
 
-          <!-- Footer -->
-          <tr>
-            <td style="background: #F2ECE0; padding: 24px 32px; text-align: center; border-top: 1px solid #E5DDCF;">
-              <p style="margin: 0 0 10px 0; font-size: 13px; color: #4A423D; line-height: 1.5;">
-                Have questions about your delivery? Message our team directly on WhatsApp at <strong style="color: #A34835;">+91 62676 64409</strong>.
-              </p>
-              <div style="margin-top: 14px; font-size: 11px; color: #8A817A;">
-                © ${new Date().getFullYear()} Saak by Aprajita. Fluid Drapes &amp; Sculpted Statements.
-              </div>
-            </td>
-          </tr>
+          ${renderEmailFooter()}
 
         </table>
       </td>
@@ -338,148 +417,197 @@ export function generateDispatchNotificationHtml(order, dispatchDetails) {
   `;
 }
 
-/**
- * Send Order Confirmation Email
- * @param {Object} order
- */
-export async function sendOrderConfirmationEmail(order) {
-  if (!order || !order.customer_email) {
-    console.info('[EmailService] Order has no customer_email, skipping confirmation email.');
-    return { success: false, reason: 'No recipient email' };
-  }
+// =============================================================================
+// 4. ORDER DELIVERED EMAIL TEMPLATE
+// =============================================================================
+export function generateOrderDeliveredHtml(order) {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Your Saak by Aprajita Parcel Has Arrived!</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #F7F3EC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1F1A17; -webkit-font-smoothing: antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F7F3EC; padding: 36px 12px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #FAF6EF; border: 1px solid #E5DDCF; border-radius: 6px; overflow: hidden; box-shadow: 0 12px 36px rgba(31,26,23,0.06); max-width: 600px; width: 100%;">
+          
+          ${renderEmailHeader('Atelier Delivery Celebration', 'Saak by Aprajita', `Order Reference: ${order.id}`)}
 
-  const subject = `✨ Your Saak by Aprajita Order is Confirmed (${order.id})`;
-  const html = generateOrderConfirmationHtml(order);
+          <!-- Announcement -->
+          <tr>
+            <td style="padding: 32px 32px 16px 32px;">
+              <div style="text-align: center; margin-bottom: 24px;">
+                <div style="font-size: 34px; margin-bottom: 8px;">🌸✨</div>
+                <h2 style="font-family: Georgia, serif; font-size: 22px; color: #1F1A17; margin: 0 0 8px 0; font-weight: 400;">
+                  Your Ensemble Has Arrived
+                </h2>
+                <p style="font-size: 14px; line-height: 1.6; color: #5C524B; margin: 0; max-width: 480px; display: inline-block;">
+                  Dear ${order.customer_name || 'Patron'}, our courier partner indicates that your Saak by Aprajita bespoke package has been safely delivered to your doorstep.
+                </p>
+              </div>
 
+              <!-- Care & Styling Guide Box -->
+              <div style="background: #FFFFFF; border: 1px solid #E2CA9B; border-radius: 6px; padding: 22px; margin-bottom: 20px;">
+                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #A34835; font-weight: 700; margin-bottom: 8px;">
+                  🌿 Atelier Care &amp; Styling Guide
+                </div>
+                <div style="font-size: 13px; color: #4A423D; line-height: 1.6;">
+                  • <strong>Tissue &amp; Raw Silk Care:</strong> Dry clean only to preserve the delicate metallic sheen and zardozi embroidery.<br />
+                  • <strong>Storage:</strong> Store wrapped in a breathable muslin or cotton cloth away from direct sunlight.<br />
+                  • <strong>Steaming:</strong> Use a low-heat garment steamer on the reverse side of the drape.<br />
+                </div>
+              </div>
+
+              <!-- Tag Us / Review Callout -->
+              <div style="background: #F4ECE1; border-left: 3px solid #C5A059; padding: 14px 18px; border-radius: 0 4px 4px 0; font-size: 13px; color: #5C524B; line-height: 1.5;">
+                We would be honored to see how you style your drape! Tag us on Instagram <strong style="color: #1F1A17;">@saakbyaprajita</strong> or message Aprajita directly on WhatsApp for draping suggestions.
+              </div>
+            </td>
+          </tr>
+
+          ${renderEmailFooter()}
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+}
+
+// =============================================================================
+// UNIFIED EMAIL DELIVERY DISPATCHER
+// =============================================================================
+async function deliverEmail({ to, subject, html, text, type, orderId, metadata = {} }) {
   const emailPayload = {
-    id: `email_${Date.now()}_conf`,
-    type: 'order_confirmation',
-    orderId: order.id,
-    to: order.customer_email,
+    id: `email_${Date.now()}_${type}`,
+    type,
+    orderId,
+    to,
     from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
     subject,
     html,
     sentAt: new Date().toISOString(),
-    status: 'delivered'
+    status: 'delivered',
+    ...metadata
   };
 
-  // 1. Deliver via Resend API if configured
-  if (RESEND_API_KEY) {
-    try {
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${RESEND_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
-          to: [order.customer_email],
-          subject,
-          html
-        })
-      });
-      const data = await res.json();
-      emailPayload.providerResponse = data;
-    } catch (err) {
-      console.warn('[EmailService] Resend API error:', err);
+  try {
+    const res = await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to,
+        from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+        subject,
+        html,
+        text
+      })
+    });
+
+    const data = await res.json();
+    emailPayload.providerResponse = data;
+    if (res.ok) {
+      console.info(`[EmailService] Delivered ${type} email to ${to} (MessageId: ${data.messageId})`);
+    } else {
+      console.warn(`[EmailService] API send error for ${type}:`, data.error);
+      emailPayload.status = 'failed';
+      emailPayload.error = data.error;
     }
+  } catch (err) {
+    console.warn(`[EmailService] Network error sending ${type}:`, err.message);
+    emailPayload.status = 'local_logged';
+    emailPayload.error = err.message;
   }
 
-  // 2. Deliver via Webhook if configured
-  if (EMAIL_WEBHOOK_URL) {
-    try {
-      await fetch(EMAIL_WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(emailPayload)
-      });
-    } catch (err) {
-      console.warn('[EmailService] Webhook error:', err);
-    }
-  }
-
-  // 3. Record in Atelier Outbox (for local admin inspection & preview)
+  // Always log in Atelier Outbox so admin can inspect and preview
   recordOutboxEmail(emailPayload);
-  console.info(`[EmailService] Order confirmation email dispatched to ${order.customer_email} for order ${order.id}`);
+  return { success: emailPayload.status === 'delivered', payload: emailPayload };
+}
 
-  return { success: true, payload: emailPayload };
+// =============================================================================
+// PUBLIC EMAIL TRIGGER FUNCTIONS
+// =============================================================================
+
+/**
+ * 1. Send Order Placed Email
+ */
+export async function sendOrderPlacedEmail(order) {
+  if (!order || !order.customer_email) return { success: false, reason: 'No recipient email' };
+  const subject = `✨ Order Placed: Saak by Aprajita (Reference #${order.id})`;
+  const html = generateOrderPlacedHtml(order);
+  return deliverEmail({
+    to: order.customer_email,
+    subject,
+    html,
+    type: 'order_placed',
+    orderId: order.id
+  });
 }
 
 /**
- * Send Dispatch & Tracking Notification Email
- * @param {Object} order
- * @param {Object} dispatchDetails
+ * 2. Send Order Confirmed Email (Payment verified / in handcrafting)
+ */
+export async function sendOrderConfirmedEmail(order) {
+  if (!order || !order.customer_email) return { success: false, reason: 'No recipient email' };
+  const subject = `💛 Order Confirmed & In Handcrafting: Saak by Aprajita (#${order.id})`;
+  const html = generateOrderConfirmedHtml(order);
+  return deliverEmail({
+    to: order.customer_email,
+    subject,
+    html,
+    type: 'order_confirmed',
+    orderId: order.id
+  });
+}
+
+/**
+ * 3. Send Dispatch & Tracking Notification Email
  */
 export async function sendDispatchNotificationEmail(order, dispatchDetails) {
-  if (!order || !order.customer_email) {
-    console.info('[EmailService] Order has no customer_email, skipping dispatch email.');
-    return { success: false, reason: 'No recipient email' };
-  }
-
-  const subject = `🚚 Dispatched: Your Saak by Aprajita Order ${order.id} is on the way!`;
+  if (!order || !order.customer_email) return { success: false, reason: 'No recipient email' };
+  const subject = `🚚 Dispatched: Your Saak by Aprajita Order #${order.id} is on the way!`;
   const html = generateDispatchNotificationHtml(order, dispatchDetails);
-
-  const emailPayload = {
-    id: `email_${Date.now()}_disp`,
-    type: 'order_dispatched',
-    orderId: order.id,
+  return deliverEmail({
     to: order.customer_email,
-    from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
     subject,
     html,
-    courier: dispatchDetails.courier,
-    trackingNumber: dispatchDetails.trackingNumber,
-    sentAt: new Date().toISOString(),
-    status: 'delivered'
-  };
-
-  // 1. Deliver via Resend API if configured
-  if (RESEND_API_KEY) {
-    try {
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${RESEND_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
-          to: [order.customer_email],
-          subject,
-          html
-        })
-      });
-      const data = await res.json();
-      emailPayload.providerResponse = data;
-    } catch (err) {
-      console.warn('[EmailService] Resend API error:', err);
+    type: 'order_dispatched',
+    orderId: order.id,
+    metadata: {
+      courier: dispatchDetails.courier,
+      trackingNumber: dispatchDetails.trackingNumber
     }
-  }
-
-  // 2. Deliver via Webhook if configured
-  if (EMAIL_WEBHOOK_URL) {
-    try {
-      await fetch(EMAIL_WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(emailPayload)
-      });
-    } catch (err) {
-      console.warn('[EmailService] Webhook error:', err);
-    }
-  }
-
-  // 3. Record in Atelier Outbox
-  recordOutboxEmail(emailPayload);
-  console.info(`[EmailService] Dispatch tracking email sent to ${order.customer_email} with tracking ${dispatchDetails.trackingNumber}`);
-
-  return { success: true, payload: emailPayload };
+  });
 }
 
 /**
- * Fetch all logged emails in the Atelier Outbox
+ * 4. Send Order Delivered Email
  */
+export async function sendOrderDeliveredEmail(order) {
+  if (!order || !order.customer_email) return { success: false, reason: 'No recipient email' };
+  const subject = `🌸 Delivered: Your Saak by Aprajita Ensemble Has Arrived! (#${order.id})`;
+  const html = generateOrderDeliveredHtml(order);
+  return deliverEmail({
+    to: order.customer_email,
+    subject,
+    html,
+    type: 'order_delivered',
+    orderId: order.id
+  });
+}
+
+// Backward compatibility alias for older calls
+export const sendOrderConfirmationEmail = sendOrderPlacedEmail;
+
+// =============================================================================
+// ATELIER OUTBOX STORAGE (LOCAL INSPECTION & HTML PREVIEW)
+// =============================================================================
 export function getOutboxEmails() {
   try {
     const raw = localStorage.getItem(OUTBOX_STORAGE_KEY);
@@ -489,14 +617,10 @@ export function getOutboxEmails() {
   }
 }
 
-/**
- * Record an email into the Outbox store
- */
 function recordOutboxEmail(entry) {
   try {
     const existing = getOutboxEmails();
     existing.unshift(entry);
-    // Keep last 50 emails
     localStorage.setItem(OUTBOX_STORAGE_KEY, JSON.stringify(existing.slice(0, 50)));
   } catch (e) {
     console.warn('Failed to record email in outbox:', e);

@@ -4,13 +4,23 @@ import { Sparkles, Check, ArrowRight, ShieldCheck, Heart } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 const COMBINATION_ASSETS = {
+  'midnight-black-crepe-saree_the-gold-corset': {
+    model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/sarees/midnight-black-crepe-saree/model_front.jpg',
+    flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/sets/signature-duo-black-gold/flatlay.jpg',
+    styling: "Aprajita's Styling: The Signature Duo — Midnight Black Crepe + Antique Gold Corset"
+  },
+  'midnight-black-crepe-saree_the-ivory-raw-silk-blouse': {
+    model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/midnight-black-crepe-saree_the-ivory-raw-silk-blouse_muse_model.jpg',
+    flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/midnight-black-crepe-saree_the-ivory-raw-silk-blouse_flatlay.jpg',
+    styling: "Aprajita's Styling: Obsidian Noir & Champagne Ivory — Pure Contrast Elegance"
+  },
   'sunset-orange-tissue_the-gold-corset': {
     model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/sunset-orange-tissue_the-gold-corset_model.jpg',
     flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/sunset-orange-tissue_the-gold-corset_flatlay.jpg',
     styling: "Aprajita's Styling: Sunset Orange Drape + Heavy Zardozi Corset"
   },
   'sunset-orange-tissue_the-ivory-raw-silk-blouse': {
-    model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/sunset-orange-tissue_the-ivory-raw-silk-blouse_model.jpg',
+    model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/sunset-orange-tissue_the-ivory-raw-silk-blouse_muse_model.jpg',
     flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/sunset-orange-tissue_the-ivory-raw-silk-blouse_flatlay.jpg',
     styling: "Aprajita's Styling: Sunset Orange Shimmer + Minimalist Ivory Raw Silk V-Neck"
   },
@@ -20,7 +30,7 @@ const COMBINATION_ASSETS = {
     styling: "Aprajita's Styling: Olive Sage Shimmer + Sculpted Antique Gold Corset"
   },
   'olive-bloom-tissue_the-ivory-raw-silk-blouse': {
-    model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/olive-bloom-tissue_the-ivory-raw-silk-blouse_model.jpg',
+    model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/olive-bloom-tissue_the-ivory-raw-silk-blouse_muse_model.jpg',
     flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/olive-bloom-tissue_the-ivory-raw-silk-blouse_flatlay.jpg',
     styling: "Aprajita's Styling: Olive Bloom Tissue + Tailored Ivory Raw Silk V-Neck"
   }
@@ -32,9 +42,23 @@ export default function MixMatchStudio() {
   const sarees = products.filter(p => p.category === 'sarees');
   const blouses = products.filter(p => p.category === 'blouses');
 
-  const [selectedSareeId, setSelectedSareeId] = useState('sunset-orange-tissue');
+  const [selectedSareeId, setSelectedSareeId] = useState('midnight-black-crepe-saree');
   const [selectedBlouseId, setSelectedBlouseId] = useState('the-gold-corset');
   const [viewMode, setViewMode] = useState('model'); // 'model' or 'flatlay'
+
+  // Preload all combo images for instant, seamless transitions
+  React.useEffect(() => {
+    Object.values(COMBINATION_ASSETS).forEach(combo => {
+      if (combo.model) {
+        const m = new Image();
+        m.src = combo.model;
+      }
+      if (combo.flatlay) {
+        const f = new Image();
+        f.src = combo.flatlay;
+      }
+    });
+  }, []);
 
   const selectedSaree = sarees.find(s => s.id === selectedSareeId) || sarees[0];
   const selectedBlouse = blouses.find(b => b.id === selectedBlouseId) || blouses[0];
@@ -156,6 +180,10 @@ export default function MixMatchStudio() {
                   src={currentPreviewImage} 
                   alt={`${selectedSaree?.name} with ${selectedBlouse?.name}`}
                   className="preview-main-img"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = selectedSaree?.images?.modelView || '/assets/saak_muse_black_saree_gold_corset.jpg';
+                  }}
                 />
 
                 <div className="preview-styling-chip">
@@ -668,6 +696,43 @@ export default function MixMatchStudio() {
           .preview-image-container {
             max-width: 100%;
             aspect-ratio: 4/5;
+          }
+        }
+
+        @media (max-width: 600px) {
+          .preview-duo-chips {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
+            padding: 8px 10px;
+          }
+          .chip-plus {
+            display: none;
+          }
+          .preview-chip {
+            font-size: 11px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+          }
+          .preview-styling-chip {
+            font-size: 10.5px;
+            padding: 6px 10px;
+            bottom: 8px;
+            left: 8px;
+            right: 8px;
+          }
+          .bundle-price-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+          }
+          .buy-individual-row {
+            flex-direction: column;
+            gap: 4px;
+          }
+          .buy-individual-row .dot {
+            display: none;
           }
         }
       `}</style>

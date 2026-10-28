@@ -475,6 +475,8 @@ export default function ProductCard({ product }) {
           padding: 6px 0;
           border-top: 1px dashed var(--border-light);
           margin-top: 4px;
+          flex-wrap: wrap;
+          gap: 4px;
         }
         .palette-label {
           font-size: 10px;
@@ -554,6 +556,37 @@ export default function ProductCard({ product }) {
           }
           .card-hover-actions {
             display: none;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .custom-palette-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+          }
+          .card-price-row {
+            flex-wrap: wrap;
+            gap: 2px;
+          }
+          .card-top-badges {
+            top: 6px;
+            left: 6px;
+            gap: 3px;
+          }
+          .card-wishlist-btn {
+            top: 6px;
+            right: 6px;
+            width: 28px;
+            height: 28px;
+          }
+          .card-badge {
+            font-size: 8.5px;
+            padding: 2px 5px;
+          }
+          .card-photo-type-pill {
+            font-size: 8px;
+            padding: 1.5px 5px;
           }
         }
       `}</style>

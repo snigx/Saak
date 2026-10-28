@@ -251,7 +251,12 @@ export default function WishlistDrawer() {
       <style>{`
         .wishlist-backdrop {
           position: fixed;
-          inset: 0;
+          top: 0;
+          left: 0;
+          width: 100%;
+          max-width: 100%;
+          height: 100%;
+          max-height: 100%;
           background: rgba(26, 22, 20, 0.65);
           backdrop-filter: blur(5px);
           -webkit-backdrop-filter: blur(5px);
@@ -259,6 +264,7 @@ export default function WishlistDrawer() {
           display: flex;
           justify-content: flex-end;
           animation: wishlistFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          box-sizing: border-box;
         }
         @keyframes wishlistFadeIn {
           from { opacity: 0; }
@@ -601,9 +607,13 @@ export default function WishlistDrawer() {
           text-align: center;
         }
 
-        @media (max-width: 480px) {
+        @media (max-width: 640px) {
+          .wishlist-backdrop {
+            justify-content: stretch;
+          }
           .wishlist-drawer-panel {
-            max-width: 100%;
+            width: 100% !important;
+            max-width: 100% !important;
           }
           .wishlist-item-card {
             flex-direction: column;

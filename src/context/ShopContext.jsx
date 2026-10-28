@@ -1,14 +1,22 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { initialProducts } from '../data/initialProducts';
 import { fetchProductsFromDb, saveProductToDb, deleteProductFromDb } from '../services/productsService';
-import { fetchOrdersFromDb, updateOrderStatusInDb, dispatchOrderInDb, deleteOrderFromDb, resetOrdersToDefault } from '../services/ordersService';
+import { 
+  fetchOrdersFromDb, 
+  updateOrderStatusInDb, 
+  confirmOrderInDb, 
+  dispatchOrderInDb, 
+  deliverOrderInDb, 
+  deleteOrderFromDb, 
+  resetOrdersToDefault 
+} from '../services/ordersService';
 
 const ShopContext = createContext();
 
 export function ShopProvider({ children }) {
   const [products, setProducts] = useState(() => {
     try {
-      const saved = localStorage.getItem('saak_products_v7');
+      const saved = localStorage.getItem('saak_products_v9');
       return saved ? JSON.parse(saved) : initialProducts;
     } catch {
       return initialProducts;
@@ -116,7 +124,7 @@ export function ShopProvider({ children }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem('saak_products_v7', JSON.stringify(products));
+      localStorage.setItem('saak_products_v9', JSON.stringify(products));
     } catch (e) {
       console.error(e);
     }
@@ -321,8 +329,24 @@ export function ShopProvider({ children }) {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updates } : o));
   };
 
+  const confirmOrder = async (orderId, notes = '', sendEmail = true) => {
+    const updated = await confirmOrderInDb(orderId, notes, sendEmail);
+    if (updated) {
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updated } : o));
+    }
+    return updated;
+  };
+
   const dispatchOrder = async (orderId, dispatchDetails, sendEmail = true) => {
     const updated = await dispatchOrderInDb(orderId, dispatchDetails, sendEmail);
+    if (updated) {
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updated } : o));
+    }
+    return updated;
+  };
+
+  const deliverOrder = async (orderId, sendEmail = true) => {
+    const updated = await deliverOrderInDb(orderId, sendEmail);
     if (updated) {
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updated } : o));
     }
@@ -361,7 +385,9 @@ export function ShopProvider({ children }) {
       openOrdersAdmin,
       refreshOrders,
       updateOrderStatus,
+      confirmOrder,
       dispatchOrder,
+      deliverOrder,
       deleteOrder,
       resetOrders,
       cart,

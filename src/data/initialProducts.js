@@ -36,7 +36,7 @@ export const initialProducts = [
         `${CDN_BASE}/blouses/the-gold-corset/flatlay.jpg`
       ]
     },
-    recommendedPairings: ['sunset-orange-tissue', 'olive-bloom-tissue'],
+    recommendedPairings: ['midnight-black-crepe-saree', 'sunset-orange-tissue', 'olive-bloom-tissue'],
     bundleDiscountPercent: 10,
     inStock: true,
     featured: true
@@ -66,20 +66,61 @@ export const initialProducts = [
     hasMargins: true,
     images: {
       modelPhotos: [
-        `${CDN_BASE}/blouses/the-ivory-raw-silk-blouse/model_front.jpg`
+        `${CDN_BASE}/blouses/the-ivory-raw-silk-blouse/model_front_muse.jpg`,
+        '/assets/black_saree_ivory_blouse_model.jpg'
       ],
       flatlayPhotos: [
         `${CDN_BASE}/blouses/the-ivory-raw-silk-blouse/flatlay.jpg`
       ],
-      modelView: `${CDN_BASE}/blouses/the-ivory-raw-silk-blouse/model_front.jpg`,
+      modelView: `${CDN_BASE}/blouses/the-ivory-raw-silk-blouse/model_front_muse.jpg`,
       flatlayView: `${CDN_BASE}/blouses/the-ivory-raw-silk-blouse/flatlay.jpg`,
-      swatchZoom: `${CDN_BASE}/blouses/the-ivory-raw-silk-blouse/flatlay.jpg`,
+      swatchZoom: '/assets/black_saree_ivory_blouse_model.jpg',
       gallery: [
-        `${CDN_BASE}/blouses/the-ivory-raw-silk-blouse/model_front.jpg`,
+        `${CDN_BASE}/blouses/the-ivory-raw-silk-blouse/model_front_muse.jpg`,
+        '/assets/black_saree_ivory_blouse_model.jpg',
         `${CDN_BASE}/blouses/the-ivory-raw-silk-blouse/flatlay.jpg`
       ]
     },
-    recommendedPairings: ['sunset-orange-tissue', 'olive-bloom-tissue'],
+    recommendedPairings: ['midnight-black-crepe-saree', 'sunset-orange-tissue', 'olive-bloom-tissue'],
+    bundleDiscountPercent: 10,
+    inStock: true,
+    featured: true
+  },
+  {
+    id: 'midnight-black-crepe-saree',
+    name: 'Midnight Black Fluid Crepe Saree',
+    category: 'sarees',
+    subCategory: 'crepe',
+    price: 3950,
+    originalPrice: 4500,
+    tag: 'Pre-Draped Fluid Crepe',
+    tagColor: '#1A1614',
+    description: 'Sculpted from pure featherlight fluid crepe in deep obsidian black. Falls in effortless, liquid drapes with a modern, sensual minimalist silhouette. Designed to provide high-impact contrast with heavy statement corsets or tailored raw silk blouses.',
+    fabric: 'Pure Featherlight Fluid Crepe',
+    drapeStyle: 'Classic 6-Yard (Optional Pre-Stitched Pleats)',
+    drapeWeight: 'Ultra-Fluid, Sensual & Weightless',
+    zariWork: 'Minimalist Clean Edges with Micro Gold Piping',
+    isCustomColorAvailable: false,
+    availableCustomColors: [],
+    sizeOptions: ['Standard 6-Yard', 'Pre-Pleated Fall & Pico (+₹450)'],
+    images: {
+      modelPhotos: [
+        `${CDN_BASE}/sarees/midnight-black-crepe-saree/model_front.jpg`,
+        '/assets/saak_muse_black_corset_side.jpg'
+      ],
+      flatlayPhotos: [
+        `${CDN_BASE}/sarees/midnight-black-crepe-saree/flatlay_folded.jpg`
+      ],
+      modelView: `${CDN_BASE}/sarees/midnight-black-crepe-saree/model_front.jpg`,
+      flatlayView: `${CDN_BASE}/sarees/midnight-black-crepe-saree/flatlay_folded.jpg`,
+      swatchZoom: '/assets/saak_muse_black_corset_side.jpg',
+      gallery: [
+        `${CDN_BASE}/sarees/midnight-black-crepe-saree/model_front.jpg`,
+        '/assets/saak_muse_black_corset_side.jpg',
+        `${CDN_BASE}/sets/signature-duo-black-gold/flatlay.jpg`
+      ]
+    },
+    recommendedPairings: ['the-gold-corset', 'the-ivory-raw-silk-blouse'],
     bundleDiscountPercent: 10,
     inStock: true,
     featured: true

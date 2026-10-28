@@ -1902,9 +1902,35 @@ export default function CheckoutModal() {
         }
 
         @media (max-width: 768px) {
+          .checkout-modal {
+            padding: 18px 14px;
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
+            max-height: 94vh;
+          }
+          .form-sections-grid {
+            grid-template-columns: 1fr;
+            gap: 20px;
+          }
+          .form-row {
+            grid-template-columns: 1fr;
+            gap: 8px;
+          }
+          .payment-step-grid {
+            grid-template-columns: 1fr;
+            gap: 24px;
+          }
           .payment-method-options, .cod-details-grid {
             grid-template-columns: 1fr;
             gap: 12px;
+          }
+          .qr-image {
+            width: 180px;
+            height: 180px;
+          }
+          .qr-container-card {
+            padding: 18px 14px;
           }
         }
 
@@ -1958,17 +1984,33 @@ export default function CheckoutModal() {
 
         @media (max-width: 540px) {
           .checkout-modal {
-            padding: 18px 12px;
+            padding: 16px 12px;
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
             max-height: 94vh;
+            border-radius: 6px;
           }
           .checkout-title {
-            font-size: 20px;
+            font-size: 19px;
+          }
+          .checkout-badge span {
+            font-size: 9.5px;
           }
           .step-connector {
-            width: 16px;
+            width: 12px;
           }
           .step-item span:not(.step-num) {
-            font-size: 11px;
+            font-size: 10px;
+          }
+          .checkout-steps-bar {
+            gap: 4px;
+          }
+          .summary-col {
+            padding: 14px 12px;
+          }
+          .form-input, .form-textarea {
+            font-size: 14px;
           }
         }
       `}</style>

@@ -1,5 +1,10 @@
 import { supabase, isSupabaseConfigured } from './supabaseClient';
-import { sendOrderConfirmationEmail, sendDispatchNotificationEmail } from './emailService';
+import { 
+  sendOrderPlacedEmail, 
+  sendOrderConfirmedEmail, 
+  sendDispatchNotificationEmail, 
+  sendOrderDeliveredEmail 
+} from './emailService';
 
 const TABLE_NAME = 'orders';
 
@@ -338,11 +343,11 @@ export async function saveOrderToDb(orderData) {
   return payload;
 }
 
-// Background helper to dispatch confirmation email without blocking checkout UI
+// Background helper to dispatch Order Placed email without blocking checkout UI
 function triggerOrderConfirmation(orderPayload) {
   if (orderPayload.customer_email) {
     setTimeout(() => {
-      sendOrderConfirmationEmail(orderPayload).catch(e => console.warn('Email trigger error:', e));
+      sendOrderPlacedEmail(orderPayload).catch(e => console.warn('Order placed email trigger error:', e));
     }, 100);
   }
 }
@@ -384,6 +389,60 @@ export async function dispatchOrderInDb(orderId, dispatchDetails, sendEmail = tr
       await sendDispatchNotificationEmail(updatedOrder, dispatchDetails);
     } catch (err) {
       console.warn('Dispatch email notification failed:', err);
+    }
+  }
+
+  return updatedOrder;
+}
+
+/**
+ * Confirm an order (payment verified / in handcrafting) and send Order Confirmed email
+ * @param {string} orderId
+ * @param {string} adminNotes
+ * @param {boolean} sendEmail
+ */
+export async function confirmOrderInDb(orderId, adminNotes = '', sendEmail = true) {
+  const updates = {
+    payment_status: 'succeeded',
+    failure_reason: null,
+    fulfillment_status: 'processing',
+    verified_at: new Date().toISOString(),
+    verified_by: 'Aprajita (Atelier Founder)',
+    admin_notes: adminNotes || `Payment verified by admin on ${new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}. Saree sent for hand-finishing fall & pico.`
+  };
+
+  const updatedOrder = await updateOrderStatusInDb(orderId, updates);
+
+  if (sendEmail && updatedOrder && updatedOrder.customer_email) {
+    try {
+      await sendOrderConfirmedEmail(updatedOrder);
+    } catch (err) {
+      console.warn('Order confirmed email notification failed:', err);
+    }
+  }
+
+  return updatedOrder;
+}
+
+/**
+ * Mark an order as delivered and send Order Delivered celebration email
+ * @param {string} orderId
+ * @param {boolean} sendEmail
+ */
+export async function deliverOrderInDb(orderId, sendEmail = true) {
+  const updates = {
+    fulfillment_status: 'delivered',
+    delivered_at: new Date().toISOString(),
+    admin_notes: `Marked delivered on ${new Date().toLocaleDateString('en-IN')}. Delivery celebration email dispatched.`
+  };
+
+  const updatedOrder = await updateOrderStatusInDb(orderId, updates);
+
+  if (sendEmail && updatedOrder && updatedOrder.customer_email) {
+    try {
+      await sendOrderDeliveredEmail(updatedOrder);
+    } catch (err) {
+      console.warn('Order delivered email notification failed:', err);
     }
   }
 

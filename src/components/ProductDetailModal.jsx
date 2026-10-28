@@ -422,14 +422,13 @@ export default function ProductDetailModal() {
           object-position: top center;
         }
         .viewport-tag {
-          position: absolute;
-          top: 12px;
-          left: 12px;
           color: #FFFFFF;
-          font-size: 11px;
+          font-size: 10px;
           font-weight: 700;
           padding: 3px 10px;
           border-radius: 2px;
+          letter-spacing: 0.04em;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
         }
         .gallery-filter-tabs {
           display: flex;
@@ -794,29 +793,56 @@ export default function ProductDetailModal() {
         @media (max-width: 600px) {
           .detail-modal {
             max-height: 94vh;
+            width: 95%;
+            max-width: 95%;
+            margin: auto;
           }
           .detail-grid {
-            padding: 16px 12px;
-            gap: 16px;
+            padding: 14px 10px;
+            gap: 14px;
           }
           .main-image-viewport {
-            max-height: 46vh;
+            max-height: 48vh;
+            border-radius: 2px;
+          }
+          .gallery-filter-tabs {
+            gap: 4px;
+          }
+          .filter-tab-pill {
+            padding: 4px 8px;
+            font-size: 10px;
           }
           .modal-close-btn {
-            top: 10px;
-            right: 10px;
+            top: 8px;
+            right: 8px;
             width: 32px;
             height: 32px;
+            z-index: 10;
           }
           .detail-title {
             font-size: 20px;
+            line-height: 1.25;
           }
           .detail-price {
             font-size: 20px;
           }
+          .size-pills-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+          }
+          .size-pill-btn {
+            padding: 7px 10px;
+            font-size: 11px;
+          }
           .detail-actions {
             flex-direction: column;
             gap: 8px;
+          }
+          .modal-add-bag-btn {
+            width: 100%;
+            padding: 13px;
+            font-size: 13px;
           }
           .detail-wishlist-btn {
             width: 100%;

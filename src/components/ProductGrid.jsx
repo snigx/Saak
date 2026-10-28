@@ -223,8 +223,14 @@ export default function ProductGrid() {
             flex-direction: column;
             align-items: stretch;
             gap: 12px;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
           }
           .category-pills-list {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
             overflow-x: auto;
             padding-bottom: 6px;
             -webkit-overflow-scrolling: touch;
@@ -232,6 +238,11 @@ export default function ProductGrid() {
           }
           .category-pills-list::-webkit-scrollbar {
             display: none;
+          }
+          .sort-wrapper {
+            align-self: flex-start;
+            width: fit-content;
+            box-sizing: border-box;
           }
           .products-grid {
             grid-template-columns: repeat(2, 1fr);

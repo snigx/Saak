@@ -212,13 +212,19 @@ export default function CartDrawer() {
       <style>{`
         .cart-backdrop {
           position: fixed;
-          inset: 0;
+          top: 0;
+          left: 0;
+          width: 100%;
+          max-width: 100%;
+          height: 100%;
+          max-height: 100%;
           background: rgba(26, 22, 20, 0.6);
           backdrop-filter: blur(4px);
           z-index: 999;
           display: flex;
           justify-content: flex-end;
           animation: fadeIn 0.2s ease-out;
+          box-sizing: border-box;
         }
         .cart-drawer-panel {
           background: #FFFFFF;
@@ -523,6 +529,35 @@ export default function CartDrawer() {
         }
         .cart-policy-link:hover {
           color: #8A3B2B;
+        }
+
+        @media (max-width: 640px) {
+          .cart-backdrop {
+            justify-content: stretch;
+          }
+          .cart-drawer-panel {
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+          .drawer-header {
+            padding: 16px;
+          }
+          .shipping-progress-box {
+            padding: 12px 16px;
+          }
+          .cart-items-body {
+            padding: 12px 16px;
+          }
+          .drawer-footer {
+            padding: 16px;
+          }
+          .cart-item-card {
+            gap: 12px;
+          }
+          .cart-item-thumb {
+            width: 68px;
+            height: 90px;
+          }
         }
       `}</style>
     </div>
