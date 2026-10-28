@@ -18,6 +18,7 @@ import CheckoutModal from './components/CheckoutModal';
 import AuthModal from './components/AuthModal';
 import ProfileModal from './components/ProfileModal';
 import RefundPolicyModal from './components/RefundPolicyModal';
+import SearchModal from './components/SearchModal';
 
 export default function App() {
   return (
@@ -58,6 +59,7 @@ export default function App() {
         <AuthModal />
         <ProfileModal />
         <RefundPolicyModal />
+        <SearchModal />
       </div>
     </ShopProvider>
   </AuthProvider>

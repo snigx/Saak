@@ -257,3 +257,18 @@ h1, h2, h3, h4, .font-serif {
   animation: spin 1s linear infinite;
 }
 
+/* Search Navigation Highlight Glow */
+.product-card.search-highlight {
+  outline: 2.5px solid var(--accent-gold) !important;
+  box-shadow: 0 0 30px rgba(197, 160, 89, 0.55), 0 10px 25px rgba(0, 0, 0, 0.12) !important;
+  animation: searchCardPulse 2.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes searchCardPulse {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.025); }
+  50% { transform: scale(1); }
+  75% { transform: scale(1.015); }
+  100% { transform: scale(1); }
+}
+

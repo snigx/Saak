@@ -11,6 +11,7 @@ export default function Navbar() {
     setActiveCategory, 
     setIsCartOpen, 
     setIsWishlistOpen,
+    openSearch,
     formatPrice,
     cartTotal
   } = useShop();
@@ -18,8 +19,6 @@ export default function Navbar() {
   const { user, openAuthModal, openProfile } = useAuth();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchOpen, setSearchOpen] = useState(false);
 
   const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);
 
@@ -111,31 +110,15 @@ export default function Navbar() {
         {/* Right Action Icons */}
         <div className="nav-actions">
           {/* Search Trigger */}
-          <div className="search-box">
-            {searchOpen ? (
-              <div className="search-input-wrapper">
-                <input 
-                  type="text" 
-                  placeholder="Search tissue, black crepe, corset..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="search-input"
-                  autoFocus
-                />
-                <button onClick={() => setSearchOpen(false)} className="search-close-btn">
-                  <X size={15} />
-                </button>
-              </div>
-            ) : (
-              <button 
-                onClick={() => setSearchOpen(true)}
-                className="action-icon-btn"
-                title="Search collection"
-              >
-                <Search size={19} />
-              </button>
-            )}
-          </div>
+          <button 
+            type="button"
+            onClick={openSearch}
+            className="action-icon-btn search-nav-trigger"
+            title="Search collection (⌘K)"
+            aria-label="Search collection"
+          >
+            <Search size={19} />
+          </button>
 
           {/* Wishlist */}
           <button 
@@ -191,6 +174,13 @@ export default function Navbar() {
       {/* Mobile Drawer Navigation */}
       {mobileMenuOpen && (
         <div className="mobile-nav-drawer">
+          <button 
+            className="mobile-nav-link mobile-search-button"
+            onClick={() => { setMobileMenuOpen(false); openSearch(); }}
+          >
+            <Search size={16} className="text-gold" />
+            <span>Search Creations &amp; Silhouettes</span>
+          </button>
           <button 
             className={`mobile-nav-link ${activeCategory === 'all' ? 'active' : ''}`}
             onClick={() => handleNavClick('all')}

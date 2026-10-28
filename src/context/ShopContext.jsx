@@ -52,6 +52,12 @@ export function ShopProvider({ children }) {
   const [customShadeProduct, setCustomShadeProduct] = useState(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const openSearch = () => setIsSearchOpen(true);
+  const closeSearch = () => setIsSearchOpen(false);
+  const clearSearch = () => setSearchQuery('');
 
   const openPolicyModal = () => setIsPolicyModalOpen(true);
 
@@ -408,6 +414,13 @@ export function ShopProvider({ children }) {
       isPolicyModalOpen,
       setIsPolicyModalOpen,
       openPolicyModal,
+      isSearchOpen,
+      setIsSearchOpen,
+      openSearch,
+      closeSearch,
+      searchQuery,
+      setSearchQuery,
+      clearSearch,
       atelierUpiId,
       setAtelierUpiId,
       clearCart,

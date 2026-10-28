@@ -52,7 +52,7 @@ export default function ProductCard({ product }) {
   };
 
   return (
-    <div className="product-card" onClick={() => setSelectedProduct(product)}>
+    <div id={`product-card-${product.id}`} className="product-card" onClick={() => setSelectedProduct(product)}>
       {/* Media Container with Carousel Slider */}
       <div className="card-media-wrapper">
         <img 

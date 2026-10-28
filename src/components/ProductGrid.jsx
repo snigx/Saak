@@ -1,14 +1,36 @@
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
 import ProductCard from './ProductCard';
-import { Sparkles, SlidersHorizontal, PlusCircle } from 'lucide-react';
+import { Sparkles, SlidersHorizontal, PlusCircle, Search, X } from 'lucide-react';
 
 export default function ProductGrid() {
-  const { products, activeCategory, setActiveCategory, setIsAtelierModalOpen } = useShop();
+  const { 
+    products, 
+    activeCategory, 
+    setActiveCategory, 
+    setIsAtelierModalOpen,
+    searchQuery,
+    clearSearch
+  } = useShop();
   const [sortBy, setSortBy] = useState('featured');
 
-  // Filter products
+  // Filter products by category and active search query
   const filteredProducts = products.filter(product => {
+    // If active search query exists, match against all product attributes
+    if (searchQuery && searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch = 
+        product.name?.toLowerCase().includes(q) ||
+        product.description?.toLowerCase().includes(q) ||
+        product.fabric?.toLowerCase().includes(q) ||
+        product.tag?.toLowerCase().includes(q) ||
+        product.category?.toLowerCase().includes(q) ||
+        product.subCategory?.toLowerCase().includes(q) ||
+        product.zariWork?.toLowerCase().includes(q) ||
+        product.availableCustomColors?.some(c => c.name.toLowerCase().includes(q));
+      if (!matchesSearch) return false;
+    }
+
     if (activeCategory === 'all') return true;
     if (activeCategory === 'tissue') return product.subCategory === 'tissue';
     if (activeCategory === 'corset') return product.category === 'blouses';
@@ -46,6 +68,27 @@ export default function ProductGrid() {
             </button>
           </div>
         </div>
+
+        {/* Active Search Filter Banner */}
+        {searchQuery && (
+          <div className="catalog-search-banner">
+            <div className="search-banner-info">
+              <Search size={15} className="text-gold" />
+              <span>
+                Showing <strong>{filteredProducts.length}</strong> {filteredProducts.length === 1 ? 'creation' : 'creations'} matching <em>"{searchQuery}"</em>
+              </span>
+            </div>
+            <button 
+              type="button" 
+              onClick={clearSearch} 
+              className="clear-search-btn"
+              title="Clear search filter"
+            >
+              <X size={13} />
+              <span>Clear Filter</span>
+            </button>
+          </div>
+        )}
 
         {/* Filter Pills & Sorting Controls */}
         <div className="catalog-controls-bar">
@@ -99,10 +142,17 @@ export default function ProductGrid() {
 
         {sortedProducts.length === 0 && (
           <div className="empty-catalog-state">
-            <p>No creations found in this category.</p>
+            <div className="empty-catalog-icon-box">
+              <Search size={28} />
+            </div>
+            <p className="empty-catalog-msg">
+              {searchQuery 
+                ? `No creations matched "${searchQuery}".` 
+                : 'No creations found in this category.'}
+            </p>
             <button 
               className="btn btn-primary"
-              onClick={() => setActiveCategory('all')}
+              onClick={() => { clearSearch(); setActiveCategory('all'); }}
             >
               View All Creations
             </button>
@@ -201,6 +251,47 @@ export default function ProductGrid() {
           outline: none;
           cursor: pointer;
         }
+        /* Active Search Filter Banner */
+        .catalog-search-banner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: #FFFFFF;
+          border: 1px solid rgba(197, 160, 89, 0.4);
+          border-left: 3px solid var(--accent-gold);
+          border-radius: 6px;
+          padding: 10px 16px;
+          margin-bottom: 20px;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+          animation: fadeIn 0.2s ease-out;
+        }
+        .search-banner-info {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 13.5px;
+          color: var(--text-primary);
+        }
+        .clear-search-btn {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          background: #F4EFE6;
+          border: 1px solid #DDD1C0;
+          color: var(--accent-terracotta);
+          font-size: 11.5px;
+          font-weight: 600;
+          padding: 4px 10px;
+          border-radius: 14px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .clear-search-btn:hover {
+          background: var(--accent-terracotta);
+          color: #FFFFFF;
+          border-color: var(--accent-terracotta);
+        }
+
         .products-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
@@ -214,6 +305,22 @@ export default function ProductGrid() {
           flex-direction: column;
           align-items: center;
           gap: 14px;
+        }
+        .empty-catalog-icon-box {
+          width: 56px;
+          height: 56px;
+          border-radius: 50%;
+          background: #EFE9DF;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--accent-terracotta);
+        }
+        .empty-catalog-msg {
+          font-size: 15px;
+          color: var(--text-primary);
+          margin: 0;
+          font-weight: 500;
         }
         @media (max-width: 768px) {
           .catalog-header-row {
