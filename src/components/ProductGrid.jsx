@@ -1,36 +1,29 @@
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
+import { useAuth } from '../context/AuthContext';
 import ProductCard from './ProductCard';
 import { Sparkles, SlidersHorizontal, PlusCircle, Search, X } from 'lucide-react';
+import { searchAndRankProducts } from '../utils/searchUtils';
 
 export default function ProductGrid() {
   const { 
     products, 
     activeCategory, 
     setActiveCategory, 
-    setIsAtelierModalOpen,
+    setIsAtelierModalOpen, 
     searchQuery,
     clearSearch
   } = useShop();
+  const { isAdmin } = useAuth();
   const [sortBy, setSortBy] = useState('featured');
 
-  // Filter products by category and active search query
-  const filteredProducts = products.filter(product => {
-    // If active search query exists, match against all product attributes
-    if (searchQuery && searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      const matchesSearch = 
-        product.name?.toLowerCase().includes(q) ||
-        product.description?.toLowerCase().includes(q) ||
-        product.fabric?.toLowerCase().includes(q) ||
-        product.tag?.toLowerCase().includes(q) ||
-        product.category?.toLowerCase().includes(q) ||
-        product.subCategory?.toLowerCase().includes(q) ||
-        product.zariWork?.toLowerCase().includes(q) ||
-        product.availableCustomColors?.some(c => c.name.toLowerCase().includes(q));
-      if (!matchesSearch) return false;
-    }
+  // If active search query exists, use intelligent relevance ranked search results
+  const baseProducts = searchQuery && searchQuery.trim()
+    ? searchAndRankProducts(products, searchQuery)
+    : products;
 
+  // Filter products by category
+  const filteredProducts = baseProducts.filter(product => {
     if (activeCategory === 'all') return true;
     if (activeCategory === 'tissue') return product.subCategory === 'tissue';
     if (activeCategory === 'corset') return product.category === 'blouses';
@@ -38,10 +31,11 @@ export default function ProductGrid() {
     return true;
   });
 
-  // Sort products
+  // Sort products: preserve relevance rank when searching with featured sort
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     if (sortBy === 'price-low') return a.price - b.price;
     if (sortBy === 'price-high') return b.price - a.price;
+    if (searchQuery && searchQuery.trim() && sortBy === 'featured') return 0;
     return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
   });
 
@@ -58,15 +52,17 @@ export default function ProductGrid() {
             <h2 className="catalog-title">Artisanal Sarees &amp; Sculpted Blouses</h2>
           </div>
 
-          <div className="catalog-header-actions">
-            <button 
-              onClick={() => setIsAtelierModalOpen(true)}
-              className="btn btn-outline-gold add-prod-trigger"
-            >
-              <PlusCircle size={15} />
-              <span>Add New Creation</span>
-            </button>
-          </div>
+          {isAdmin && (
+            <div className="catalog-header-actions">
+              <button 
+                onClick={() => setIsAtelierModalOpen(true)}
+                className="btn btn-outline-gold add-prod-trigger"
+              >
+                <PlusCircle size={15} />
+                <span>Add New Creation</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Active Search Filter Banner */}

@@ -33,7 +33,61 @@ const COMBINATION_ASSETS = {
     model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/olive-bloom-tissue_the-ivory-raw-silk-blouse_muse_model.jpg',
     flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/olive-bloom-tissue_the-ivory-raw-silk-blouse_flatlay.jpg',
     styling: "Aprajita's Styling: Olive Bloom Tissue + Tailored Ivory Raw Silk V-Neck"
+  },
+  'seafoam-emerald-tissue_the-gold-corset': {
+    model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/seafoam-emerald-tissue_the-gold-corset_model.jpg',
+    flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/seafoam-emerald-tissue_the-gold-corset_flatlay.jpg',
+    styling: "Aprajita's Styling: Seafoam Emerald Tissue + Sculpted Antique Gold Corset"
+  },
+  'seafoam-emerald-tissue_the-ivory-raw-silk-blouse': {
+    model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/seafoam-emerald-tissue_the-ivory-raw-silk-blouse_model.jpg',
+    flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/seafoam-emerald-tissue_the-ivory-raw-silk-blouse_flatlay.jpg',
+    styling: "Aprajita's Styling: Seafoam Emerald Shimmer + Tailored Ivory Raw Silk V-Neck"
+  },
+  'sunshine-marigold-tissue_the-gold-corset': {
+    model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/sunshine-marigold-tissue_the-gold-corset_model.jpg',
+    flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/sunshine-marigold-tissue_the-gold-corset_flatlay.jpg',
+    styling: "Aprajita's Styling: Sunshine Marigold Saree + Sculpted Antique Gold Corset"
+  },
+  'sunshine-marigold-tissue_the-sunshine-marigold-blouse': {
+    model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/sunshine-marigold-tissue_the-sunshine-marigold-blouse_model.jpg',
+    flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/sunshine-marigold-tissue_the-sunshine-marigold-blouse_flatlay.jpg',
+    styling: "Aprajita's Styling: Sunshine Marigold Saree + Monochrome Sunshine Silk Bow Blouse"
+  },
+  'pearl-ivory-geometric-tissue_the-gold-corset': {
+    model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/pearl-ivory-geometric-tissue_the-gold-corset_muse.jpg',
+    flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/pearl-ivory-geometric-tissue_the-gold-corset_flatlay.jpg',
+    styling: "Aprajita's Styling: Pearl Ivory Translucent Tissue + Sculpted Antique Gold Corset"
+  },
+  'pearl-ivory-geometric-tissue_the-ivory-gold-striped-blouse': {
+    model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/pearl-ivory-geometric-tissue_the-ivory-gold-striped-blouse_model.jpg',
+    flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/pearl-ivory-geometric-tissue_the-ivory-gold-striped-blouse_flatlay.jpg',
+    styling: "Aprajita's Styling: The Original Atelier Look — Pearl Ivory Saree + Ivory & Gold Striped Zari Blouse"
   }
+};
+
+/**
+ * Eligible blouses rule:
+ * 1. Sunshine Marigold Saree (yellow): exactly 2 options -> Yellow Blouse & Golden Corset
+ * 2. Pearl Ivory Architectural Saree (white): exactly 2 options -> Original Striped Blouse & Golden Corset
+ * 3. All rest sarees: exactly 2 options -> White Raw Silk Blouse & Golden Corset
+ */
+export const getEligibleBlouseIds = (saree) => {
+  if (!saree) return ['the-ivory-raw-silk-blouse', 'the-gold-corset'];
+
+  // 1. Yellow Saree -> Yellow Blouse & Gold Corset
+  if (saree.id === 'sunshine-marigold-tissue') {
+    return ['the-sunshine-marigold-blouse', 'the-gold-corset'];
+  }
+
+  // 2. White / Pearl Ivory Saree -> Original Striped Blouse & Gold Corset
+  if (saree.id === 'pearl-ivory-geometric-tissue') {
+    return ['the-ivory-gold-striped-blouse', 'the-gold-corset'];
+  }
+
+  // 3. All other sarees (Midnight Black, Sunset Orange, Olive Bloom, Seafoam Emerald)
+  // -> White Raw Silk Blouse & Gold Corset
+  return ['the-ivory-raw-silk-blouse', 'the-gold-corset'];
 };
 
 export default function MixMatchStudio() {
@@ -61,7 +115,29 @@ export default function MixMatchStudio() {
   }, []);
 
   const selectedSaree = sarees.find(s => s.id === selectedSareeId) || sarees[0];
-  const selectedBlouse = blouses.find(b => b.id === selectedBlouseId) || blouses[0];
+
+  // Dynamically filter ONLY eligible blouses for the selected saree
+  const eligibleBlouseIds = getEligibleBlouseIds(selectedSaree);
+  const eligibleBlouses = eligibleBlouseIds
+    .map(id => blouses.find(b => b.id === id))
+    .filter(Boolean);
+
+  // Safe fallback if any blouse is missing in store
+  const displayBlouses = eligibleBlouses.length > 0 
+    ? eligibleBlouses 
+    : blouses.filter(b => ['the-gold-corset', 'the-ivory-raw-silk-blouse'].includes(b.id));
+
+  // Active blouse must be in displayBlouses
+  const selectedBlouse = displayBlouses.find(b => b.id === selectedBlouseId) 
+    || displayBlouses[0];
+
+  // Automatically switch selected blouse if current choice is ineligible for newly selected saree
+  React.useEffect(() => {
+    const eligibleIds = getEligibleBlouseIds(selectedSaree);
+    if (!eligibleIds.includes(selectedBlouseId) && eligibleIds.length > 0) {
+      setSelectedBlouseId(eligibleIds[0]);
+    }
+  }, [selectedSareeId, selectedBlouseId, selectedSaree]);
 
   const comboKey = `${selectedSaree?.id}_${selectedBlouse?.id}`;
   const currentCombo = COMBINATION_ASSETS[comboKey];
@@ -127,7 +203,13 @@ export default function MixMatchStudio() {
                   <div 
                     key={saree.id}
                     className={`selector-item-card ${isSelected ? 'selected' : ''}`}
-                    onClick={() => setSelectedSareeId(saree.id)}
+                    onClick={() => {
+                      setSelectedSareeId(saree.id);
+                      const eligibleIds = getEligibleBlouseIds(saree);
+                      if (!eligibleIds.includes(selectedBlouseId)) {
+                        setSelectedBlouseId(eligibleIds[0]);
+                      }
+                    }}
                   >
                     <div className="item-thumbnail-wrap">
                       <img 
@@ -218,8 +300,8 @@ export default function MixMatchStudio() {
             </div>
 
             <div className="items-selector-list">
-              {blouses.map(blouse => {
-                const isSelected = blouse.id === selectedBlouseId;
+              {displayBlouses.map(blouse => {
+                const isSelected = blouse.id === selectedBlouse?.id;
                 return (
                   <div 
                     key={blouse.id}
@@ -245,7 +327,13 @@ export default function MixMatchStudio() {
                         <span className="item-price">{formatPrice(blouse.price)}</span>
                       </div>
                       <span className="mini-badge-gold">
-                        {blouse.subCategory === 'corset' ? 'Padded Boned Fit' : 'Tailored V-Neck'}
+                        {blouse.subCategory === 'corset' 
+                          ? 'Padded Boned Fit' 
+                          : blouse.id === 'the-sunshine-marigold-blouse'
+                            ? 'Statement Bow Neck'
+                            : blouse.id === 'the-ivory-gold-striped-blouse'
+                              ? 'Gold Zari Boat Neck'
+                              : 'Tailored V-Neck'}
                       </span>
                     </div>
                   </div>

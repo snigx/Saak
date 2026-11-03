@@ -890,8 +890,13 @@ export default function CheckoutModal() {
 
           return (
             <div className="success-step-container">
+              <img 
+                src="/assets/saak_emblem_transparent.png" 
+                alt="Saak Atelier Seal" 
+                className="success-emblem-seal" 
+              />
               <div className="success-icon-bubble">
-                <Check size={36} color="#FFFFFF" />
+                <Check size={32} color="#FFFFFF" />
               </div>
 
               <span className="success-sub">THANK YOU, {shippingData.fullName.toUpperCase()}</span>
@@ -1467,6 +1472,13 @@ export default function CheckoutModal() {
           display: flex;
           flex-direction: column;
           align-items: center;
+        }
+        .success-emblem-seal {
+          height: 60px;
+          width: auto;
+          object-fit: contain;
+          margin-bottom: 14px;
+          filter: drop-shadow(0 4px 12px rgba(197, 160, 89, 0.25));
         }
         .success-icon-bubble {
           width: 68px;

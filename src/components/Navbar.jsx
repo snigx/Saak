@@ -62,8 +62,15 @@ export default function Navbar() {
 
         {/* Brand Logo */}
         <div className="brand-logo-wrapper" onClick={() => handleNavClick('all')}>
-          <span className="brand-name">Saak</span>
-          <span className="brand-sub">by Aprajita</span>
+          <img 
+            src="/assets/saak_emblem_transparent.png" 
+            alt="Saak Peacock Emblem" 
+            className="brand-logo-emblem" 
+          />
+          <div className="brand-text-lockup">
+            <span className="brand-name">Saak</span>
+            <span className="brand-sub">by Aprajita</span>
+          </div>
         </div>
 
         {/* Desktop Navigation Links */}
@@ -174,6 +181,13 @@ export default function Navbar() {
       {/* Mobile Drawer Navigation */}
       {mobileMenuOpen && (
         <div className="mobile-nav-drawer">
+          <div className="mobile-drawer-brand">
+            <img 
+              src="/assets/saak_logo_transparent.png" 
+              alt="Saak by Aprajita" 
+              className="mobile-drawer-logo" 
+            />
+          </div>
           <button 
             className="mobile-nav-link mobile-search-button"
             onClick={() => { setMobileMenuOpen(false); openSearch(); }}
@@ -273,27 +287,55 @@ export default function Navbar() {
         }
         .brand-logo-wrapper {
           display: flex;
-          flex-direction: column;
+          flex-direction: row;
           align-items: center;
+          gap: 10px;
           cursor: pointer;
           user-select: none;
           text-decoration: none;
         }
+        .brand-logo-emblem {
+          height: 38px;
+          width: auto;
+          object-fit: contain;
+          transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+          filter: drop-shadow(0 2px 5px rgba(197, 160, 89, 0.25));
+        }
+        .brand-logo-wrapper:hover .brand-logo-emblem {
+          transform: scale(1.08) rotate(-2deg);
+        }
+        .brand-text-lockup {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+        }
         .brand-name {
           font-family: var(--font-serif);
-          font-size: 32px;
+          font-size: 28px;
           font-weight: 500;
           letter-spacing: 0.08em;
           color: var(--text-primary);
           line-height: 1;
         }
         .brand-sub {
-          font-size: 9px;
-          letter-spacing: 0.26em;
+          font-size: 8.5px;
+          letter-spacing: 0.24em;
           text-transform: uppercase;
           color: var(--accent-terracotta);
-          margin-top: 3px;
+          margin-top: 2px;
           font-weight: 600;
+        }
+        .mobile-drawer-brand {
+          display: flex;
+          justify-content: center;
+          padding: 16px 0 10px;
+          border-bottom: 1px solid rgba(197, 160, 89, 0.15);
+          margin-bottom: 8px;
+        }
+        .mobile-drawer-logo {
+          height: 52px;
+          width: auto;
+          object-fit: contain;
         }
         .desktop-nav {
           display: flex;

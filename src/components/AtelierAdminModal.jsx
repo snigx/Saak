@@ -6,6 +6,7 @@ import {
   Camera, Layers, Loader2, Receipt 
 } from 'lucide-react';
 import { uploadImageBlob } from '../services/storageService';
+import { useAuth } from '../context/AuthContext';
 import AdminOrdersView from './AdminOrdersView';
 
 export default function AtelierAdminModal() {
@@ -286,7 +287,9 @@ export default function AtelierAdminModal() {
     setActiveTab('editor');
   };
 
-  if (!isAtelierModalOpen) return null;
+  const { isAdmin } = useAuth();
+
+  if (!isAtelierModalOpen || !isAdmin) return null;
 
   return (
     <div className="modal-overlay" onClick={() => setIsAtelierModalOpen(false)}>

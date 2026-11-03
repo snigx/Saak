@@ -35,7 +35,11 @@ export default function BrandIntro() {
 
             {/* Featured Quote Card */}
             <div className="intro-quote-card">
-              <div className="quote-icon-mark">“</div>
+              <img 
+                src="/assets/saak_emblem_transparent.png" 
+                alt="Saak Emblem Seal" 
+                className="quote-emblem-seal" 
+              />
               <p className="intro-quote-text">
                 At its heart, SAAK is a celebration of where we come from and all the ways we can carry it forward — keeping our heritage alive, relevant, and ever-evolving.
               </p>
@@ -201,15 +205,21 @@ export default function BrandIntro() {
           box-shadow: 0 8px 24px rgba(31, 26, 23, 0.05);
         }
 
-        .quote-icon-mark {
+        .quote-emblem-seal {
           position: absolute;
-          top: -12px;
+          top: 14px;
           right: 20px;
-          font-family: var(--font-serif);
-          font-size: 64px;
-          color: rgba(197, 160, 89, 0.25);
-          line-height: 1;
+          height: 60px;
+          width: auto;
+          object-fit: contain;
+          opacity: 0.3;
           pointer-events: none;
+          transition: opacity 0.3s ease, transform 0.3s ease;
+          filter: drop-shadow(0 2px 4px rgba(197, 160, 89, 0.2));
+        }
+        .intro-quote-card:hover .quote-emblem-seal {
+          opacity: 0.65;
+          transform: scale(1.06);
         }
 
         .intro-quote-text {

@@ -36,7 +36,7 @@ export const initialProducts = [
         `${CDN_BASE}/blouses/the-gold-corset/flatlay.jpg`
       ]
     },
-    recommendedPairings: ['midnight-black-crepe-saree', 'sunset-orange-tissue', 'olive-bloom-tissue'],
+    recommendedPairings: ['midnight-black-crepe-saree', 'sunset-orange-tissue', 'olive-bloom-tissue', 'seafoam-emerald-tissue', 'sunshine-marigold-tissue', 'pearl-ivory-geometric-tissue'],
     bundleDiscountPercent: 10,
     inStock: true,
     featured: true
@@ -81,7 +81,85 @@ export const initialProducts = [
         `${CDN_BASE}/blouses/the-ivory-raw-silk-blouse/flatlay.jpg`
       ]
     },
-    recommendedPairings: ['midnight-black-crepe-saree', 'sunset-orange-tissue', 'olive-bloom-tissue'],
+    recommendedPairings: ['midnight-black-crepe-saree', 'sunset-orange-tissue', 'olive-bloom-tissue', 'seafoam-emerald-tissue'],
+    bundleDiscountPercent: 10,
+    inStock: true,
+    featured: true
+  },
+  {
+    id: 'the-sunshine-marigold-blouse',
+    name: 'The Sunshine Marigold Silk Blouse',
+    category: 'blouses',
+    subCategory: 'blouse',
+    price: 3950,
+    originalPrice: 4600,
+    tag: 'Monochrome Haldi Statement',
+    tagColor: '#D49B00',
+    description: 'Tailored from pure chanderi raw silk in radiant sunshine marigold. Features an architectural high-neck collar with an artisanal statement bow-tie front and clean-cut sleeves. Perfectly matched in shade and weave with our Sunshine Marigold Saree.',
+    fabric: 'Pure Chanderi Raw Silk',
+    drapeStyle: 'Structured Bow-Neck Blouse with Fitted Darting',
+    drapeWeight: 'Lightweight & Structured',
+    zariWork: 'Tonal Edge Stitching with Gold Button Accents',
+    isCustomColorAvailable: false,
+    availableCustomColors: [],
+    sizeOptions: ['XS (Bust 32)', 'S (Bust 34)', 'M (Bust 36)', 'L (Bust 38)', 'XL (Bust 40)', 'Custom Bespoke'],
+    isPadded: true,
+    hasMargins: true,
+    images: {
+      modelPhotos: [
+        `${CDN_BASE}/blouses/the-sunshine-marigold-blouse/model_front.jpg`
+      ],
+      flatlayPhotos: [
+        `${CDN_BASE}/blouses/the-sunshine-marigold-blouse/flatlay.jpg`
+      ],
+      modelView: `${CDN_BASE}/blouses/the-sunshine-marigold-blouse/model_front.jpg`,
+      flatlayView: `${CDN_BASE}/blouses/the-sunshine-marigold-blouse/flatlay.jpg`,
+      swatchZoom: `${CDN_BASE}/blouses/the-sunshine-marigold-blouse/flatlay.jpg`,
+      gallery: [
+        `${CDN_BASE}/blouses/the-sunshine-marigold-blouse/model_front.jpg`,
+        `${CDN_BASE}/blouses/the-sunshine-marigold-blouse/flatlay.jpg`
+      ]
+    },
+    recommendedPairings: ['sunshine-marigold-tissue'],
+    bundleDiscountPercent: 10,
+    inStock: true,
+    featured: true
+  },
+  {
+    id: 'the-ivory-gold-striped-blouse',
+    name: 'The Ivory & Gold Striped Zari Blouse',
+    category: 'blouses',
+    subCategory: 'blouse',
+    price: 3950,
+    originalPrice: 4650,
+    tag: 'Original Runway Pairing',
+    tagColor: '#C5A059',
+    description: 'The authentic atelier pairing shown with our Pearl Ivory Architectural Zari Saree. Tailored from lustrous pure silk blend in soft ivory, accented with fine horizontal metallic gold zari stripes. Features an elegant boat-round neckline, elbow-length sleeves, and structured comfort fit.',
+    fabric: 'Pure Silk & Woven Metallic Gold Zari',
+    drapeStyle: 'Structured Boat-Neck Blouse with Elbow Sleeves',
+    drapeWeight: 'Lightweight & Structured',
+    zariWork: 'Fine Horizontal Woven Gold Zari Pinstripes',
+    isCustomColorAvailable: false,
+    availableCustomColors: [],
+    sizeOptions: ['XS (Bust 32)', 'S (Bust 34)', 'M (Bust 36)', 'L (Bust 38)', 'XL (Bust 40)', 'Custom Bespoke'],
+    isPadded: true,
+    hasMargins: true,
+    images: {
+      modelPhotos: [
+        `${CDN_BASE}/blouses/the-ivory-gold-striped-blouse/model_front.jpg`
+      ],
+      flatlayPhotos: [
+        `${CDN_BASE}/blouses/the-ivory-gold-striped-blouse/flatlay.jpg`
+      ],
+      modelView: `${CDN_BASE}/blouses/the-ivory-gold-striped-blouse/model_front.jpg`,
+      flatlayView: `${CDN_BASE}/blouses/the-ivory-gold-striped-blouse/flatlay.jpg`,
+      swatchZoom: `${CDN_BASE}/blouses/the-ivory-gold-striped-blouse/flatlay.jpg`,
+      gallery: [
+        `${CDN_BASE}/blouses/the-ivory-gold-striped-blouse/model_front.jpg`,
+        `${CDN_BASE}/blouses/the-ivory-gold-striped-blouse/flatlay.jpg`
+      ]
+    },
+    recommendedPairings: ['pearl-ivory-geometric-tissue'],
     bundleDiscountPercent: 10,
     inStock: true,
     featured: true
@@ -214,6 +292,127 @@ export const initialProducts = [
       ]
     },
     recommendedPairings: ['the-gold-corset', 'the-ivory-raw-silk-blouse'],
+    bundleDiscountPercent: 10,
+    inStock: true,
+    featured: true
+  },
+  {
+    id: 'seafoam-emerald-tissue',
+    name: 'Seafoam Emerald Shimmer Tissue Saree',
+    category: 'sarees',
+    subCategory: 'tissue',
+    price: 4750,
+    originalPrice: 5400,
+    tag: 'Festive Dual-Tone Weave',
+    tagColor: '#2E8B75',
+    description: 'Artisanal crushed metallic shimmer tissue saree in layered vertical ombre stripes of turquoise teal, vibrant emerald green, and mint seafoam. Embellished with delicate hand-embroidered gold zari butis and framed by an ornate antique Banarasi floral zari jaal border. Lightweight, luminous, and draped with effortless grace.',
+    fabric: 'Crushed Metallic Shimmer Tissue Silk',
+    drapeStyle: 'Classic 6-Yard (Fall & Pico Included)',
+    drapeWeight: 'Featherlight, Fluid & Radiant',
+    zariWork: 'Banarasi Antique Gold Zari Floral Border & Buti Weave',
+    isCustomColorAvailable: false,
+    sizeOptions: ['Standard 6-Yard', 'Pre-Pleated Fall & Pico (+₹450)'],
+    images: {
+      modelPhotos: [
+        `${CDN_BASE}/sarees/seafoam-emerald-tissue/model_front.jpg`,
+        `${CDN_BASE}/sarees/seafoam-emerald-tissue/model_ivory.jpg`
+      ],
+      flatlayPhotos: [
+        `${CDN_BASE}/sarees/seafoam-emerald-tissue/flatlay_folded.jpg`,
+        `${CDN_BASE}/sarees/seafoam-emerald-tissue/swatch_texture.jpg`
+      ],
+      modelView: `${CDN_BASE}/sarees/seafoam-emerald-tissue/model_front.jpg`,
+      flatlayView: `${CDN_BASE}/sarees/seafoam-emerald-tissue/flatlay_folded.jpg`,
+      swatchZoom: `${CDN_BASE}/sarees/seafoam-emerald-tissue/swatch_texture.jpg`,
+      gallery: [
+        `${CDN_BASE}/sarees/seafoam-emerald-tissue/model_front.jpg`,
+        `${CDN_BASE}/sarees/seafoam-emerald-tissue/model_ivory.jpg`,
+        `${CDN_BASE}/sarees/seafoam-emerald-tissue/flatlay_folded.jpg`,
+        `${CDN_BASE}/sarees/seafoam-emerald-tissue/swatch_texture.jpg`
+      ]
+    },
+    recommendedPairings: ['the-gold-corset', 'the-ivory-raw-silk-blouse'],
+    bundleDiscountPercent: 10,
+    inStock: true,
+    featured: true
+  },
+  {
+    id: 'sunshine-marigold-tissue',
+    name: 'Sunshine Marigold Striped Tissue Saree',
+    category: 'sarees',
+    subCategory: 'tissue',
+    price: 4650,
+    originalPrice: 5200,
+    tag: 'Festive Haldi Radiance',
+    tagColor: '#D49B00',
+    description: 'Radiant sunshine marigold saree handcrafted in fine metallic shimmer tissue and chanderi silk. Woven with subtle translucent alternating vertical and horizontal stripes, finished with delicate gold zari accents and hand-knotted pallu tassels. Luminous, airy, and celebratory.',
+    fabric: 'Chanderi Shimmer Tissue Silk with Alternating Sheer Stripes',
+    drapeStyle: 'Classic 6-Yard (Fall & Pico Included)',
+    drapeWeight: 'Featherlight, Crisp & Fluid',
+    zariWork: 'Fine Gold Zari Accent Border with Hand-Tied Tassels',
+    isCustomColorAvailable: false,
+    sizeOptions: ['Standard 6-Yard', 'Pre-Pleated Fall & Pico (+₹450)'],
+    images: {
+      modelPhotos: [
+        `${CDN_BASE}/sarees/sunshine-marigold-tissue/model_front.jpg`,
+        `${CDN_BASE}/sarees/sunshine-marigold-tissue/model_gold.jpg`
+      ],
+      flatlayPhotos: [
+        `${CDN_BASE}/sarees/sunshine-marigold-tissue/flatlay_folded.jpg`,
+        `${CDN_BASE}/sarees/sunshine-marigold-tissue/swatch_texture.jpg`
+      ],
+      modelView: `${CDN_BASE}/sarees/sunshine-marigold-tissue/model_front.jpg`,
+      flatlayView: `${CDN_BASE}/sarees/sunshine-marigold-tissue/flatlay_folded.jpg`,
+      swatchZoom: `${CDN_BASE}/sarees/sunshine-marigold-tissue/swatch_texture.jpg`,
+      gallery: [
+        `${CDN_BASE}/sarees/sunshine-marigold-tissue/model_front.jpg`,
+        `${CDN_BASE}/sarees/sunshine-marigold-tissue/model_gold.jpg`,
+        `${CDN_BASE}/sarees/sunshine-marigold-tissue/flatlay_folded.jpg`,
+        `${CDN_BASE}/sarees/sunshine-marigold-tissue/swatch_texture.jpg`
+      ]
+    },
+    recommendedPairings: ['the-sunshine-marigold-blouse', 'the-gold-corset'],
+    bundleDiscountPercent: 10,
+    inStock: true,
+    featured: true
+  },
+  {
+    id: 'pearl-ivory-geometric-tissue',
+    name: 'Pearl Ivory Architectural Zari Saree',
+    category: 'sarees',
+    subCategory: 'tissue',
+    price: 4950,
+    originalPrice: 5600,
+    tag: 'Sculpted Dual-Tone Border',
+    tagColor: '#C49A2C',
+    description: 'Ethereal translucent pearl ivory organza tissue saree illuminated by delicate handwoven silver and gold floral butis. Grounded by a statement architectural border in mustard yellow and antique gold zari featuring sculptural circular loop chain motifs. Featherlight, structured, and modern.',
+    fabric: 'Pure Translucent Organza Tissue Silk with Handwoven Butis',
+    drapeStyle: 'Classic 6-Yard (Fall & Pico Included)',
+    drapeWeight: 'Featherlight, Ethereal & Sculpted',
+    zariWork: 'Mustard Yellow & Antique Gold Geometric Chain Border',
+    isCustomColorAvailable: false,
+    availableCustomColors: [],
+    sizeOptions: ['Standard 6-Yard', 'Pre-Pleated Fall & Pico (+₹450)'],
+    images: {
+      modelPhotos: [
+        `${CDN_BASE}/sarees/pearl-ivory-geometric-tissue/model_front_muse.jpg`,
+        `${CDN_BASE}/sarees/pearl-ivory-geometric-tissue/model_drape_muse.jpg`
+      ],
+      flatlayPhotos: [
+        `${CDN_BASE}/sarees/pearl-ivory-geometric-tissue/flatlay_folded.jpg`,
+        `${CDN_BASE}/sarees/pearl-ivory-geometric-tissue/swatch_texture.jpg`
+      ],
+      modelView: `${CDN_BASE}/sarees/pearl-ivory-geometric-tissue/model_front_muse.jpg`,
+      flatlayView: `${CDN_BASE}/sarees/pearl-ivory-geometric-tissue/flatlay_folded.jpg`,
+      swatchZoom: `${CDN_BASE}/sarees/pearl-ivory-geometric-tissue/swatch_texture.jpg`,
+      gallery: [
+        `${CDN_BASE}/sarees/pearl-ivory-geometric-tissue/model_front_muse.jpg`,
+        `${CDN_BASE}/sarees/pearl-ivory-geometric-tissue/model_drape_muse.jpg`,
+        `${CDN_BASE}/sarees/pearl-ivory-geometric-tissue/flatlay_folded.jpg`,
+        `${CDN_BASE}/sarees/pearl-ivory-geometric-tissue/swatch_texture.jpg`
+      ]
+    },
+    recommendedPairings: ['the-ivory-gold-striped-blouse', 'the-gold-corset'],
     bundleDiscountPercent: 10,
     inStock: true,
     featured: true

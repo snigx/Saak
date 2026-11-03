@@ -1,9 +1,11 @@
 import React from 'react';
 import { useShop } from '../context/ShopContext';
+import { useAuth } from '../context/AuthContext';
 import { Sparkles, MessageCircle, Mail, ShieldCheck, Heart } from 'lucide-react';
 
 export default function Footer() {
   const { setIsAtelierModalOpen, openOrdersAdmin, openPolicyModal } = useShop();
+  const { isAdmin } = useAuth();
 
   return (
     <footer className="atelier-footer">
@@ -25,8 +27,17 @@ export default function Footer() {
         {/* Col 1: Brand Info */}
         <div className="footer-col brand-col">
           <div className="footer-brand">
-            <span className="footer-brand-title">Saak</span>
-            <span className="footer-brand-sub">by Aprajita</span>
+            <div className="footer-brand-lockup">
+              <img 
+                src="/assets/saak_emblem_transparent.png" 
+                alt="Saak Peacock Emblem" 
+                className="footer-brand-emblem" 
+              />
+              <div className="footer-brand-text">
+                <span className="footer-brand-title">Saak</span>
+                <span className="footer-brand-sub">by Aprajita</span>
+              </div>
+            </div>
           </div>
           <p className="footer-brand-desc">
             Born from a desire to create something timeless and classic, deeply rooted in Indian tradition yet reimagined with a contemporary sensibility.
@@ -121,21 +132,23 @@ export default function Footer() {
             </button>
           </div>
 
-          <div className="footer-admin-links">
-            <button 
-              onClick={() => setIsAtelierModalOpen(true)}
-              className="portal-link-btn"
-            >
-              Atelier Portal (Catalog &amp; Inventory)
-            </button>
-            <span className="divider-dot">•</span>
-            <button 
-              onClick={openOrdersAdmin}
-              className="portal-link-btn"
-            >
-              Orders &amp; UPI Ledger
-            </button>
-          </div>
+          {isAdmin && (
+            <div className="footer-admin-links">
+              <button 
+                onClick={() => setIsAtelierModalOpen(true)}
+                className="portal-link-btn"
+              >
+                Atelier Portal (Catalog &amp; Inventory)
+              </button>
+              <span className="divider-dot">•</span>
+              <button 
+                onClick={openOrdersAdmin}
+                className="portal-link-btn"
+              >
+                Orders &amp; UPI Ledger
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -220,9 +233,26 @@ export default function Footer() {
           display: flex;
           flex-direction: column;
         }
+        .footer-brand-lockup {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 6px;
+        }
+        .footer-brand-emblem {
+          height: 48px;
+          width: auto;
+          object-fit: contain;
+          filter: drop-shadow(0 2px 8px rgba(197, 160, 89, 0.45));
+        }
+        .footer-brand-text {
+          display: flex;
+          flex-direction: column;
+        }
         .footer-brand-title {
           font-family: var(--font-serif);
           font-size: 32px;
+          font-weight: 500;
           letter-spacing: 0.06em;
           color: #FFFFFF;
           line-height: 1;
@@ -233,6 +263,7 @@ export default function Footer() {
           text-transform: uppercase;
           color: var(--accent-gold);
           margin-top: 3px;
+          font-weight: 600;
         }
         .footer-brand-desc {
           font-size: 13px;

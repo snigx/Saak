@@ -1,34 +1,39 @@
 import React from 'react';
 import { useShop } from '../context/ShopContext';
+import { useAuth } from '../context/AuthContext';
 import { Sparkles, MessageCircle, PlusCircle, Globe, Receipt } from 'lucide-react';
 import InstagramIcon from './InstagramIcon';
 
 export default function AnnouncementBar() {
   const { currency, setCurrency, setIsAtelierModalOpen, openOrdersAdmin } = useShop();
+  const { isAdmin } = useAuth();
 
   return (
     <div className="announcement-bar">
       <div className="container announcement-content">
         <div className="announcement-right">
-          {/* Atelier Admin Shortcut */}
-          <button 
-            onClick={() => setIsAtelierModalOpen(true)}
-            className="atelier-btn"
-            title="Manage Products, Inventory & Pricing"
-          >
-            <Sparkles size={13} className="text-gold" />
-            <span>Atelier Console</span>
-          </button>
+          {/* Atelier Admin Shortcut (Admin Only) */}
+          {isAdmin && (
+            <>
+              <button 
+                onClick={() => setIsAtelierModalOpen(true)}
+                className="atelier-btn"
+                title="Manage Products, Inventory & Pricing"
+              >
+                <Sparkles size={13} className="text-gold" />
+                <span>Atelier Console</span>
+              </button>
 
-          {/* Orders & Transactions Shortcut */}
-          <button 
-            onClick={openOrdersAdmin}
-            className="atelier-btn"
-            title="Check transactions succeeded, failed, and customer orders"
-          >
-            <Receipt size={13} />
-            <span>Orders Ledger</span>
-          </button>
+              <button 
+                onClick={openOrdersAdmin}
+                className="atelier-btn"
+                title="Check transactions succeeded, failed, and customer orders"
+              >
+                <Receipt size={13} />
+                <span>Orders Ledger</span>
+              </button>
+            </>
+          )}
 
           {/* Official Instagram */}
           <a 

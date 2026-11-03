@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useShop } from '../context/ShopContext';
 import { Search, X, ArrowRight, Sparkles, CornerDownLeft, ShoppingBag } from 'lucide-react';
+import { searchAndRankProducts } from '../utils/searchUtils';
 
 const POPULAR_SEARCHES = [
   'Midnight Black Crepe',
@@ -59,31 +60,9 @@ export default function SearchModal() {
 
   const trimmed = localQuery.trim().toLowerCase();
 
-  // Search filter
+  // Search filter and ranked results
   const searchResults = trimmed
-    ? products.filter((product) => {
-        const nameMatch = product.name?.toLowerCase().includes(trimmed);
-        const descMatch = product.description?.toLowerCase().includes(trimmed);
-        const fabricMatch = product.fabric?.toLowerCase().includes(trimmed);
-        const tagMatch = product.tag?.toLowerCase().includes(trimmed);
-        const catMatch = product.category?.toLowerCase().includes(trimmed);
-        const subCatMatch = product.subCategory?.toLowerCase().includes(trimmed);
-        const zariMatch = product.zariWork?.toLowerCase().includes(trimmed);
-        const colorMatch = product.availableCustomColors?.some((c) =>
-          c.name.toLowerCase().includes(trimmed)
-        );
-
-        return (
-          nameMatch ||
-          descMatch ||
-          fabricMatch ||
-          tagMatch ||
-          catMatch ||
-          subCatMatch ||
-          zariMatch ||
-          colorMatch
-        );
-      })
+    ? searchAndRankProducts(products, localQuery)
     : [];
 
   const handleSelectProduct = (product) => {

@@ -96,6 +96,11 @@ export default function AuthModal() {
 
         {/* Header & Atelier Branding */}
         <div className="auth-header">
+          <img 
+            src="/assets/saak_emblem_transparent.png" 
+            alt="Saak Emblem" 
+            className="auth-emblem-logo"
+          />
           <div className="auth-badge">
             <Sparkles size={13} className="text-gold" />
             <span>SAAK ATELIER CIRCLE</span>
@@ -297,6 +302,14 @@ export default function AuthModal() {
         .auth-header {
           text-align: center;
           margin-bottom: 24px;
+        }
+        .auth-emblem-logo {
+          height: 48px;
+          width: auto;
+          object-fit: contain;
+          margin: 0 auto 12px;
+          display: block;
+          filter: drop-shadow(0 2px 8px rgba(197, 160, 89, 0.2));
         }
         .auth-badge {
           display: inline-flex;
