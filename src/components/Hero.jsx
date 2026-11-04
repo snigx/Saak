@@ -100,14 +100,14 @@ export default function Hero() {
 
         {/* Editorial Bottom Bar */}
         <div className="hero-bottom-bar">
-          {/* Left Slide / Atelier Indicator */}
+          {/* Left Slide Indicator */}
           <div className="hero-pagination-cluster">
             <div className="pagination-step-item">
               <span className="pagination-num-text active">01</span>
               <div className="pagination-track-line">
                 <div className="pagination-track-fill" />
               </div>
-              <span className="pagination-label-text">SAAK ATELIER • SIGNATURE DUO</span>
+              <span className="pagination-label-text">SAAK • SIGNATURE DUO</span>
             </div>
           </div>
 
@@ -318,7 +318,7 @@ export default function Hero() {
           pointer-events: auto;
         }
 
-        /* Left Atelier Indicator */
+        /* Left Slide Indicator */
         .hero-pagination-cluster {
           display: flex;
           align-items: center;

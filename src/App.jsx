@@ -43,7 +43,7 @@ export default function App() {
         {/* Complete Product Catalog */}
         <ProductGrid />
 
-        {/* Official Instagram Community & Atelier Stories */}
+        {/* Official Instagram Community & Stories */}
         <InstagramFeed />
 
         {/* Footer & Textile Care */}

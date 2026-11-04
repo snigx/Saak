@@ -235,7 +235,7 @@ export function ShopProvider({ children }) {
 
   const [editingProduct, setEditingProduct] = useState(null);
 
-  // Add new product (Atelier Admin function)
+  // Add new product (Admin function)
   const addNewProduct = (newProd) => {
     const modelPhotos = newProd.modelPhotos || (newProd.images?.modelPhotos) || [newProd.modelView || newProd.images?.modelView].filter(Boolean);
     const flatlayPhotos = newProd.flatlayPhotos || (newProd.images?.flatlayPhotos) || [newProd.flatlayView || newProd.images?.flatlayView].filter(Boolean);

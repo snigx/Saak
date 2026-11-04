@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     });
 
     const mailOptions = {
-      from: from || `Saak by Aprajita Atelier <${user}>`,
+      from: from || `Saak by Aprajita <${user}>`,
       to,
       subject,
       html,

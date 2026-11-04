@@ -172,7 +172,7 @@ export default function Navbar() {
           <button 
             onClick={() => user ? openProfile() : openAuthModal('signin')}
             className={`action-icon-btn patron-account-btn ${user ? 'is-logged-in' : ''}`}
-            title={user ? `Patron Profile (${user.fullName || user.email})` : "Sign In to Atelier"}
+            title={user ? `Patron Profile (${user.fullName || user.email})` : "Sign In"}
           >
             {user ? (
               user.avatarUrl ? (

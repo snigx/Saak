@@ -54,7 +54,7 @@ export const SAMPLE_ORDERS = [
     payment_status: 'succeeded',
     fulfillment_status: 'processing',
     verified_at: new Date(Date.now() - 3600000 * 4).toISOString(),
-    verified_by: 'Aprajita (Atelier Founder)',
+    verified_by: 'Aprajita (Founder)',
     admin_notes: 'Bank ledger matched on HDFC NetBanking UPI portal. Fabric sent for hand-finishing fall.',
     created_at: new Date(Date.now() - 3600000 * 5).toISOString()
   },
@@ -127,7 +127,7 @@ export const SAMPLE_ORDERS = [
     failure_reason: 'Invalid 12-digit UTR - Transaction not credited or rejected by remitting bank',
     fulfillment_status: 'cancelled',
     verified_at: new Date(Date.now() - 3600000 * 24).toISOString(),
-    verified_by: 'Atelier Audit System',
+    verified_by: 'Audit System',
     admin_notes: 'Customer notified on WhatsApp to re-try payment or share valid bank reference.',
     created_at: new Date(Date.now() - 3600000 * 26).toISOString()
   },
@@ -175,7 +175,7 @@ export const SAMPLE_ORDERS = [
     fulfillment_status: 'shipped',
     tracking_number: 'BlueDart Express #BD-9041829',
     verified_at: new Date(Date.now() - 3600000 * 48).toISOString(),
-    verified_by: 'Aprajita (Atelier Founder)',
+    verified_by: 'Aprajita (Founder)',
     admin_notes: 'Dispatched via premium insured courier with signature required.',
     created_at: new Date(Date.now() - 3600000 * 52).toISOString()
   },
@@ -407,7 +407,7 @@ export async function confirmOrderInDb(orderId, adminNotes = '', sendEmail = tru
     failure_reason: null,
     fulfillment_status: 'processing',
     verified_at: new Date().toISOString(),
-    verified_by: 'Aprajita (Atelier Founder)',
+    verified_by: 'Aprajita (Founder)',
     admin_notes: adminNotes || `Payment verified by admin on ${new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}. Saree sent for hand-finishing fall & pico.`
   };
 

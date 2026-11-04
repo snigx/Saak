@@ -12,7 +12,7 @@ export default function AnnouncementBar() {
     <div className="announcement-bar">
       <div className="container announcement-content">
         <div className="announcement-right">
-          {/* Atelier Admin Shortcut (Admin Only) */}
+          {/* Admin Shortcut (Admin Only) */}
           {isAdmin && (
             <>
               <button 
@@ -21,7 +21,7 @@ export default function AnnouncementBar() {
                 title="Manage Products, Inventory & Pricing"
               >
                 <Sparkles size={13} className="text-gold" />
-                <span>Atelier Console</span>
+                <span>Admin Console</span>
               </button>
 
               <button 

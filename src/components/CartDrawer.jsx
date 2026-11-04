@@ -36,7 +36,7 @@ export default function CartDrawer() {
         <div className="drawer-header">
           <div className="drawer-title-group">
             <ShoppingBag size={18} className="text-gold" />
-            <h3 className="drawer-title">Your Atelier Bag</h3>
+            <h3 className="drawer-title">Your Shopping Bag</h3>
             <span className="drawer-count">({cart.reduce((t, i) => t + i.quantity, 0)})</span>
           </div>
           <button 

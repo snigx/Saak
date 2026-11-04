@@ -257,7 +257,7 @@ export default function AuthModal() {
           <X size={20} />
         </button>
 
-        {/* Header & Atelier Branding */}
+        {/* Header & Patron Branding */}
         <div className="auth-header">
           <img 
             src="/assets/saak_emblem_transparent.png" 
@@ -266,11 +266,11 @@ export default function AuthModal() {
           />
           <div className="auth-badge">
             <Sparkles size={13} className="text-gold" />
-            <span>SAAK ATELIER CIRCLE</span>
+            <span>SAAK PATRON CIRCLE</span>
           </div>
           <h2 className="auth-title">
             {authModalView === 'otp' && 'Verify Your Email'}
-            {authModalView === 'signin' && 'Welcome to the Atelier'}
+            {authModalView === 'signin' && 'Welcome to Saak'}
             {authModalView === 'signup' && 'Create Patron Account'}
           </h2>
           <p className="auth-subtitle">
@@ -365,7 +365,7 @@ export default function AuthModal() {
                 </>
               ) : (
                 <>
-                  <span>Verify &amp; Enter Atelier</span>
+                  <span>Verify &amp; Enter</span>
                   <ArrowRight size={16} />
                 </>
               )}
@@ -531,7 +531,7 @@ export default function AuthModal() {
                   </>
                 ) : (
                   <>
-                    <span>{authModalView === 'signin' ? 'Sign In to Atelier' : 'Create Account'}</span>
+                    <span>{authModalView === 'signin' ? 'Sign In to Saak' : 'Create Account'}</span>
                     <ArrowRight size={16} />
                   </>
                 )}
@@ -561,7 +561,7 @@ export default function AuthModal() {
             <div className="auth-footer-prompt">
               {authModalView === 'signin' ? (
                 <p>
-                  New to Saak Atelier?{' '}
+                  New to Saak?{' '}
                   <button 
                     type="button" 
                     onClick={() => switchView('signup')}
@@ -572,7 +572,7 @@ export default function AuthModal() {
                 </p>
               ) : (
                 <p>
-                  Already have an Atelier account?{' '}
+                  Already have an account?{' '}
                   <button 
                     type="button" 
                     onClick={() => switchView('signin')}
@@ -589,7 +589,7 @@ export default function AuthModal() {
         {/* Privacy & Trust Guarantee */}
         <div className="auth-trust-note">
           <ShieldCheck size={14} className="text-gold" />
-          <span>Encrypted Session • Official Saak by Aprajita Atelier Guarantee</span>
+          <span>Encrypted Session • Official Saak by Aprajita Guarantee</span>
         </div>
       </div>
 

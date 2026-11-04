@@ -147,7 +147,7 @@ export default function Footer() {
                 onClick={() => setIsAtelierModalOpen(true)}
                 className="portal-link-btn"
               >
-                Atelier Portal (Catalog &amp; Inventory)
+                Admin Portal (Catalog &amp; Inventory)
               </button>
               <span className="divider-dot">•</span>
               <button 

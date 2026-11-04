@@ -16,7 +16,7 @@ export const supabase = isSupabaseConfigured
 
 if (!isSupabaseConfigured) {
   console.info(
-    '%c[Saak Atelier Cloud Connection]%c Running in local/offline adapter mode. To connect live Supabase PostgreSQL and Blob Storage, add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your .env file.',
+    '%c[Saak Cloud Connection]%c Running in local/offline adapter mode. To connect live Supabase PostgreSQL and Blob Storage, add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your .env file.',
     'color: #A34835; font-weight: bold;',
     'color: #1F1A17;'
   );

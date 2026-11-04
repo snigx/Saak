@@ -305,7 +305,7 @@ export default function AtelierAdminModal() {
         <div className="admin-modal-header">
           <div className="admin-badge">
             <Sparkles size={13} className="text-gold" />
-            <span>SAAK ATELIER • PRODUCT MANAGEMENT ENGINE</span>
+            <span>SAAK • PRODUCT MANAGEMENT ENGINE</span>
           </div>
           <h2 className="admin-title">
             {activeTab === 'inventory' 

@@ -11,7 +11,7 @@ function mapUser(rawUser) {
   return {
     id: rawUser.id,
     email: rawUser.email,
-    fullName: rawUser.user_metadata?.full_name || rawUser.fullName || rawUser.name || rawUser.email?.split('@')[0] || 'Atelier Patron',
+    fullName: rawUser.user_metadata?.full_name || rawUser.fullName || rawUser.name || rawUser.email?.split('@')[0] || 'Patron',
     avatarUrl: rawUser.user_metadata?.avatar_url || rawUser.avatarUrl || null,
     provider: rawUser.app_metadata?.provider || rawUser.provider || 'email',
     createdAt: rawUser.created_at || rawUser.createdAt || new Date().toISOString()
@@ -227,7 +227,7 @@ export async function signInWithEmail(email, password) {
   }
 
   // If no user found, invite user to create account or sign in with OTP
-  throw new Error('No account found with this email. Please click "Create an account" to join the Atelier.');
+  throw new Error('No account found with this email. Please click "Create an account" to join Saak.');
 }
 
 /**
@@ -285,7 +285,7 @@ export async function signInWithDemoPatron() {
   const googleUser = {
     id: `patron_${Date.now()}`,
     email: 'patron.muse@gmail.com',
-    fullName: 'Atelier Patron',
+    fullName: 'Patron',
     avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
     provider: 'google',
     createdAt: new Date().toISOString()

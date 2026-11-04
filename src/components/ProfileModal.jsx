@@ -131,7 +131,7 @@ export default function ProfileModal() {
           <div className="profile-hero-info">
             <div className="patron-badge">
               <Sparkles size={12} className="text-gold" />
-              <span>SAAK ATELIER CIRCLE PATRON</span>
+              <span>SAAK PATRON CIRCLE</span>
             </div>
             
             {isEditingName ? (
@@ -159,7 +159,7 @@ export default function ProfileModal() {
               </div>
             ) : (
               <div className="name-display-row">
-                <h2 className="patron-name">{user.fullName || 'Atelier Patron'}</h2>
+                <h2 className="patron-name">{user.fullName || 'Patron'}</h2>
                 <button 
                   onClick={() => setIsEditingName(true)} 
                   className="edit-name-btn"
@@ -195,7 +195,7 @@ export default function ProfileModal() {
             onClick={() => setActiveTab('orders')}
           >
             <Package size={15} />
-            <span>Atelier Orders ({displayedOrders.length})</span>
+            <span>Your Orders ({displayedOrders.length})</span>
           </button>
         </div>
 
@@ -221,7 +221,7 @@ export default function ProfileModal() {
               </div>
               <div className="info-card">
                 <span className="info-card-label">Bespoke Styling Privileges</span>
-                <span className="info-card-value">Direct Atelier Access Unlocked</span>
+                <span className="info-card-value">Direct Studio Access Unlocked</span>
               </div>
             </div>
 
@@ -317,7 +317,7 @@ export default function ProfileModal() {
             {displayedOrders.length === 0 ? (
               <div className="empty-orders-view">
                 <Package size={36} className="empty-icon" />
-                <h4>No Atelier Orders Yet</h4>
+                <h4>No Orders Yet</h4>
                 <p>Pieces you order via direct UPI checkout or Cash on Delivery will automatically appear here with their live handcrafting and courier dispatch status.</p>
               </div>
             ) : (
@@ -470,7 +470,7 @@ export default function ProfileModal() {
             className="logout-action-btn"
           >
             <LogOut size={16} />
-            <span>Sign Out from Atelier</span>
+            <span>Sign Out</span>
           </button>
         </div>
       </div>

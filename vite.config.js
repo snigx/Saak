@@ -52,7 +52,7 @@ export default defineConfig(({ mode }) => {
                 })
 
                 const mailOptions = {
-                  from: from || `Saak by Aprajita Atelier <${user}>`,
+                  from: from || `Saak by Aprajita <${user}>`,
                   to,
                   subject,
                   html,
@@ -125,7 +125,7 @@ export default defineConfig(({ mode }) => {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Your Saak Atelier Verification Code</title>
+  <title>Your Saak Verification Code</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body style="margin: 0; padding: 0; background-color: #F7F3EC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1F1A17; -webkit-font-smoothing: antialiased;">
@@ -138,7 +138,7 @@ export default defineConfig(({ mode }) => {
           <tr>
             <td style="background: linear-gradient(135deg, #1F1A17 0%, #2A221E 100%); padding: 36px 32px; text-align: center; border-bottom: 2px solid #C5A059;">
               <div style="color: #C5A059; font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 8px; font-weight: 600;">
-                SAAK ATELIER AUTHENTICATION
+                SAAK AUTHENTICATION
               </div>
               <h1 style="color: #FAF6EF; font-family: Georgia, serif; font-size: 26px; margin: 0 0 6px 0; font-weight: 400; letter-spacing: 0.04em;">
                 Saak by Aprajita
@@ -157,7 +157,7 @@ export default defineConfig(({ mode }) => {
                 Your Verification Code
               </h2>
               <p style="font-size: 14px; line-height: 1.6; color: #5C524B; margin: 0 auto 24px auto; max-width: 440px;">
-                Dear ${recipientName}, use the 6-digit one-time verification code below to complete your registration and enter the Saak Atelier circle.
+                Dear ${recipientName}, use the 6-digit one-time verification code below to complete your registration and join the Saak Patron circle.
               </p>
 
               <!-- Luxury OTP Display Box -->
@@ -212,11 +212,11 @@ export default defineConfig(({ mode }) => {
                 })
 
                 await transporter.sendMail({
-                  from: `Saak by Aprajita Atelier <${user}>`,
+                  from: `Saak by Aprajita <${user}>`,
                   to: normalizedEmail,
-                  subject: `✨ Your Saak Atelier Verification Code: ${otp}`,
+                  subject: `✨ Your Saak Verification Code: ${otp}`,
                   html: otpHtml,
-                  text: `Your Saak Atelier verification code is: ${otp}. It is valid for 10 minutes.`
+                  text: `Your Saak verification code is: ${otp}. It is valid for 10 minutes.`
                 })
 
                 console.info(`[DevServer OTP] Sent code ${otp} to ${normalizedEmail}`)

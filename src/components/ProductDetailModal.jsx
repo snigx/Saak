@@ -343,7 +343,7 @@ export default function ProductDetailModal() {
               </button>
             </div>
 
-            {/* Atelier Admin Direct Edit */}
+            {/* Admin Direct Edit */}
             <div className="detail-admin-edit-box">
               <button 
                 type="button"
@@ -353,10 +353,10 @@ export default function ProductDetailModal() {
                   openEditProduct(prod);
                 }}
                 className="btn btn-outline detail-edit-btn"
-                title="Open product in Atelier Engine to update photos, price, or title"
+                title="Open product in Admin Console to update photos, price, or title"
               >
                 <Edit3 size={13} />
-                <span>Edit Product Details &amp; Photos in Atelier</span>
+                <span>Edit Product Details &amp; Photos</span>
               </button>
             </div>
           </div>

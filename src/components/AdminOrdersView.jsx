@@ -59,7 +59,7 @@ export default function AdminOrdersView() {
   const [simData, setSimData] = useState({
     customerName: 'Kareena Kapoor',
     customerPhone: '+91 98200 11223',
-    customerEmail: 'kareena@atelier.in',
+    customerEmail: 'kareena@saak.in',
     city: 'Mumbai',
     state: 'Maharashtra',
     pincode: '400050',
@@ -91,7 +91,7 @@ export default function AdminOrdersView() {
         failure_reason: null,
         fulfillment_status: 'processing',
         verified_at: new Date().toISOString(),
-        verified_by: 'Aprajita (Atelier Founder)',
+        verified_by: 'Aprajita (Founder)',
         admin_notes: `Payment verified by admin on ${new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.`
       });
     }
@@ -132,7 +132,7 @@ export default function AdminOrdersView() {
       failure_reason: finalReason || 'Payment rejected by bank / UTR could not be verified',
       fulfillment_status: 'cancelled',
       verified_at: new Date().toISOString(),
-      verified_by: 'Atelier Audit System',
+      verified_by: 'Audit System',
       admin_notes: `Marked failed by admin: ${finalReason}`
     });
     setFailModalOrder(null);
@@ -236,7 +236,7 @@ export default function AdminOrdersView() {
       city: simData.city,
       state: simData.state,
       pincode: simData.pincode,
-      stylingNotes: 'Test order created via Atelier Admin Console simulator.',
+      stylingNotes: 'Test order created via Admin Console simulator.',
       items: [
         {
           id: 'saak-01',
@@ -259,7 +259,7 @@ export default function AdminOrdersView() {
       failureReason: simData.paymentStatus === 'failed' ? 'Simulated bank decline / invalid UTR reference' : null,
       fulfillmentStatus: simData.paymentStatus === 'succeeded' ? 'processing' : (simData.paymentStatus === 'failed' ? 'cancelled' : 'unfulfilled'),
       verifiedAt: simData.paymentStatus === 'succeeded' ? new Date().toISOString() : null,
-      verifiedBy: simData.paymentStatus === 'succeeded' ? 'Aprajita (Atelier Founder)' : null,
+      verifiedBy: simData.paymentStatus === 'succeeded' ? 'Aprajita (Founder)' : null,
       adminNotes: 'Generated via Admin Simulator for testing transaction states.'
     };
 
@@ -273,22 +273,22 @@ export default function AdminOrdersView() {
     let msg = '';
 
     if (order.payment_method?.includes('COD')) {
-      msg = `✨ *SAAK ATELIER • CASH ON DELIVERY CONFIRMATION*\n\n` +
+      msg = `✨ *SAAK • CASH ON DELIVERY CONFIRMATION*\n\n` +
         `Namaste ${order.customer_name},\n\n` +
         `We have received your Cash on Delivery order *#${order.id}* for *₹${Number(order.total_amount).toLocaleString('en-IN')}*.\n\n` +
         `Our team is reaching out to confirm your delivery address in ${order.city} and saree fall & pico preferences before dispatch.\n\n` +
         `*Amount Payable upon Arrival:* ₹${Number(order.total_amount).toLocaleString('en-IN')}\n\n` +
-        `Warm regards,\nAprajita | Saak Atelier`;
+        `Warm regards,\nAprajita | Saak`;
     } else if (order.payment_status === 'succeeded') {
-      msg = `✨ *SAAK ATELIER • PAYMENT VERIFIED*\n\n` +
+      msg = `✨ *SAAK • PAYMENT VERIFIED*\n\n` +
         `Namaste ${order.customer_name},\n\n` +
-        `We are delighted to confirm that your payment of *₹${Number(order.total_amount).toLocaleString('en-IN')}* for Order *#${order.id}* has been successfully verified by our atelier.\n\n` +
+        `We are delighted to confirm that your payment of *₹${Number(order.total_amount).toLocaleString('en-IN')}* for Order *#${order.id}* has been successfully verified by our team.\n\n` +
         `*UTR Reference:* ${order.utr_number}\n` +
         `*Status:* Confirmed & In Handcrafting\n\n` +
         `Our artisans are preparing your drape with utmost care. You will receive dispatch tracking once dispatched.\n\n` +
-        `Warm regards,\nAprajita | Saak Atelier`;
+        `Warm regards,\nAprajita | Saak`;
     } else if (order.payment_status === 'failed') {
-      msg = `⚠️ *SAAK ATELIER • PAYMENT STATUS UPDATE*\n\n` +
+      msg = `⚠️ *SAAK • PAYMENT STATUS UPDATE*\n\n` +
         `Namaste ${order.customer_name},\n\n` +
         `Regarding your Order *#${order.id}* (Total: ₹${Number(order.total_amount).toLocaleString('en-IN')}):\n\n` +
         `Our bank reconciliation system was unable to verify the UPI transaction reference: *${order.utr_number}*.\n` +
@@ -296,11 +296,11 @@ export default function AdminOrdersView() {
         `Kindly reply to this message with your payment screenshot or UPI bank confirmation slip so our team can assist you immediately.\n\n` +
         `Warm regards,\nSaak Customer Support`;
     } else {
-      msg = `⏳ *SAAK ATELIER • ORDER ACKNOWLEDGEMENT*\n\n` +
+      msg = `⏳ *SAAK • ORDER ACKNOWLEDGEMENT*\n\n` +
         `Namaste ${order.customer_name},\n\n` +
         `Thank you for your order *#${order.id}* with Saak by Aprajita (Total: ₹${Number(order.total_amount).toLocaleString('en-IN')}).\n\n` +
         `We have received your UPI reference: *${order.utr_number}* and our team is currently verifying the bank ledger. You will receive an official confirmation shortly.\n\n` +
-        `Warm regards,\nAprajita | Saak Atelier`;
+        `Warm regards,\nAprajita | Saak`;
     }
 
     return `https://wa.me/${phoneClean}?text=${encodeURIComponent(msg)}`;
@@ -374,7 +374,7 @@ export default function AdminOrdersView() {
         </div>
       )}
 
-      {/* 1. ATELIER KPI DASHBOARD SUMMARY */}
+      {/* 1. ORDERS KPI DASHBOARD SUMMARY */}
       <div className="orders-kpi-grid">
         <div className="kpi-card total">
           <div className="kpi-label">
@@ -421,11 +421,11 @@ export default function AdminOrdersView() {
         </div>
       </div>
 
-      {/* ATELIER ACTIVE UPI RECONCILIATION STRIP */}
+      {/* ACTIVE UPI RECONCILIATION STRIP */}
       <div className="orders-upi-config-strip">
         <div className="upi-strip-left">
           <Sparkles size={14} className="text-gold" />
-          <span>Active Atelier Receiving UPI VPA:</span>
+          <span>Active Receiving UPI VPA:</span>
           <code className="active-vpa-pill">{atelierUpiId}</code>
           <span className="vpa-status-badge">● Live on Dynamic QR &amp; Direct UPI Intent</span>
         </div>
@@ -666,7 +666,7 @@ export default function AdminOrdersView() {
 
                       {order.styling_notes && (
                         <div className="styling-notes-callout">
-                          <span className="notes-tag">Bespoke Atelier Note:</span>
+                          <span className="notes-tag">Bespoke Styling Note:</span>
                           <p className="notes-body">"{order.styling_notes}"</p>
                         </div>
                       )}
@@ -1178,7 +1178,7 @@ export default function AdminOrdersView() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Atelier Inspection &amp; Packaging Notes:</label>
+                <label className="form-label">Inspection &amp; Packaging Notes:</label>
                 <textarea 
                   rows={2}
                   placeholder="e.g. Saree inspected by Aprajita. Fall & pico hand-stitched. Packaged in luxury gold box."
@@ -1206,7 +1206,7 @@ export default function AdminOrdersView() {
                       {shipModalOrder.customer_email ? (
                         <>Delivers luxury HTML dispatch notification with AWB tracking link to <strong>{shipModalOrder.customer_email}</strong>.</>
                       ) : (
-                        <span className="text-muted">No email registered on this order (notification will be recorded in Atelier Outbox).</span>
+                        <span className="text-muted">No email registered on this order (notification will be recorded in Email Outbox).</span>
                       )}
                     </div>
                   </div>
@@ -1253,7 +1253,7 @@ export default function AdminOrdersView() {
             <div className="invoice-header-strip">
               <div className="invoice-brand">
                 <span className="brand-title">Saak by Aprajita</span>
-                <span className="brand-tag">Atelier Order Slip • Official Tax &amp; Delivery Summary</span>
+                <span className="brand-tag">Official Order Slip • Tax &amp; Delivery Summary</span>
               </div>
               <button className="lightbox-close-btn" onClick={() => setInvoiceOrder(null)}>
                 <X size={18} />
@@ -1280,7 +1280,7 @@ export default function AdminOrdersView() {
 
               <div className="invoice-parties-grid">
                 <div className="party-box">
-                  <span className="party-title">ATELIER DISPATCH FROM:</span>
+                  <span className="party-title">DISPATCH FROM:</span>
                   <strong>Saak by Aprajita</strong>
                   <p>Hauz Khas Enclave / DLF Phase 5</p>
                   <p>New Delhi / Gurugram, India</p>
@@ -1335,7 +1335,7 @@ export default function AdminOrdersView() {
               )}
 
               <div className="invoice-footer-seal">
-                <p>Authentic Handcrafted Creation by Aprajita • Saak Atelier Official Record</p>
+                <p>Authentic Handcrafted Creation by Aprajita • Saak Official Record</p>
               </div>
             </div>
 
@@ -1437,7 +1437,7 @@ export default function AdminOrdersView() {
         </div>
       )}
 
-      {/* MODAL 6: ATELIER EMAIL OUTBOX & PREVIEW MODAL */}
+      {/* MODAL 6: EMAIL OUTBOX & PREVIEW MODAL */}
       {showOutboxModal && (
         <div className="lightbox-overlay" onClick={() => setShowOutboxModal(false)}>
           <div className="lightbox-modal outbox-modal" onClick={(e) => e.stopPropagation()}>
@@ -1445,7 +1445,7 @@ export default function AdminOrdersView() {
               <div className="ship-modal-title">
                 <Mail size={18} className="text-terracotta" />
                 <div>
-                  <h4>Atelier Email Notification Outbox</h4>
+                  <h4>Email Notification Outbox</h4>
                   <span className="modal-subtitle">Sent Order Confirmations &amp; Dispatch Tracking Logs ({outboxEmails.length})</span>
                 </div>
               </div>
@@ -1626,7 +1626,7 @@ export default function AdminOrdersView() {
         .text-crimson { color: #C62828 !important; }
         .text-blue { color: #1565C0 !important; }
 
-        /* Atelier Active UPI Config Strip */
+        /* Active UPI Config Strip */
         .orders-upi-config-strip {
           background: #FAF7F2;
           border: 1px solid var(--border-light);

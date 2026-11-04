@@ -30,9 +30,9 @@ export default function InstagramFeed() {
     {
       id: 4,
       image: '/assets/saak_flatlay_copper_green.jpg',
-      caption: 'Fresh mogra blossoms, brass thalis, and pure metallic zari. Atelier mornings at Saak.',
+      caption: 'Fresh mogra blossoms, brass thalis, and pure metallic zari. Studio mornings at Saak.',
       likes: '416',
-      tag: '#AtelierDiaries'
+      tag: '#SaakDiaries'
     },
     {
       id: 5,
@@ -52,7 +52,7 @@ export default function InstagramFeed() {
               <InstagramIcon size={13} className="text-gold" />
               <span>COMMUNITY DIARY • @SAAKBYAPRAJITA</span>
             </div>
-            <h2 className="insta-title">Stories from the Atelier</h2>
+            <h2 className="insta-title">Stories from the Studio</h2>
             <p className="insta-subtitle">
               Follow our visual journal on Instagram for launch previews, styling notes, and real muses celebrating life in Saak.
             </p>

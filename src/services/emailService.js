@@ -3,24 +3,24 @@
  * Handles luxury transactional emails across the full customer lifecycle:
  * 1. Order Placed ("Your booking is received, payment verification in progress")
  * 2. Order Confirmed ("Your payment is verified and ensemble is in handcrafting")
- * 3. Order Dispatched & Tracking ("Dispatched from atelier with courier & AWB tracking")
+ * 3. Order Dispatched & Tracking ("Dispatched from studio with courier & AWB tracking")
  * 4. Order Delivered ("Your bespoke parcel has arrived, styling & care notes")
  * 
- * Delivers via /api/send-email (Gmail SMTP with App Password) with built-in Atelier Outbox preview.
+ * Delivers via /api/send-email (Gmail SMTP with App Password) with built-in Email Outbox preview.
  */
 
 const OUTBOX_STORAGE_KEY = 'saak_outbox_emails';
 
 // Sender configuration
 export const SENDER_EMAIL = 'Saakbyaprajita@gmail.com';
-export const SENDER_NAME = 'Saak by Aprajita Atelier';
+export const SENDER_NAME = 'Saak by Aprajita';
 
 /**
  * Common HTML email header wrapper
  */
 function renderEmailHeader(subtitle, title, refText) {
   return `
-    <!-- Atelier Header -->
+    <!-- Header -->
     <tr>
       <td style="background: linear-gradient(135deg, #1F1A17 0%, #2A221E 100%); padding: 36px 32px; text-align: center; border-bottom: 2px solid #C5A059;">
         <div style="color: #C5A059; font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 8px; font-weight: 600;">
@@ -43,12 +43,12 @@ function renderEmailHeader(subtitle, title, refText) {
  */
 function renderEmailFooter() {
   return `
-    <!-- Footer / Atelier Concierge -->
+    <!-- Footer / Concierge -->
     <tr>
       <td style="background: #F2ECE0; padding: 24px 32px; text-align: center; border-top: 1px solid #E5DDCF;">
         <p style="margin: 0 0 10px 0; font-size: 13px; color: #4A423D; line-height: 1.5;">
           Need bespoke styling assistance or drape adjustments?<br />
-          Our atelier concierge is available on WhatsApp at <strong style="color: #A34835;">+91 62676 64409</strong> or via email at <strong style="color: #A34835;">Saakbyaprajita@gmail.com</strong>.
+          Our concierge is available on WhatsApp at <strong style="color: #A34835;">+91 62676 64409</strong> or via email at <strong style="color: #A34835;">Saakbyaprajita@gmail.com</strong>.
         </p>
         <div style="margin-top: 14px; font-size: 11px; color: #8A817A;">
           © ${new Date().getFullYear()} Saak by Aprajita. Fluid Drapes &amp; Sculpted Statements.
@@ -103,7 +103,7 @@ export function generateOrderPlacedHtml(order) {
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #FAF6EF; border: 1px solid #E5DDCF; border-radius: 6px; overflow: hidden; box-shadow: 0 12px 36px rgba(31,26,23,0.06); max-width: 600px; width: 100%;">
           
-          ${renderEmailHeader('Bespoke Festive Atelier', 'Saak by Aprajita', `Order Reference: ${order.id}`)}
+          ${renderEmailHeader('Bespoke Festive Collection', 'Saak by Aprajita', `Order Reference: ${order.id}`)}
 
           <!-- Status Notice Callout -->
           <tr>
@@ -158,7 +158,7 @@ export function generateOrderPlacedHtml(order) {
           <tr>
             <td style="padding: 12px 32px 0 32px;">
               <h3 style="font-family: Georgia, serif; font-size: 18px; margin: 0 0 12px 0; color: #1F1A17; font-weight: 400; border-bottom: 1px solid #E5DDCF; padding-bottom: 8px;">
-                Your Atelier Selection
+                Your Order Selection
               </h3>
               <table width="100%" cellpadding="0" cellspacing="0">
                 <thead>
@@ -238,7 +238,7 @@ export function generateOrderConfirmedHtml(order) {
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #FAF6EF; border: 1px solid #E5DDCF; border-radius: 6px; overflow: hidden; box-shadow: 0 12px 36px rgba(31,26,23,0.06); max-width: 600px; width: 100%;">
           
-          ${renderEmailHeader('Atelier Handcrafting Confirmation', 'Saak by Aprajita', `Order Reference: ${order.id}`)}
+          ${renderEmailHeader('Handcrafting Confirmation', 'Saak by Aprajita', `Order Reference: ${order.id}`)}
 
           <!-- Status Callout -->
           <tr>
@@ -326,7 +326,7 @@ export function generateDispatchNotificationHtml(order, dispatchDetails) {
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #FAF6EF; border: 1px solid #E5DDCF; border-radius: 6px; overflow: hidden; box-shadow: 0 12px 36px rgba(31,26,23,0.06); max-width: 600px; width: 100%;">
           
-          ${renderEmailHeader('Atelier Shipment Notification', 'Saak by Aprajita', `Order Reference: ${order.id}`)}
+          ${renderEmailHeader('Shipment Notification', 'Saak by Aprajita', `Order Reference: ${order.id}`)}
 
           <!-- Announcement -->
           <tr>
@@ -389,7 +389,7 @@ export function generateDispatchNotificationHtml(order, dispatchDetails) {
               <!-- Dispatch Note -->
               ${notes ? `
                 <div style="background: #F4ECE1; border-left: 3px solid #C5A059; padding: 12px 16px; border-radius: 0 4px 4px 0; font-size: 12px; color: #5C524B; line-height: 1.5; margin-bottom: 24px;">
-                  <strong style="color: #1F1A17;">Atelier Dispatch Note:</strong> ${notes}
+                  <strong style="color: #1F1A17;">Dispatch Note:</strong> ${notes}
                 </div>
               ` : ''}
 
@@ -435,7 +435,7 @@ export function generateOrderDeliveredHtml(order) {
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #FAF6EF; border: 1px solid #E5DDCF; border-radius: 6px; overflow: hidden; box-shadow: 0 12px 36px rgba(31,26,23,0.06); max-width: 600px; width: 100%;">
           
-          ${renderEmailHeader('Atelier Delivery Celebration', 'Saak by Aprajita', `Order Reference: ${order.id}`)}
+          ${renderEmailHeader('Delivery Celebration', 'Saak by Aprajita', `Order Reference: ${order.id}`)}
 
           <!-- Announcement -->
           <tr>
@@ -453,7 +453,7 @@ export function generateOrderDeliveredHtml(order) {
               <!-- Care & Styling Guide Box -->
               <div style="background: #FFFFFF; border: 1px solid #E2CA9B; border-radius: 6px; padding: 22px; margin-bottom: 20px;">
                 <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #A34835; font-weight: 700; margin-bottom: 8px;">
-                  🌿 Atelier Care &amp; Styling Guide
+                  🌿 Care &amp; Styling Guide
                 </div>
                 <div style="font-size: 13px; color: #4A423D; line-height: 1.6;">
                   • <strong>Tissue &amp; Raw Silk Care:</strong> Dry clean only to preserve the delicate metallic sheen and zardozi embroidery.<br />
@@ -527,7 +527,7 @@ async function deliverEmail({ to, cc, subject, html, text, type, orderId, metada
     emailPayload.error = err.message;
   }
 
-  // Always log in Atelier Outbox so admin can inspect and preview
+  // Always log in Email Outbox so admin can inspect and preview
   recordOutboxEmail(emailPayload);
   return { success: emailPayload.status === 'delivered', payload: emailPayload };
 }
@@ -615,7 +615,7 @@ export function generateOtpEmailHtml(otp, fullName = 'Patron', expiryMinutes = 1
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Your Saak Atelier Verification Code</title>
+  <title>Your Saak Verification Code</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body style="margin: 0; padding: 0; background-color: #F7F3EC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1F1A17; -webkit-font-smoothing: antialiased;">
@@ -624,11 +624,11 @@ export function generateOtpEmailHtml(otp, fullName = 'Patron', expiryMinutes = 1
       <td align="center">
         <table width="560" cellpadding="0" cellspacing="0" style="background-color: #FAF6EF; border: 1px solid #E5DDCF; border-radius: 6px; overflow: hidden; box-shadow: 0 12px 36px rgba(31,26,23,0.06); max-width: 560px; width: 100%;">
           
-          <!-- Atelier Header -->
+          <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #1F1A17 0%, #2A221E 100%); padding: 36px 32px; text-align: center; border-bottom: 2px solid #C5A059;">
               <div style="color: #C5A059; font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 8px; font-weight: 600;">
-                SAAK ATELIER AUTHENTICATION
+                SAAK AUTHENTICATION
               </div>
               <h1 style="color: #FAF6EF; font-family: Georgia, serif; font-size: 26px; margin: 0 0 6px 0; font-weight: 400; letter-spacing: 0.04em;">
                 Saak by Aprajita
@@ -647,7 +647,7 @@ export function generateOtpEmailHtml(otp, fullName = 'Patron', expiryMinutes = 1
                 Your Verification Code
               </h2>
               <p style="font-size: 14px; line-height: 1.6; color: #5C524B; margin: 0 auto 24px auto; max-width: 440px;">
-                Dear ${fullName}, use the 6-digit one-time verification code below to complete your registration and enter the Saak Atelier circle.
+                Dear ${fullName}, use the 6-digit one-time verification code below to complete your registration and join the Saak Patron circle.
               </p>
 
               <!-- Luxury OTP Display Box -->
@@ -702,7 +702,7 @@ export function generateOtpEmailHtml(otp, fullName = 'Patron', expiryMinutes = 1
  */
 export async function sendAuthOtpEmail(email, otp, fullName = 'Patron') {
   if (!email || !otp) return { success: false, reason: 'Missing email or otp' };
-  const subject = `✨ Your Saak Atelier Verification Code: ${otp}`;
+  const subject = `✨ Your Saak Verification Code: ${otp}`;
   const html = generateOtpEmailHtml(otp, fullName);
   return deliverEmail({
     to: email,
@@ -717,7 +717,7 @@ export async function sendAuthOtpEmail(email, otp, fullName = 'Patron') {
 export const sendOrderConfirmationEmail = sendOrderPlacedEmail;
 
 // =============================================================================
-// ATELIER OUTBOX STORAGE (LOCAL INSPECTION & HTML PREVIEW)
+// EMAIL OUTBOX STORAGE (LOCAL INSPECTION & HTML PREVIEW)
 // =============================================================================
 export function getOutboxEmails() {
   try {

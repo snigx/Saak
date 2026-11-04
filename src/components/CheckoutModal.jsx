@@ -358,7 +358,7 @@ export default function CheckoutModal() {
         <div className="checkout-header">
           <div className="checkout-badge">
             <Sparkles size={13} className="text-gold" />
-            <span>SAAK ATELIER • BESPOKE CLIENT CHECKOUT</span>
+            <span>SAAK • BESPOKE CLIENT CHECKOUT</span>
           </div>
           <h2 className="checkout-title">
             {currentStep === 'shipping' && 'Delivery & Client Details'}
@@ -734,7 +734,7 @@ export default function CheckoutModal() {
                       </div>
                       <div className="reassurance-item">
                         <Clock size={14} className="text-gold" />
-                        <span>Orders confirmed within 15 minutes by Aprajita's atelier.</span>
+                        <span>Orders confirmed within 15 minutes by Aprajita's studio.</span>
                       </div>
                     </div>
 
@@ -892,7 +892,7 @@ export default function CheckoutModal() {
             <div className="success-step-container">
               <img 
                 src="/assets/saak_emblem_transparent.png" 
-                alt="Saak Atelier Seal" 
+                alt="Saak Emblem Seal" 
                 className="success-emblem-seal" 
               />
               <div className="success-icon-bubble">
@@ -912,7 +912,7 @@ export default function CheckoutModal() {
                   </>
                 ) : (
                   <>
-                    We have received your payment reference <strong>UTR: {utrNumber}</strong> for Order <strong>#{orderId}</strong>. Our atelier master dyers and tailors have begun preparing your ensemble.
+                    We have received your payment reference <strong>UTR: {utrNumber}</strong> for Order <strong>#{orderId}</strong>. Our master dyers and tailors have begun preparing your ensemble.
                   </>
                 )}
               </p>
@@ -1013,7 +1013,7 @@ export default function CheckoutModal() {
                         Tracking details will be shared as soon as it is available.
                       </h4>
                       <p className="tracking-pending-desc">
-                        Our atelier artisans are hand-inspecting your pieces and tailoring the complimentary fall &amp; pico. Once handed over to our insured courier partner, your live tracking details and AWB will appear right here.
+                        Our artisans are hand-inspecting your pieces and tailoring the complimentary fall &amp; pico. Once handed over to our insured courier partner, your live tracking details and AWB will appear right here.
                       </p>
                     </div>
                   </div>

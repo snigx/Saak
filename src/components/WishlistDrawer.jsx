@@ -71,7 +71,7 @@ export default function WishlistDrawer() {
       onClick={() => setIsWishlistOpen(false)}
       role="dialog"
       aria-modal="true"
-      aria-label="Your Atelier Wishlist"
+      aria-label="Your Wishlist"
     >
       <div 
         className="wishlist-drawer-panel" 

@@ -244,7 +244,7 @@ export default function ProductGrid() {
               <div className="block-title-col">
                 <div className="block-badge">
                   <span className="badge-dot gold"></span>
-                  <span>HAUTE ATELIER</span>
+                  <span>STRUCTURED STATEMENTS</span>
                 </div>
                 <h3 className="block-title">Sculpted Blouses &amp; Corsets</h3>
                 <p className="block-subtitle">

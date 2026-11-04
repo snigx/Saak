@@ -62,7 +62,7 @@ const COMBINATION_ASSETS = {
   'pearl-ivory-geometric-tissue_the-ivory-gold-striped-blouse': {
     model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/pearl-ivory-geometric-tissue_the-ivory-gold-striped-blouse_model.jpg',
     flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/pearl-ivory-geometric-tissue_the-ivory-gold-striped-blouse_flatlay.jpg',
-    styling: "Aprajita's Styling: The Original Atelier Look — Pearl Ivory Saree + Ivory & Gold Striped Zari Blouse"
+    styling: "Aprajita's Styling: The Signature Ensemble — Pearl Ivory Saree + Ivory & Gold Striped Zari Blouse"
   }
 };
 

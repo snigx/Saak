@@ -273,7 +273,7 @@ export default function SearchModal() {
             <div className="search-default-showcase">
               <div className="showcase-header">
                 <Sparkles size={14} className="text-gold" />
-                <span>ATELIER SIGNATURE CREATIONS</span>
+                <span>SIGNATURE CREATIONS</span>
               </div>
               <div className="showcase-grid">
                 {products.slice(0, 4).map((product) => {
@@ -288,7 +288,7 @@ export default function SearchModal() {
                         <img src={thumb} alt={product.name} />
                       </div>
                       <div className="showcase-details">
-                        <span className="showcase-tag">{product.tag || 'Atelier'}</span>
+                        <span className="showcase-tag">{product.tag || 'Signature'}</span>
                         <span className="showcase-name">{product.name}</span>
                         <span className="showcase-price">{formatPrice(product.price)}</span>
                       </div>

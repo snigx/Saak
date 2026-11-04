@@ -44,7 +44,7 @@ export default function RefundPolicyModal() {
           <div className="header-meta">
             <div className="policy-badge">
               <ShieldCheck size={14} className="text-gold" />
-              <span>SAAK ATELIER • CLIENT ASSURANCE</span>
+              <span>SAAK • CLIENT ASSURANCE</span>
             </div>
             <h2 id="policy-modal-title" className="policy-title">Returns, Exchanges &amp; Refunds</h2>
             <p className="policy-intro-quote">
@@ -196,7 +196,7 @@ export default function RefundPolicyModal() {
               Exchanges for a change of mind or colour preference are not routinely offered. However, we will assist with eligible cases involving defective, damaged, incorrect or materially misdescribed products.
             </p>
             <p className="section-para">
-              Any exchange is subject to product availability in our atelier. If a suitable replacement is unavailable, we will discuss an appropriate resolution, including a refund where applicable.
+              Any exchange is subject to product availability in our studio. If a suitable replacement is unavailable, we will discuss an appropriate resolution, including a refund where applicable.
             </p>
           </section>
 
@@ -207,7 +207,7 @@ export default function RefundPolicyModal() {
               <h3 className="section-heading">Refunds</h3>
             </div>
             <p className="section-para">
-              Once an eligible return is approved and the returned product has been received or otherwise verified by our atelier artisans, refunds will be processed to the original payment method wherever possible (UPI or bank account).
+              Once an eligible return is approved and the returned product has been received or otherwise verified by our artisans, refunds will be processed to the original payment method wherever possible (UPI or bank account).
             </p>
             <p className="section-para">
               We aim to initiate approved refunds promptly and within the timeframe required by applicable law. The time taken for the amount to appear in your account may depend on your bank or payment provider.
@@ -260,7 +260,7 @@ export default function RefundPolicyModal() {
               <h3 className="section-heading">Contact Us &amp; Support</h3>
             </div>
             <p className="section-para">
-              For return, exchange or refund assistance, our atelier team is here to support you:
+              For return, exchange or refund assistance, our dedicated support team is here to support you:
             </p>
 
             <div className="contact-info-grid">

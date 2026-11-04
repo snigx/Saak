@@ -134,7 +134,7 @@ export const initialProducts = [
     originalPrice: 4650,
     tag: 'Original Runway Pairing',
     tagColor: '#C5A059',
-    description: 'The authentic atelier pairing shown with our Pearl Ivory Architectural Zari Saree. Tailored from lustrous pure silk blend in soft ivory, accented with fine horizontal metallic gold zari stripes. Features an elegant boat-round neckline, elbow-length sleeves, and structured comfort fit.',
+    description: 'The authentic signature pairing shown with our Pearl Ivory Architectural Zari Saree. Tailored from lustrous pure silk blend in soft ivory, accented with fine horizontal metallic gold zari stripes. Features an elegant boat-round neckline, elbow-length sleeves, and structured comfort fit.',
     fabric: 'Pure Silk & Woven Metallic Gold Zari',
     drapeStyle: 'Structured Boat-Neck Blouse with Elbow Sleeves',
     drapeWeight: 'Lightweight & Structured',

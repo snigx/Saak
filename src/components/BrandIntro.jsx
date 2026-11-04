@@ -62,10 +62,10 @@ export default function BrandIntro() {
           </div>
         </div>
 
-        {/* Right Column: High-Fashion Visual & Atelier Highlights */}
+        {/* Right Column: High-Fashion Visual & Highlights */}
         <div className="intro-visual-col">
           <div className="visual-composition">
-            {/* Primary Atelier Frame */}
+            {/* Primary Feature Frame */}
             <div className="main-frame">
               <img 
                 src="/assets/saak_muse_black_corset_side.jpg" 
