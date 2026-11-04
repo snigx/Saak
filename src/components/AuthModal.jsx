@@ -280,6 +280,26 @@ export default function AuthModal() {
           </p>
         </div>
 
+        {/* Segmented Top Tabs */}
+        {authModalView !== 'otp' && (
+          <div className="auth-segmented-tabs">
+            <button
+              type="button"
+              className={`auth-tab-btn ${authModalView === 'signin' ? 'active' : ''}`}
+              onClick={() => switchView('signin')}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              className={`auth-tab-btn ${authModalView === 'signup' ? 'active' : ''}`}
+              onClick={() => switchView('signup')}
+            >
+              Create Account
+            </button>
+          </div>
+        )}
+
         {/* Error Alert */}
         {errorMessage && (
           <div className="auth-error-alert">
@@ -507,15 +527,21 @@ export default function AuthModal() {
                 {isSubmitting ? (
                   <>
                     <Loader2 size={16} className="spin" />
-                    <span>Processing...</span>
+                    <span>{authModalView === 'signup' ? 'Dispatching Verification Code...' : 'Signing In...'}</span>
                   </>
                 ) : (
                   <>
-                    <span>{authModalView === 'signin' ? 'Sign In to Atelier' : 'Send Verification Code'}</span>
+                    <span>{authModalView === 'signin' ? 'Sign In to Atelier' : 'Create Account'}</span>
                     <ArrowRight size={16} />
                   </>
                 )}
               </button>
+
+              {authModalView === 'signup' && (
+                <p className="signup-otp-hint">
+                  ✨ A 6-digit verification code will be sent to your email from <strong>Saak by Aprajita</strong> to complete registration.
+                </p>
+              )}
 
               {/* Alternative: 1-Click OTP Sign-In for existing patrons */}
               {authModalView === 'signin' && (
@@ -567,7 +593,7 @@ export default function AuthModal() {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .auth-modal {
           max-width: 440px;
           width: 100%;
@@ -580,7 +606,46 @@ export default function AuthModal() {
         }
         .auth-header {
           text-align: center;
-          margin-bottom: 24px;
+          margin-bottom: 20px;
+        }
+        .auth-segmented-tabs {
+          display: flex;
+          background: #EDE6DC;
+          border-radius: 6px;
+          padding: 4px;
+          margin-bottom: 22px;
+          gap: 4px;
+        }
+        .auth-tab-btn {
+          flex: 1;
+          padding: 9px 16px;
+          border: none;
+          background: transparent;
+          font-family: inherit;
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--text-secondary);
+          border-radius: 4px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .auth-tab-btn.active {
+          background: #FFFFFF;
+          color: var(--accent-terracotta);
+          box-shadow: 0 2px 6px rgba(31, 26, 23, 0.08);
+        }
+        .auth-tab-btn:hover:not(.active) {
+          color: var(--text-primary);
+        }
+        .signup-otp-hint {
+          font-size: 11.5px;
+          color: #7A726D;
+          text-align: center;
+          margin-top: 10px;
+          line-height: 1.4;
+        }
+        .signup-otp-hint strong {
+          color: #1F1A17;
         }
         .auth-emblem-logo {
           height: 48px;

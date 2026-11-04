@@ -195,7 +195,7 @@ export default function ProfileModal() {
             onClick={() => setActiveTab('orders')}
           >
             <Package size={15} />
-            <span>Atelier Orders ({recentOrders.length})</span>
+            <span>Atelier Orders ({displayedOrders.length})</span>
           </button>
         </div>
 
@@ -475,7 +475,7 @@ export default function ProfileModal() {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .profile-modal {
           max-width: 580px;
           width: 100%;
