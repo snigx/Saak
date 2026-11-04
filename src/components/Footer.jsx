@@ -27,7 +27,16 @@ export default function Footer() {
         {/* Col 1: Brand Info */}
         <div className="footer-col brand-col">
           <div className="footer-brand">
-            <div className="footer-brand-lockup">
+            <div 
+              className="footer-brand-lockup"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              style={{ cursor: 'pointer' }}
+              title="Return to top of page"
+              aria-label="Saak by Aprajita - Return to top of page"
+            >
               <img 
                 src="/assets/saak_emblem_transparent.png" 
                 alt="Saak Peacock Emblem" 

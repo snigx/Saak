@@ -12,6 +12,7 @@ export default function Navbar() {
     setIsCartOpen, 
     setIsWishlistOpen,
     openSearch,
+    clearSearch,
     formatPrice,
     cartTotal
   } = useShop();
@@ -21,6 +22,13 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);
+
+  const handleLogoClick = () => {
+    setActiveCategory('all');
+    if (clearSearch) clearSearch();
+    setMobileMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleNavClick = (catKey) => {
     setActiveCategory(catKey);
@@ -71,8 +79,13 @@ export default function Navbar() {
           {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
 
-        {/* Brand Logo */}
-        <div className="brand-logo-wrapper" onClick={() => handleNavClick('all')}>
+        {/* Brand Logo - Clicking brings to top of page */}
+        <button 
+          type="button"
+          className="brand-logo-wrapper" 
+          onClick={handleLogoClick}
+          aria-label="Saak by Aprajita - Return to top of page"
+        >
           <img 
             src="/assets/saak_emblem_transparent.png" 
             alt="Saak Peacock Emblem" 
@@ -82,7 +95,7 @@ export default function Navbar() {
             <span className="brand-name">Saak</span>
             <span className="brand-sub">by Aprajita</span>
           </div>
-        </div>
+        </button>
 
         {/* Desktop Navigation Links */}
         <nav className="desktop-nav">
@@ -192,7 +205,15 @@ export default function Navbar() {
       {/* Mobile Drawer Navigation */}
       {mobileMenuOpen && (
         <div className="mobile-nav-drawer">
-          <div className="mobile-drawer-brand">
+          <div 
+            className="mobile-drawer-brand"
+            onClick={handleLogoClick}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleLogoClick(); }}
+            style={{ cursor: 'pointer' }}
+            aria-label="Saak by Aprajita - Return to top of page"
+          >
             <img 
               src="/assets/saak_logo_transparent.png" 
               alt="Saak by Aprajita" 
@@ -304,6 +325,11 @@ export default function Navbar() {
           cursor: pointer;
           user-select: none;
           text-decoration: none;
+          background: transparent;
+          border: none;
+          padding: 0;
+          font: inherit;
+          text-align: left;
         }
         .brand-logo-emblem {
           height: 42px;
