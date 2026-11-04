@@ -1,14 +1,15 @@
 import nodemailer from 'nodemailer';
 
-// Serverless OTP store cache (in-memory for warm lambdas)
+// Serverless store caches (in-memory across warm lambda invocations)
 const otpStore = new Map();
+const patronsStore = new Map();
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { action, email, otp, fullName } = req.body || {};
+  const { action, email, otp, fullName, password, confirmPassword, type } = req.body || {};
   const user = process.env.GMAIL_USER || 'Saakbyaprajita@gmail.com';
   const pass = process.env.GMAIL_APP_PASSWORD;
 
@@ -23,11 +24,21 @@ export default async function handler(req, res) {
 
   // 1. ACTION: SEND OTP
   if (action === 'send') {
+    if (type === 'signup') {
+      if (password && confirmPassword && password !== confirmPassword) {
+        return res.status(400).json({ error: 'Passwords do not match. Please ensure both passwords are identical.' });
+      }
+      if (password && password.length < 6) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+      }
+    }
+
     try {
       const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
       otpStore.set(normalizedEmail, {
         otp: generatedOtp,
         fullName: fullName || normalizedEmail.split('@')[0],
+        password: password ? password.trim() : undefined,
         expiresAt: Date.now() + 10 * 60 * 1000,
         attempts: 0
       });
@@ -153,18 +164,65 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Incorrect verification code. Please check your email and try again.' });
     }
 
-    otpStore.delete(normalizedEmail);
-    const authenticatedUser = {
-      id: `patron_${Date.now()}`,
+    const effectivePass = (password || record.password || '').trim();
+    const effectiveConfirm = (confirmPassword || '').trim();
+    if (effectivePass && effectiveConfirm && effectivePass !== effectiveConfirm) {
+      return res.status(400).json({ error: 'Passwords do not match. Please ensure both passwords are identical.' });
+    }
+
+    // Update patronsStore
+    const existingPatron = patronsStore.get(normalizedEmail);
+    const patronRecord = {
+      id: existingPatron?.id || `patron_${Date.now()}`,
       email: normalizedEmail,
-      fullName: record.fullName || fullName || normalizedEmail.split('@')[0],
+      fullName: record.fullName || fullName || existingPatron?.fullName || normalizedEmail.split('@')[0],
+      password: effectivePass || existingPatron?.password,
       provider: 'email',
       verified: true,
-      createdAt: new Date().toISOString()
+      createdAt: existingPatron?.createdAt || new Date().toISOString()
+    };
+    patronsStore.set(normalizedEmail, patronRecord);
+
+    otpStore.delete(normalizedEmail);
+
+    const user = {
+      id: patronRecord.id,
+      email: normalizedEmail,
+      fullName: patronRecord.fullName,
+      provider: 'email',
+      verified: true,
+      createdAt: patronRecord.createdAt
     };
 
-    return res.status(200).json({ success: true, user: authenticatedUser });
+    return res.status(200).json({ success: true, user });
   }
 
-  return res.status(400).json({ error: 'Invalid action. Must be "send" or "verify".' });
+  // 3. ACTION: LOGIN WITH PASSWORD
+  if (action === 'login') {
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required.' });
+    }
+    const cleanEnteredPass = password.trim();
+    const patron = patronsStore.get(normalizedEmail);
+
+    if (patron && patron.password) {
+      const storedPass = (patron.password || '').trim();
+      if (patron.password === password || storedPass === cleanEnteredPass) {
+        return res.status(200).json({
+          success: true,
+          user: {
+            id: patron.id,
+            email: patron.email,
+            fullName: patron.fullName,
+            provider: 'email',
+            createdAt: patron.createdAt
+          }
+        });
+      }
+    }
+
+    return res.status(401).json({ error: 'Invalid password. Please check your credentials or sign in with an OTP code.' });
+  }
+
+  return res.status(400).json({ error: 'Invalid action. Must be "send", "verify", or "login".' });
 }

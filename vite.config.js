@@ -1,6 +1,28 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv } from 'vite'
 import nodemailer from 'nodemailer'
+import fs from 'node:fs'
+import path from 'node:path'
+
+// Helper for local server patrons persistence
+const PATRONS_FILE = path.resolve(process.cwd(), 'scratch/server_patrons_db.json')
+function getServerPatrons() {
+  try {
+    if (fs.existsSync(PATRONS_FILE)) {
+      return JSON.parse(fs.readFileSync(PATRONS_FILE, 'utf-8'))
+    }
+  } catch {}
+  return []
+}
+function saveServerPatrons(patrons) {
+  try {
+    const dir = path.dirname(PATRONS_FILE)
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+    fs.writeFileSync(PATRONS_FILE, JSON.stringify(patrons, null, 2), 'utf-8')
+  } catch (e) {
+    console.error('[ServerPatrons save error]:', e)
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -90,12 +112,27 @@ export default defineConfig(({ mode }) => {
             req.on('end', async () => {
               try {
                 const parsed = JSON.parse(body || '{}')
-                const { email, fullName } = parsed
+                const { email, fullName, type, password, confirmPassword } = parsed
                 if (!email || !email.includes('@')) {
                   res.statusCode = 400
                   res.setHeader('Content-Type', 'application/json')
                   res.end(JSON.stringify({ error: 'Please enter a valid email address.' }))
                   return
+                }
+
+                if (type === 'signup') {
+                  if (password && confirmPassword && password !== confirmPassword) {
+                    res.statusCode = 400
+                    res.setHeader('Content-Type', 'application/json')
+                    res.end(JSON.stringify({ error: 'Passwords do not match. Please ensure both passwords are identical.' }))
+                    return
+                  }
+                  if (password && password.length < 6) {
+                    res.statusCode = 400
+                    res.setHeader('Content-Type', 'application/json')
+                    res.end(JSON.stringify({ error: 'Password must be at least 6 characters long.' }))
+                    return
+                  }
                 }
 
                 const user = env.GMAIL_USER || 'Saakbyaprajita@gmail.com'
@@ -115,6 +152,7 @@ export default defineConfig(({ mode }) => {
                 otpStore.set(normalizedEmail, {
                   otp,
                   fullName: fullName || normalizedEmail.split('@')[0],
+                  password: password ? password.trim() : undefined,
                   expiresAt: Date.now() + 10 * 60 * 1000,
                   attempts: 0
                 })
@@ -246,7 +284,7 @@ export default defineConfig(({ mode }) => {
             req.on('end', () => {
               try {
                 const parsed = JSON.parse(body || '{}')
-                const { email, otp, fullName } = parsed
+                const { email, otp, fullName, password, confirmPassword } = parsed
                 if (!email || !otp) {
                   res.statusCode = 400
                   res.setHeader('Content-Type', 'application/json')
@@ -287,15 +325,44 @@ export default defineConfig(({ mode }) => {
                   return
                 }
 
+                const effectivePass = (password || record.password || '').trim()
+                const effectiveConfirm = (confirmPassword || '').trim()
+                if (effectivePass && effectiveConfirm && effectivePass !== effectiveConfirm) {
+                  res.statusCode = 400
+                  res.setHeader('Content-Type', 'application/json')
+                  res.end(JSON.stringify({ error: 'Passwords do not match. Please ensure both passwords are identical.' }))
+                  return
+                }
+
+                // Update server patrons database
+                const patrons = getServerPatrons()
+                const existingIdx = patrons.findIndex(p => p.email.toLowerCase() === normalizedEmail)
+                const patronRecord = {
+                  id: existingIdx >= 0 ? patrons[existingIdx].id : `patron_${Date.now()}`,
+                  email: normalizedEmail,
+                  fullName: record.fullName || fullName || (existingIdx >= 0 ? patrons[existingIdx].fullName : normalizedEmail.split('@')[0]),
+                  password: effectivePass || (existingIdx >= 0 ? patrons[existingIdx].password : undefined),
+                  provider: 'email',
+                  verified: true,
+                  createdAt: existingIdx >= 0 ? patrons[existingIdx].createdAt : new Date().toISOString(),
+                  updatedAt: new Date().toISOString()
+                }
+                if (existingIdx >= 0) {
+                  patrons[existingIdx] = patronRecord
+                } else {
+                  patrons.push(patronRecord)
+                }
+                saveServerPatrons(patrons)
+
                 // Code is correct! Clean up store and build authenticated patron
                 otpStore.delete(normalizedEmail)
                 const user = {
-                  id: `patron_${Date.now()}`,
+                  id: patronRecord.id,
                   email: normalizedEmail,
-                  fullName: record.fullName || fullName || normalizedEmail.split('@')[0],
+                  fullName: patronRecord.fullName,
                   provider: 'email',
                   verified: true,
-                  createdAt: new Date().toISOString()
+                  createdAt: patronRecord.createdAt
                 }
 
                 console.info(`[DevServer OTP] Successfully verified patron: ${normalizedEmail}`)
@@ -307,6 +374,63 @@ export default defineConfig(({ mode }) => {
                 res.statusCode = 500
                 res.setHeader('Content-Type', 'application/json')
                 res.end(JSON.stringify({ error: err.message || 'Verification failed.' }))
+              }
+            })
+          })
+
+          // 4. Auth Password Login Endpoint
+          server.middlewares.use('/api/auth/login', (req, res) => {
+            if (req.method !== 'POST') {
+              res.statusCode = 405
+              res.setHeader('Content-Type', 'application/json')
+              res.end(JSON.stringify({ error: 'Method not allowed' }))
+              return
+            }
+
+            let body = ''
+            req.on('data', chunk => { body += chunk })
+            req.on('end', () => {
+              try {
+                const parsed = JSON.parse(body || '{}')
+                const { email, password } = parsed
+                if (!email || !password) {
+                  res.statusCode = 400
+                  res.setHeader('Content-Type', 'application/json')
+                  res.end(JSON.stringify({ error: 'Email and password are required.' }))
+                  return
+                }
+
+                const normalizedEmail = email.trim().toLowerCase()
+                const cleanEnteredPass = password.trim()
+                const patrons = getServerPatrons()
+                const found = patrons.find(p => p.email.toLowerCase() === normalizedEmail)
+
+                if (found && found.password) {
+                  const storedPass = (found.password || '').trim()
+                  if (found.password === password || storedPass === cleanEnteredPass) {
+                    res.statusCode = 200
+                    res.setHeader('Content-Type', 'application/json')
+                    res.end(JSON.stringify({
+                      success: true,
+                      user: {
+                        id: found.id,
+                        email: found.email,
+                        fullName: found.fullName,
+                        provider: 'email',
+                        createdAt: found.createdAt
+                      }
+                    }))
+                    return
+                  }
+                }
+
+                res.statusCode = 401
+                res.setHeader('Content-Type', 'application/json')
+                res.end(JSON.stringify({ error: 'Invalid password. Please check your credentials or sign in with an OTP code.' }))
+              } catch (err) {
+                res.statusCode = 500
+                res.setHeader('Content-Type', 'application/json')
+                res.end(JSON.stringify({ error: err.message }))
               }
             })
           })

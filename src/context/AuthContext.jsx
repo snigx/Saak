@@ -99,19 +99,29 @@ export function AuthProvider({ children }) {
     return loggedUser;
   };
 
-  const registerWithEmail = async (email, password, fullName) => {
-    await requestEmailOtp(email, fullName, 'signup');
-    setPendingOtpData({ email, fullName, password, type: 'signup' });
+  const registerWithEmail = async (email, password, confirmPassword, fullName) => {
+    if (!password || !confirmPassword) {
+      throw new Error('Please enter and retype your password.');
+    }
+    if (password !== confirmPassword) {
+      throw new Error('Passwords do not match. Please ensure both passwords are identical.');
+    }
+    if (password.length < 6) {
+      throw new Error('Password must be at least 6 characters long.');
+    }
+
+    await requestEmailOtp(email, fullName, 'signup', password, confirmPassword);
+    setPendingOtpData({ email, fullName, password, confirmPassword, type: 'signup' });
     setAuthModalView('otp');
     return { requiresOtp: true, email };
   };
 
-  const sendOtp = async (email, fullName, type = 'signup') => {
-    return await requestEmailOtp(email, fullName, type);
+  const sendOtp = async (email, fullName, type = 'signup', password = '', confirmPassword = '') => {
+    return await requestEmailOtp(email, fullName, type, password, confirmPassword);
   };
 
-  const verifyOtp = async (email, otp, fullName, password) => {
-    const verifiedUser = await verifyEmailOtp(email, otp, fullName, password);
+  const verifyOtp = async (email, otp, fullName, password, confirmPassword) => {
+    const verifiedUser = await verifyEmailOtp(email, otp, fullName, password, confirmPassword);
     setUser(verifiedUser);
     setPendingOtpData(null);
     setIsAuthModalOpen(false);

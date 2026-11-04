@@ -56,9 +56,18 @@ export async function getCurrentUser() {
 /**
  * Request 6-digit OTP sent to patron's email
  */
-export async function requestEmailOtp(email, fullName = '', type = 'signup') {
+export async function requestEmailOtp(email, fullName = '', type = 'signup', password = '', confirmPassword = '') {
   if (!email || !email.includes('@')) {
     throw new Error('Please enter a valid email address.');
+  }
+
+  if (type === 'signup') {
+    if (password && confirmPassword && password !== confirmPassword) {
+      throw new Error('Passwords do not match. Please ensure both passwords are identical.');
+    }
+    if (password && password.length < 6) {
+      throw new Error('Password must be at least 6 characters long.');
+    }
   }
 
   const normalizedEmail = email.trim().toLowerCase();
@@ -68,7 +77,7 @@ export async function requestEmailOtp(email, fullName = '', type = 'signup') {
     const res = await fetch('/api/auth/send-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: normalizedEmail, fullName, type })
+      body: JSON.stringify({ email: normalizedEmail, fullName, type, password, confirmPassword })
     });
 
     const data = await res.json();
@@ -82,7 +91,7 @@ export async function requestEmailOtp(email, fullName = '', type = 'signup') {
       const resFallback = await fetch('/api/auth-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'send', email: normalizedEmail, fullName, type })
+        body: JSON.stringify({ action: 'send', email: normalizedEmail, fullName, type, password, confirmPassword })
       });
       const dataFallback = await resFallback.json();
       if (!resFallback.ok) {
@@ -98,19 +107,24 @@ export async function requestEmailOtp(email, fullName = '', type = 'signup') {
 /**
  * Verify 6-digit OTP and authenticate patron
  */
-export async function verifyEmailOtp(email, otp, fullName = '', password = '') {
+export async function verifyEmailOtp(email, otp, fullName = '', password = '', confirmPassword = '') {
   if (!email || !otp) {
     throw new Error('Please enter both email and the 6-digit verification code.');
   }
 
+  if (password && confirmPassword && password !== confirmPassword) {
+    throw new Error('Passwords do not match. Please ensure both passwords are identical.');
+  }
+
   const normalizedEmail = email.trim().toLowerCase();
+  const cleanPass = (password || '').trim();
   let authenticatedUser = null;
 
   try {
     const res = await fetch('/api/auth/verify-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: normalizedEmail, otp: otp.trim(), fullName, password })
+      body: JSON.stringify({ email: normalizedEmail, otp: otp.trim(), fullName, password: cleanPass, confirmPassword: (confirmPassword || '').trim() })
     });
 
     const data = await res.json();
@@ -124,7 +138,7 @@ export async function verifyEmailOtp(email, otp, fullName = '', password = '') {
       const resFallback = await fetch('/api/auth-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'verify', email: normalizedEmail, otp: otp.trim(), fullName, password })
+        body: JSON.stringify({ action: 'verify', email: normalizedEmail, otp: otp.trim(), fullName, password: cleanPass, confirmPassword: (confirmPassword || '').trim() })
       });
       const dataFallback = await resFallback.json();
       if (!resFallback.ok) {
@@ -149,13 +163,13 @@ export async function verifyEmailOtp(email, otp, fullName = '', password = '') {
   const existingIdx = users.findIndex(u => u.email.toLowerCase() === normalizedEmail);
   if (existingIdx >= 0) {
     users[existingIdx].fullName = cleanUser.fullName;
-    if (password) users[existingIdx].password = password;
+    if (cleanPass) users[existingIdx].password = cleanPass;
   } else {
     users.push({
       id: cleanUser.id,
       email: normalizedEmail,
       fullName: cleanUser.fullName,
-      password: password || undefined,
+      password: cleanPass || undefined,
       provider: 'email',
       createdAt: cleanUser.createdAt
     });
@@ -167,16 +181,18 @@ export async function verifyEmailOtp(email, otp, fullName = '', password = '') {
 }
 
 /**
- * Sign up initiation with Email, Password and Full Name
+ * Sign up initiation with Email, Password, Retype Password, and Full Name
  * Dispatches 6-digit OTP code to the patron's email instead of broken confirmation links.
  */
-export async function signUpWithEmail(email, password, fullName) {
+export async function signUpWithEmail(email, password, confirmPassword, fullName) {
   if (!email || !password) throw new Error('Please enter both email and password.');
+  if (!confirmPassword) throw new Error('Please retype your password to confirm.');
+  if (password !== confirmPassword) throw new Error('Passwords do not match. Please ensure both passwords are identical.');
   if (password.length < 6) throw new Error('Password must be at least 6 characters long.');
 
   // Send 6-digit OTP to patron's email via verified Gmail SMTP
-  await requestEmailOtp(email, fullName, 'signup');
-  return { requiresOtp: true, email, fullName, password };
+  await requestEmailOtp(email, fullName, 'signup', password, confirmPassword);
+  return { requiresOtp: true, email, fullName, password, confirmPassword };
 }
 
 /**
@@ -186,28 +202,58 @@ export async function signInWithEmail(email, password) {
   if (!email || !password) throw new Error('Please enter both email and password.');
 
   const normalizedEmail = email.trim().toLowerCase();
+  const enteredPass = password.trim();
 
   // 1. Try local verified users database first
   const users = getLocalUsersDb();
   const found = users.find(u => u.email.toLowerCase() === normalizedEmail);
 
   if (found && found.password) {
-    if (found.password === password) {
+    const storedPass = (found.password || '').trim();
+    if (found.password === password || storedPass === enteredPass) {
       const cleanUser = mapUser(found);
       localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, JSON.stringify(cleanUser));
       window.dispatchEvent(new Event('saak-auth-change'));
       return cleanUser;
-    } else {
-      throw new Error('Invalid password. Please check your credentials or sign in with an OTP code.');
     }
   }
 
-  // 2. Try Supabase Auth if configured
+  // 2. Try server patrons database (via /api/auth/login)
+  try {
+    const serverRes = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: normalizedEmail, password: enteredPass })
+    });
+    if (serverRes.ok) {
+      const serverData = await serverRes.json();
+      if (serverData.user) {
+        const cleanUser = mapUser(serverData.user);
+        // Sync into local db
+        const uDb = getLocalUsersDb();
+        const idx = uDb.findIndex(u => u.email.toLowerCase() === normalizedEmail);
+        if (idx >= 0) {
+          uDb[idx].password = enteredPass;
+          uDb[idx].fullName = cleanUser.fullName;
+        } else {
+          uDb.push({ ...cleanUser, password: enteredPass });
+        }
+        saveLocalUsersDb(uDb);
+        localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, JSON.stringify(cleanUser));
+        window.dispatchEvent(new Event('saak-auth-change'));
+        return cleanUser;
+      }
+    }
+  } catch (err) {
+    // Ignore server error and continue to other providers
+  }
+
+  // 3. Try Supabase Auth if configured
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
-        password
+        password: enteredPass
       });
 
       if (!error && data?.user) {
@@ -218,7 +264,12 @@ export async function signInWithEmail(email, password) {
     }
   }
 
-  // 3. Fallback: If user exists in local database without password
+  // If user exists locally or on server with a password, but entered password did not match:
+  if (found && found.password) {
+    throw new Error('Invalid password. Please check your credentials or sign in with an OTP code.');
+  }
+
+  // 4. Fallback: If user exists in local database without password (e.g. Google or OTP signup)
   if (found) {
     const cleanUser = mapUser(found);
     localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, JSON.stringify(cleanUser));

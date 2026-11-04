@@ -24,8 +24,10 @@ export default function AuthModal() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successNotice, setSuccessNotice] = useState('');
@@ -109,10 +111,18 @@ export default function AuthModal() {
         setErrorMessage('Password must be at least 6 characters long.');
         return;
       }
+      if (!confirmPassword) {
+        setErrorMessage('Please retype your password to confirm.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setErrorMessage('Passwords do not match. Please ensure both passwords are identical.');
+        return;
+      }
 
       setIsSubmitting(true);
       try {
-        await registerWithEmail(email.trim(), password, fullName.trim());
+        await registerWithEmail(email.trim(), password, confirmPassword, fullName.trim());
         setSuccessNotice(`Verification code dispatched to ${email.trim()}`);
       } catch (err) {
         setErrorMessage(err.message || 'Failed to dispatch verification code. Please check your email.');
@@ -208,10 +218,11 @@ export default function AuthModal() {
     const targetEmail = pendingOtpData?.email || email.trim();
     const targetName = pendingOtpData?.fullName || fullName.trim();
     const targetPass = pendingOtpData?.password || password;
+    const targetConfirmPass = pendingOtpData?.confirmPassword || confirmPassword;
 
     setIsSubmitting(true);
     try {
-      await verifyOtp(targetEmail, enteredOtp, targetName, targetPass);
+      await verifyOtp(targetEmail, enteredOtp, targetName, targetPass, targetConfirmPass);
     } catch (err) {
       setErrorMessage(err.message || 'Invalid or expired code. Please try again.');
     } finally {
@@ -242,6 +253,8 @@ export default function AuthModal() {
   const switchView = (newView) => {
     setErrorMessage('');
     setSuccessNotice('');
+    setPassword('');
+    setConfirmPassword('');
     setAuthModalView(newView);
   };
 
@@ -303,8 +316,19 @@ export default function AuthModal() {
         {/* Error Alert */}
         {errorMessage && (
           <div className="auth-error-alert">
-            <AlertCircle size={16} />
-            <span>{errorMessage}</span>
+            <AlertCircle size={16} className="alert-error-icon" />
+            <div className="error-message-content">
+              <span>{errorMessage}</span>
+              {authModalView === 'signin' && (
+                <button
+                  type="button"
+                  onClick={handleRequestSignInOtp}
+                  className="error-otp-link"
+                >
+                  Sign in with 1-Time Email Code instead →
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -492,8 +516,18 @@ export default function AuthModal() {
               {/* Password */}
               <div className="auth-input-group">
                 <div className="label-row">
-                  <label htmlFor="auth-password">Password</label>
-                  <span className="password-hint">Min. 6 characters</span>
+                  <label htmlFor="auth-password">{authModalView === 'signup' ? 'Create Password' : 'Password'}</label>
+                  {authModalView === 'signin' ? (
+                    <button
+                      type="button"
+                      onClick={handleRequestSignInOtp}
+                      className="forgot-pass-link"
+                    >
+                      Sign In with OTP?
+                    </button>
+                  ) : (
+                    <span className="password-hint">Min. 6 characters</span>
+                  )}
                 </div>
                 <div className="input-with-icon">
                   <Lock size={16} className="input-icon" />
@@ -517,6 +551,45 @@ export default function AuthModal() {
                   </button>
                 </div>
               </div>
+
+              {/* Retype Password (Sign Up only) */}
+              {authModalView === 'signup' && (
+                <div className="auth-input-group">
+                  <div className="label-row">
+                    <label htmlFor="auth-confirm-password">Retype Password</label>
+                    {confirmPassword ? (
+                      confirmPassword === password ? (
+                        <span className="password-match-tag success">✓ Passwords match</span>
+                      ) : (
+                        <span className="password-match-tag error">⚠️ Passwords do not match</span>
+                      )
+                    ) : (
+                      <span className="password-hint">Repeat your password</span>
+                    )}
+                  </div>
+                  <div className={`input-with-icon ${confirmPassword && confirmPassword !== password ? 'has-error' : ''} ${confirmPassword && confirmPassword === password && password.length >= 6 ? 'has-match' : ''}`}>
+                    <CheckCircle2 size={16} className={`input-icon ${confirmPassword && confirmPassword === password ? 'text-gold' : ''}`} />
+                    <input 
+                      id="auth-confirm-password"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      disabled={isSubmitting}
+                      required
+                    />
+                    <button 
+                      type="button"
+                      className="password-toggle-btn"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      tabIndex={-1}
+                      aria-label="Toggle confirm password visibility"
+                    >
+                      {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Submit Button */}
               <button 
@@ -680,8 +753,8 @@ export default function AuthModal() {
         }
         .auth-error-alert {
           display: flex;
-          align-items: center;
-          gap: 8px;
+          align-items: flex-start;
+          gap: 10px;
           background: #FDF2F0;
           color: #B93826;
           border: 1px solid #F5C6CB;
@@ -690,6 +763,59 @@ export default function AuthModal() {
           font-size: 13px;
           margin-bottom: 20px;
           text-align: left;
+        }
+        .alert-error-icon {
+          flex-shrink: 0;
+          margin-top: 2px;
+        }
+        .error-message-content {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        .error-otp-link {
+          background: none;
+          border: none;
+          padding: 0;
+          color: #A34835;
+          font-size: 12px;
+          font-weight: 600;
+          text-decoration: underline;
+          cursor: pointer;
+          text-align: left;
+        }
+        .error-otp-link:hover {
+          color: #7A2E20;
+        }
+        .forgot-pass-link {
+          background: none;
+          border: none;
+          padding: 0;
+          font-size: 11.5px;
+          color: #A34835;
+          cursor: pointer;
+          text-decoration: underline;
+          font-weight: 500;
+        }
+        .forgot-pass-link:hover {
+          color: #7A2E20;
+        }
+        .password-match-tag {
+          font-size: 11px;
+          font-weight: 600;
+        }
+        .password-match-tag.success {
+          color: #2D6A4F;
+        }
+        .password-match-tag.error {
+          color: #B93826;
+        }
+        .input-with-icon.has-error input {
+          border-color: #B93826 !important;
+          background: #FFFDFD;
+        }
+        .input-with-icon.has-match input {
+          border-color: #2D6A4F !important;
         }
         .auth-success-alert {
           display: flex;
