@@ -25,15 +25,15 @@ export const initialProducts = [
         `${CDN_BASE}/blouses/the-gold-corset/model_side.jpg`
       ],
       flatlayPhotos: [
-        `${CDN_BASE}/blouses/the-gold-corset/flatlay.jpg`
+        '/assets/gold_corset_flatlay.jpg'
       ],
       modelView: `${CDN_BASE}/blouses/the-gold-corset/model_front.jpg`,
-      flatlayView: `${CDN_BASE}/blouses/the-gold-corset/flatlay.jpg`,
+      flatlayView: '/assets/gold_corset_flatlay.jpg',
       swatchZoom: `${CDN_BASE}/blouses/the-gold-corset/model_side.jpg`,
       gallery: [
         `${CDN_BASE}/blouses/the-gold-corset/model_front.jpg`,
         `${CDN_BASE}/blouses/the-gold-corset/model_side.jpg`,
-        `${CDN_BASE}/blouses/the-gold-corset/flatlay.jpg`
+        '/assets/gold_corset_flatlay.jpg'
       ]
     },
     recommendedPairings: ['midnight-black-crepe-saree', 'sunset-orange-tissue', 'olive-bloom-tissue', 'seafoam-emerald-tissue', 'sunshine-marigold-tissue', 'pearl-ivory-geometric-tissue'],
@@ -195,7 +195,7 @@ export const initialProducts = [
       gallery: [
         `${CDN_BASE}/sarees/midnight-black-crepe-saree/model_front.jpg`,
         '/assets/saak_muse_black_corset_side.jpg',
-        `${CDN_BASE}/sets/signature-duo-black-gold/flatlay.jpg`
+        '/assets/signature_duo_black_gold_flatlay.jpg'
       ]
     },
     recommendedPairings: ['the-gold-corset', 'the-ivory-raw-silk-blouse'],
@@ -439,15 +439,15 @@ export const initialProducts = [
         `${CDN_BASE}/sets/signature-duo-black-gold/model_side.jpg`
       ],
       flatlayPhotos: [
-        `${CDN_BASE}/sets/signature-duo-black-gold/flatlay.jpg`
+        '/assets/signature_duo_black_gold_flatlay.jpg'
       ],
       modelView: `${CDN_BASE}/sets/signature-duo-black-gold/model_front.jpg`,
-      flatlayView: `${CDN_BASE}/sets/signature-duo-black-gold/flatlay.jpg`,
+      flatlayView: '/assets/signature_duo_black_gold_flatlay.jpg',
       swatchZoom: `${CDN_BASE}/sets/signature-duo-black-gold/model_side.jpg`,
       gallery: [
         `${CDN_BASE}/sets/signature-duo-black-gold/model_front.jpg`,
         `${CDN_BASE}/sets/signature-duo-black-gold/model_side.jpg`,
-        `${CDN_BASE}/sets/signature-duo-black-gold/flatlay.jpg`
+        '/assets/signature_duo_black_gold_flatlay.jpg'
       ]
     },
     recommendedPairings: [],

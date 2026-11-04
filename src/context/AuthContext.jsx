@@ -3,6 +3,8 @@ import {
   getCurrentUser, 
   signInWithEmail, 
   signUpWithEmail, 
+  requestEmailOtp,
+  verifyEmailOtp,
   signInWithGoogle, 
   signInWithDemoPatron,
   changePassword, 
@@ -10,36 +12,44 @@ import {
   updateUserProfile,
   subscribeToAuth 
 } from '../services/authService';
-
-export const ADMIN_EMAILS = [
-  'snigdh24@gmail.com',
-  'khushirai6900@gmail.com'
-];
-
-export function checkIsAdmin(currentUser) {
-  // Localhost always runs in admin mode per user requirement
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') {
-      return true;
-    }
-  }
-
-  if (!currentUser || !currentUser.email) return false;
-  const userEmail = currentUser.email.trim().toLowerCase();
-  return ADMIN_EMAILS.some(admin => admin.toLowerCase() === userEmail);
-}
+import { checkIsAdminFromDb } from '../services/adminService';
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalView, setAuthModalView] = useState('signin'); // 'signin' | 'signup'
+  const [authModalView, setAuthModalView] = useState('signin'); // 'signin' | 'signup' | 'otp'
+  const [pendingOtpData, setPendingOtpData] = useState(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  const isAdmin = checkIsAdmin(user);
+  // Synchronize admin status with database whenever user changes
+  useEffect(() => {
+    let mounted = true;
+
+    async function syncAdminStatus() {
+      if (!user) {
+        if (mounted) setIsAdmin(false);
+        return;
+      }
+      try {
+        const adminStatus = await checkIsAdminFromDb(user);
+        if (mounted) {
+          setIsAdmin(Boolean(adminStatus));
+        }
+      } catch (err) {
+        if (mounted) setIsAdmin(false);
+      }
+    }
+
+    syncAdminStatus();
+
+    return () => {
+      mounted = false;
+    };
+  }, [user]);
 
   useEffect(() => {
     let mounted = true;
@@ -90,10 +100,22 @@ export function AuthProvider({ children }) {
   };
 
   const registerWithEmail = async (email, password, fullName) => {
-    const newUser = await signUpWithEmail(email, password, fullName);
-    setUser(newUser);
+    await requestEmailOtp(email, fullName, 'signup');
+    setPendingOtpData({ email, fullName, password, type: 'signup' });
+    setAuthModalView('otp');
+    return { requiresOtp: true, email };
+  };
+
+  const sendOtp = async (email, fullName, type = 'signup') => {
+    return await requestEmailOtp(email, fullName, type);
+  };
+
+  const verifyOtp = async (email, otp, fullName, password) => {
+    const verifiedUser = await verifyEmailOtp(email, otp, fullName, password);
+    setUser(verifiedUser);
+    setPendingOtpData(null);
     setIsAuthModalOpen(false);
-    return newUser;
+    return verifiedUser;
   };
 
   const loginWithGoogle = async () => {
@@ -131,12 +153,13 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     isAdmin,
-    ADMIN_EMAILS,
     loading,
     isAuthModalOpen,
     setIsAuthModalOpen,
     authModalView,
     setAuthModalView,
+    pendingOtpData,
+    setPendingOtpData,
     openAuthModal,
     closeAuthModal,
     isProfileOpen,
@@ -145,6 +168,8 @@ export function AuthProvider({ children }) {
     closeProfile,
     loginWithEmail,
     registerWithEmail,
+    sendOtp,
+    verifyOtp,
     loginWithGoogle,
     loginWithDemoPatron,
     updatePassword,

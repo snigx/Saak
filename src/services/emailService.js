@@ -483,12 +483,13 @@ export function generateOrderDeliveredHtml(order) {
 // =============================================================================
 // UNIFIED EMAIL DELIVERY DISPATCHER
 // =============================================================================
-async function deliverEmail({ to, subject, html, text, type, orderId, metadata = {} }) {
+async function deliverEmail({ to, cc, subject, html, text, type, orderId, metadata = {} }) {
   const emailPayload = {
     id: `email_${Date.now()}_${type}`,
     type,
     orderId,
     to,
+    cc: cc || undefined,
     from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
     subject,
     html,
@@ -503,6 +504,7 @@ async function deliverEmail({ to, subject, html, text, type, orderId, metadata =
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         to,
+        cc: cc || undefined,
         from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
         subject,
         html,
@@ -513,7 +515,7 @@ async function deliverEmail({ to, subject, html, text, type, orderId, metadata =
     const data = await res.json();
     emailPayload.providerResponse = data;
     if (res.ok) {
-      console.info(`[EmailService] Delivered ${type} email to ${to} (MessageId: ${data.messageId})`);
+      console.info(`[EmailService] Delivered ${type} email to ${to}${cc ? ` (CC: ${cc})` : ''} (MessageId: ${data.messageId})`);
     } else {
       console.warn(`[EmailService] API send error for ${type}:`, data.error);
       emailPayload.status = 'failed';
@@ -552,6 +554,7 @@ export async function sendOrderPlacedEmail(order) {
 
 /**
  * 2. Send Order Confirmed Email (Payment verified / in handcrafting)
+ * Delivers confirmation to customer with SaakByAprajita@gmail.com in CC
  */
 export async function sendOrderConfirmedEmail(order) {
   if (!order || !order.customer_email) return { success: false, reason: 'No recipient email' };
@@ -559,6 +562,7 @@ export async function sendOrderConfirmedEmail(order) {
   const html = generateOrderConfirmedHtml(order);
   return deliverEmail({
     to: order.customer_email,
+    cc: 'SaakByAprajita@gmail.com',
     subject,
     html,
     type: 'order_confirmed',
@@ -599,6 +603,113 @@ export async function sendOrderDeliveredEmail(order) {
     html,
     type: 'order_delivered',
     orderId: order.id
+  });
+}
+
+/**
+ * 5. Generate Luxury OTP Email HTML
+ */
+export function generateOtpEmailHtml(otp, fullName = 'Patron', expiryMinutes = 10) {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Your Saak Atelier Verification Code</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #F7F3EC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1F1A17; -webkit-font-smoothing: antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F7F3EC; padding: 36px 12px;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="background-color: #FAF6EF; border: 1px solid #E5DDCF; border-radius: 6px; overflow: hidden; box-shadow: 0 12px 36px rgba(31,26,23,0.06); max-width: 560px; width: 100%;">
+          
+          <!-- Atelier Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #1F1A17 0%, #2A221E 100%); padding: 36px 32px; text-align: center; border-bottom: 2px solid #C5A059;">
+              <div style="color: #C5A059; font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 8px; font-weight: 600;">
+                SAAK ATELIER AUTHENTICATION
+              </div>
+              <h1 style="color: #FAF6EF; font-family: Georgia, serif; font-size: 26px; margin: 0 0 6px 0; font-weight: 400; letter-spacing: 0.04em;">
+                Saak by Aprajita
+              </h1>
+              <div style="color: #D6CBC0; font-size: 12px; font-style: italic;">
+                Fluid Drapes &amp; Sculpted Statements
+              </div>
+            </td>
+          </tr>
+
+          <!-- OTP Content Body -->
+          <tr>
+            <td style="padding: 36px 32px 28px 32px; text-align: center;">
+              <div style="font-size: 32px; margin-bottom: 12px;">✨🔑</div>
+              <h2 style="font-family: Georgia, serif; font-size: 22px; color: #1F1A17; margin: 0 0 10px 0; font-weight: 400;">
+                Your Verification Code
+              </h2>
+              <p style="font-size: 14px; line-height: 1.6; color: #5C524B; margin: 0 auto 24px auto; max-width: 440px;">
+                Dear ${fullName}, use the 6-digit one-time verification code below to complete your registration and enter the Saak Atelier circle.
+              </p>
+
+              <!-- Luxury OTP Display Box -->
+              <table align="center" cellpadding="0" cellspacing="0" style="margin: 0 auto 24px auto;">
+                <tr>
+                  <td style="background: #FFFFFF; border: 2px solid #C5A059; border-radius: 8px; padding: 18px 36px; text-align: center; box-shadow: 0 6px 20px rgba(197, 160, 89, 0.15);">
+                    <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: #8A817A; font-weight: 600; margin-bottom: 6px;">
+                      ONE-TIME PASSCODE
+                    </div>
+                    <div style="font-size: 38px; font-weight: 700; color: #A34835; letter-spacing: 0.25em; font-family: monospace; line-height: 1.2;">
+                      ${otp}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Expiry & Security Notice -->
+              <div style="background: #F4ECE1; border-left: 3px solid #C5A059; padding: 14px 18px; border-radius: 0 4px 4px 0; text-align: left; margin: 0 auto; max-width: 440px;">
+                <div style="font-size: 12px; color: #1F1A17; font-weight: 600; margin-bottom: 3px;">
+                  ⏳ Valid for ${expiryMinutes} minutes
+                </div>
+                <div style="font-size: 12px; color: #7A726D; line-height: 1.4;">
+                  If you did not request this verification code, please ignore this email.
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background: #F2ECE0; padding: 22px 32px; text-align: center; border-top: 1px solid #E5DDCF;">
+              <p style="margin: 0 0 8px 0; font-size: 12px; color: #4A423D; line-height: 1.5;">
+                Need assistance? Contact our concierge at <strong style="color: #A34835;">Saakbyaprajita@gmail.com</strong>
+              </p>
+              <div style="font-size: 11px; color: #8A817A;">
+                © ${new Date().getFullYear()} Saak by Aprajita. All rights reserved.
+              </div>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+}
+
+/**
+ * 6. Send OTP Authentication Email
+ */
+export async function sendAuthOtpEmail(email, otp, fullName = 'Patron') {
+  if (!email || !otp) return { success: false, reason: 'Missing email or otp' };
+  const subject = `✨ Your Saak Atelier Verification Code: ${otp}`;
+  const html = generateOtpEmailHtml(otp, fullName);
+  return deliverEmail({
+    to: email,
+    subject,
+    html,
+    type: 'auth_otp',
+    metadata: { otp }
   });
 }
 

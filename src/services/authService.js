@@ -27,6 +27,10 @@ export async function getCurrentUser() {
       // 1. Check active session (which exchanges OAuth PKCE code from URL if returning from Google)
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (!sessionError && session?.user) {
+        if (typeof window !== 'undefined' && (window.location.search.includes('code=') || window.location.hash.includes('access_token='))) {
+          const cleanUrl = window.location.origin + window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+        }
         return mapUser(session.user);
       }
 
@@ -50,52 +54,129 @@ export async function getCurrentUser() {
 }
 
 /**
- * Sign up with Email, Password and Full Name
+ * Request 6-digit OTP sent to patron's email
+ */
+export async function requestEmailOtp(email, fullName = '', type = 'signup') {
+  if (!email || !email.includes('@')) {
+    throw new Error('Please enter a valid email address.');
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  // Try Vite dev middleware first (/api/auth/send-otp), then /api/auth-otp
+  try {
+    const res = await fetch('/api/auth/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: normalizedEmail, fullName, type })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to dispatch verification code.');
+    }
+    return data;
+  } catch (err) {
+    // Try serverless fallback
+    try {
+      const resFallback = await fetch('/api/auth-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send', email: normalizedEmail, fullName, type })
+      });
+      const dataFallback = await resFallback.json();
+      if (!resFallback.ok) {
+        throw new Error(dataFallback.error || err.message);
+      }
+      return dataFallback;
+    } catch (fallbackErr) {
+      throw new Error(fallbackErr.message || err.message || 'Failed to send OTP.');
+    }
+  }
+}
+
+/**
+ * Verify 6-digit OTP and authenticate patron
+ */
+export async function verifyEmailOtp(email, otp, fullName = '', password = '') {
+  if (!email || !otp) {
+    throw new Error('Please enter both email and the 6-digit verification code.');
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  let authenticatedUser = null;
+
+  try {
+    const res = await fetch('/api/auth/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: normalizedEmail, otp: otp.trim(), fullName, password })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Verification failed. Please check the code.');
+    }
+    authenticatedUser = data.user;
+  } catch (err) {
+    // Try fallback
+    try {
+      const resFallback = await fetch('/api/auth-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify', email: normalizedEmail, otp: otp.trim(), fullName, password })
+      });
+      const dataFallback = await resFallback.json();
+      if (!resFallback.ok) {
+        throw new Error(dataFallback.error || err.message);
+      }
+      authenticatedUser = dataFallback.user;
+    } catch (fallbackErr) {
+      throw new Error(fallbackErr.message || err.message);
+    }
+  }
+
+  if (!authenticatedUser) {
+    throw new Error('Verification failed. Please try again.');
+  }
+
+  // Format and persist user
+  const cleanUser = mapUser(authenticatedUser);
+  localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, JSON.stringify(cleanUser));
+
+  // Save/update password in local db if provided so password login also works
+  const users = getLocalUsersDb();
+  const existingIdx = users.findIndex(u => u.email.toLowerCase() === normalizedEmail);
+  if (existingIdx >= 0) {
+    users[existingIdx].fullName = cleanUser.fullName;
+    if (password) users[existingIdx].password = password;
+  } else {
+    users.push({
+      id: cleanUser.id,
+      email: normalizedEmail,
+      fullName: cleanUser.fullName,
+      password: password || undefined,
+      provider: 'email',
+      createdAt: cleanUser.createdAt
+    });
+  }
+  saveLocalUsersDb(users);
+
+  window.dispatchEvent(new Event('saak-auth-change'));
+  return cleanUser;
+}
+
+/**
+ * Sign up initiation with Email, Password and Full Name
+ * Dispatches 6-digit OTP code to the patron's email instead of broken confirmation links.
  */
 export async function signUpWithEmail(email, password, fullName) {
   if (!email || !password) throw new Error('Please enter both email and password.');
   if (password.length < 6) throw new Error('Password must be at least 6 characters long.');
 
-  if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName
-        }
-      }
-    });
-
-    if (error) throw error;
-    if (data.user) {
-      return mapUser(data.user);
-    }
-  }
-
-  // Local Fallback Mock
-  const users = getLocalUsersDb();
-  const existing = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-  if (existing) {
-    throw new Error('An account with this email already exists. Please sign in.');
-  }
-
-  const newUser = {
-    id: `patron_${Date.now()}`,
-    email,
-    password, // stored locally for mock testing
-    fullName: fullName || email.split('@')[0],
-    provider: 'email',
-    createdAt: new Date().toISOString()
-  };
-
-  users.push(newUser);
-  saveLocalUsersDb(users);
-
-  const cleanUser = mapUser(newUser);
-  localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, JSON.stringify(cleanUser));
-  window.dispatchEvent(new Event('saak-auth-change'));
-  return cleanUser;
+  // Send 6-digit OTP to patron's email via verified Gmail SMTP
+  await requestEmailOtp(email, fullName, 'signup');
+  return { requiresOtp: true, email, fullName, password };
 }
 
 /**
@@ -104,44 +185,49 @@ export async function signUpWithEmail(email, password, fullName) {
 export async function signInWithEmail(email, password) {
   if (!email || !password) throw new Error('Please enter both email and password.');
 
-  if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
+  const normalizedEmail = email.trim().toLowerCase();
 
-    if (error) throw error;
-    if (data.user) {
-      return mapUser(data.user);
-    }
-  }
-
-  // Local Fallback Mock
+  // 1. Try local verified users database first
   const users = getLocalUsersDb();
-  let found = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+  const found = users.find(u => u.email.toLowerCase() === normalizedEmail);
 
-  if (found) {
-    if (found.password && found.password !== password) {
-      throw new Error('Invalid password. Please try again.');
+  if (found && found.password) {
+    if (found.password === password) {
+      const cleanUser = mapUser(found);
+      localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, JSON.stringify(cleanUser));
+      window.dispatchEvent(new Event('saak-auth-change'));
+      return cleanUser;
+    } else {
+      throw new Error('Invalid password. Please check your credentials or sign in with an OTP code.');
     }
-  } else {
-    // Convenience for evaluation: create patron on the fly if testing demo credentials
-    found = {
-      id: `patron_${Date.now()}`,
-      email,
-      password,
-      fullName: email.split('@')[0].replace('.', ' '),
-      provider: 'email',
-      createdAt: new Date().toISOString()
-    };
-    users.push(found);
-    saveLocalUsersDb(users);
   }
 
-  const cleanUser = mapUser(found);
-  localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, JSON.stringify(cleanUser));
-  window.dispatchEvent(new Event('saak-auth-change'));
-  return cleanUser;
+  // 2. Try Supabase Auth if configured
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password
+      });
+
+      if (!error && data?.user) {
+        return mapUser(data.user);
+      }
+    } catch (err) {
+      console.warn('Supabase password sign in error:', err.message);
+    }
+  }
+
+  // 3. Fallback: If user exists in local database without password
+  if (found) {
+    const cleanUser = mapUser(found);
+    localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, JSON.stringify(cleanUser));
+    window.dispatchEvent(new Event('saak-auth-change'));
+    return cleanUser;
+  }
+
+  // If no user found, invite user to create account or sign in with OTP
+  throw new Error('No account found with this email. Please click "Create an account" to join the Atelier.');
 }
 
 /**
@@ -153,7 +239,11 @@ export async function signInWithGoogle() {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin
+          redirectTo: window.location.href,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
         }
       });
 

@@ -25,11 +25,22 @@ export default function Navbar() {
   const handleNavClick = (catKey) => {
     setActiveCategory(catKey);
     setMobileMenuOpen(false);
-    // Smooth scroll to catalog section
-    const catalogEl = document.getElementById('catalog-section');
-    if (catalogEl) {
-      catalogEl.scrollIntoView({ behavior: 'smooth' });
-    }
+    // Smooth scroll to catalog section or specific category block
+    setTimeout(() => {
+      let targetEl = null;
+      if (catKey === 'sarees' || catKey === 'tissue') {
+        targetEl = document.getElementById('sarees-block') || document.getElementById('catalog-section');
+      } else if (catKey === 'blouses' || catKey === 'corset') {
+        targetEl = document.getElementById('blouses-block') || document.getElementById('catalog-section');
+      } else if (catKey === 'sets') {
+        targetEl = document.getElementById('sets-block') || document.getElementById('catalog-section');
+      } else {
+        targetEl = document.getElementById('catalog-section');
+      }
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 50);
   };
 
   const handleStudioScroll = () => {
@@ -82,16 +93,16 @@ export default function Navbar() {
             All Creations
           </button>
           <button 
-            className={`nav-link ${activeCategory === 'tissue' ? 'active' : ''}`}
-            onClick={() => handleNavClick('tissue')}
+            className={`nav-link ${activeCategory === 'sarees' || activeCategory === 'tissue' ? 'active' : ''}`}
+            onClick={() => handleNavClick('sarees')}
           >
-            The Tissue Series
+            Sarees
           </button>
           <button 
-            className={`nav-link ${activeCategory === 'corset' ? 'active' : ''}`}
-            onClick={() => handleNavClick('corset')}
+            className={`nav-link ${activeCategory === 'blouses' || activeCategory === 'corset' ? 'active' : ''}`}
+            onClick={() => handleNavClick('blouses')}
           >
-            Corsets &amp; Blouses
+            Blouses &amp; Corsets
           </button>
           <button 
             className={`nav-link studio-nav-pill ${activeCategory === 'studio' ? 'active' : ''}`}
@@ -202,16 +213,16 @@ export default function Navbar() {
             All Creations
           </button>
           <button 
-            className={`mobile-nav-link ${activeCategory === 'tissue' ? 'active' : ''}`}
-            onClick={() => handleNavClick('tissue')}
+            className={`mobile-nav-link ${activeCategory === 'sarees' || activeCategory === 'tissue' ? 'active' : ''}`}
+            onClick={() => handleNavClick('sarees')}
           >
-            The Tissue Series (Shimmer Sarees)
+            Artisanal Sarees (Tissue &amp; Crepe)
           </button>
           <button 
-            className={`mobile-nav-link ${activeCategory === 'corset' ? 'active' : ''}`}
-            onClick={() => handleNavClick('corset')}
+            className={`mobile-nav-link ${activeCategory === 'blouses' || activeCategory === 'corset' ? 'active' : ''}`}
+            onClick={() => handleNavClick('blouses')}
           >
-            Corsets &amp; Blouses (Heavy Zardozi &amp; Raw Silk)
+            Sculpted Blouses &amp; Corsets
           </button>
           <button 
             className="mobile-nav-link mobile-studio-link"
@@ -295,11 +306,11 @@ export default function Navbar() {
           text-decoration: none;
         }
         .brand-logo-emblem {
-          height: 38px;
+          height: 42px;
           width: auto;
           object-fit: contain;
           transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-          filter: drop-shadow(0 2px 5px rgba(197, 160, 89, 0.25));
+          filter: drop-shadow(0 3px 8px rgba(14, 53, 47, 0.25)) drop-shadow(0 2px 6px rgba(197, 160, 89, 0.45));
         }
         .brand-logo-wrapper:hover .brand-logo-emblem {
           transform: scale(1.08) rotate(-2deg);
@@ -311,19 +322,20 @@ export default function Navbar() {
         }
         .brand-name {
           font-family: var(--font-serif);
-          font-size: 28px;
-          font-weight: 500;
+          font-size: 30px;
+          font-weight: 600;
           letter-spacing: 0.08em;
-          color: var(--text-primary);
+          color: #0E352F;
           line-height: 1;
+          text-shadow: 0 1px 2px rgba(14, 53, 47, 0.08);
         }
         .brand-sub {
-          font-size: 8.5px;
-          letter-spacing: 0.24em;
+          font-size: 9.5px;
+          letter-spacing: 0.28em;
           text-transform: uppercase;
-          color: var(--accent-terracotta);
+          color: #B28328;
           margin-top: 2px;
-          font-weight: 600;
+          font-weight: 700;
         }
         .mobile-drawer-brand {
           display: flex;
@@ -549,12 +561,15 @@ export default function Navbar() {
           .nav-actions {
             gap: 10px;
           }
+          .brand-logo-emblem {
+            height: 35px;
+          }
           .brand-name {
-            font-size: 24px;
+            font-size: 25px;
           }
           .brand-sub {
-            font-size: 9px;
-            letter-spacing: 0.16em;
+            font-size: 8.5px;
+            letter-spacing: 0.22em;
           }
           .cart-total-text {
             display: none;

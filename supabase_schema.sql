@@ -126,10 +126,10 @@ insert into public.products (
   '[]'::jsonb,
   '["XS (Bust 32)", "S (Bust 34)", "M (Bust 36)", "L (Bust 38)", "XL (Bust 40)", "Custom Bespoke"]'::jsonb,
   '["https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/blouses/the-gold-corset/model_front.jpg", "https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/blouses/the-gold-corset/model_side.jpg"]'::jsonb,
-  '["https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/blouses/the-gold-corset/flatlay.jpg"]'::jsonb,
-  '["https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/blouses/the-gold-corset/model_front.jpg", "https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/blouses/the-gold-corset/model_side.jpg", "https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/blouses/the-gold-corset/flatlay.jpg"]'::jsonb,
+  '["/assets/gold_corset_flatlay.jpg"]'::jsonb,
+  '["https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/blouses/the-gold-corset/model_front.jpg", "https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/blouses/the-gold-corset/model_side.jpg", "/assets/gold_corset_flatlay.jpg"]'::jsonb,
   'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/blouses/the-gold-corset/model_front.jpg',
-  'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/blouses/the-gold-corset/flatlay.jpg',
+  '/assets/gold_corset_flatlay.jpg',
   'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/blouses/the-gold-corset/model_side.jpg',
   '["sunset-orange-tissue", "olive-bloom-tissue"]'::jsonb,
   10,
@@ -406,10 +406,10 @@ insert into public.products (
   '[]'::jsonb,
   '["Waist 26 + Bust 32", "Waist 28 + Bust 34", "Waist 30 + Bust 36", "Waist 32 + Bust 38", "Custom Measurements"]'::jsonb,
   '["https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/sets/signature-duo-black-gold/model_front.jpg", "https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/sets/signature-duo-black-gold/model_side.jpg"]'::jsonb,
-  '["https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/sets/signature-duo-black-gold/flatlay.jpg"]'::jsonb,
-  '["https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/sets/signature-duo-black-gold/model_front.jpg", "https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/sets/signature-duo-black-gold/model_side.jpg", "https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/sets/signature-duo-black-gold/flatlay.jpg"]'::jsonb,
+  '["/assets/signature_duo_black_gold_flatlay.jpg"]'::jsonb,
+  '["https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/sets/signature-duo-black-gold/model_front.jpg", "https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/sets/signature-duo-black-gold/model_side.jpg", "/assets/signature_duo_black_gold_flatlay.jpg"]'::jsonb,
   'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/sets/signature-duo-black-gold/model_front.jpg',
-  'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/sets/signature-duo-black-gold/flatlay.jpg',
+  '/assets/signature_duo_black_gold_flatlay.jpg',
   'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/sets/signature-duo-black-gold/model_side.jpg',
   '[]'::jsonb,
   10,
@@ -441,4 +441,37 @@ create policy "Allow public update on orders"
   on public.orders for update
   using (true)
   with check (true);
+
+-- =============================================================================
+-- 6. ADMIN ROLES & ACCESS CONTROL TABLE
+-- =============================================================================
+create table if not exists public.admin_users (
+  id uuid default gen_random_uuid() primary key,
+  email text unique not null,
+  role text default 'admin' not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Enable RLS
+alter table public.admin_users enable row level security;
+
+-- Policy: Allow read access to verify admin status
+create policy "Allow read access on admin_users"
+  on public.admin_users for select
+  using (true);
+
+-- Policy: Allow insert/update access
+create policy "Allow management on admin_users"
+  on public.admin_users for all
+  using (true)
+  with check (true);
+
+-- Seed initial admin users in DB
+insert into public.admin_users (email, role)
+values 
+  ('snigdh24@gmail.com', 'admin'),
+  ('khushirai6900@gmail.com', 'admin'),
+  ('saakbyaprajita@gmail.com', 'admin')
+on conflict (email) do nothing;
+
 

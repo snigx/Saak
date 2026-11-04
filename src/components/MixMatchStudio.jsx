@@ -6,7 +6,7 @@ import confetti from 'canvas-confetti';
 const COMBINATION_ASSETS = {
   'midnight-black-crepe-saree_the-gold-corset': {
     model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/sarees/midnight-black-crepe-saree/model_front.jpg',
-    flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/sets/signature-duo-black-gold/flatlay.jpg',
+    flatlay: '/assets/signature_duo_black_gold_flatlay.jpg',
     styling: "Aprajita's Styling: The Signature Duo — Midnight Black Crepe + Antique Gold Corset"
   },
   'midnight-black-crepe-saree_the-ivory-raw-silk-blouse': {
