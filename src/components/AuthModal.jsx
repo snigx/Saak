@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useOverlay } from '../hooks/useOverlay';
+import { isGoogleAuthAvailable } from '../services/authService';
 import { 
   X, Eye, EyeOff, Sparkles, AlertCircle, Loader2, 
   ArrowRight, ShieldCheck, Mail, Lock, User as UserIcon,
@@ -18,9 +20,10 @@ export default function AuthModal() {
     registerWithEmail, 
     sendOtp,
     verifyOtp,
-    loginWithGoogle,
-    loginWithDemoPatron
+    loginWithGoogle
   } = useAuth();
+
+  useOverlay(isAuthModalOpen, closeAuthModal);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,6 +35,15 @@ export default function AuthModal() {
   const [errorMessage, setErrorMessage] = useState('');
   const [successNotice, setSuccessNotice] = useState('');
   const [googleNotice, setGoogleNotice] = useState(false);
+  const [googleAvailable, setGoogleAvailable] = useState(false);
+
+  // Only offer Google if the provider is actually enabled on the backend
+  useEffect(() => {
+    if (!isAuthModalOpen) return undefined;
+    let active = true;
+    isGoogleAuthAvailable().then(ok => { if (active) setGoogleAvailable(ok); });
+    return () => { active = false; };
+  }, [isAuthModalOpen]);
 
   // OTP Verification Specific State
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
@@ -85,7 +97,7 @@ export default function AuthModal() {
       if (err.message === 'GOOGLE_PROVIDER_NOT_ENABLED') {
         setGoogleNotice(true);
       } else {
-        setErrorMessage(err.message || 'Google authentication failed. Please try again.');
+        setErrorMessage(err.message || 'Google sign-in failed. Please try again.');
       }
     } finally {
       setIsSubmitting(false);
@@ -108,24 +120,24 @@ export default function AuthModal() {
         return;
       }
       if (!password || password.length < 6) {
-        setErrorMessage('Password must be at least 6 characters long.');
+        setErrorMessage('Password must be at least 6 characters.');
         return;
       }
       if (!confirmPassword) {
-        setErrorMessage('Please retype your password to confirm.');
+        setErrorMessage('Please type your password again.');
         return;
       }
       if (password !== confirmPassword) {
-        setErrorMessage('Passwords do not match. Please ensure both passwords are identical.');
+        setErrorMessage("Passwords don't match.");
         return;
       }
 
       setIsSubmitting(true);
       try {
         await registerWithEmail(email.trim(), password, confirmPassword, fullName.trim());
-        setSuccessNotice(`Verification code dispatched to ${email.trim()}`);
+        setSuccessNotice(`Code sent to ${email.trim()}`);
       } catch (err) {
-        setErrorMessage(err.message || 'Failed to dispatch verification code. Please check your email.');
+        setErrorMessage(err.message || "Couldn't send the code. Please check your email address.");
       } finally {
         setIsSubmitting(false);
       }
@@ -134,7 +146,7 @@ export default function AuthModal() {
 
     if (authModalView === 'signin') {
       if (!password) {
-        setErrorMessage('Please enter your password, or sign in using a One-Time Passcode.');
+        setErrorMessage('Please enter your password, or sign in with an email code.');
         return;
       }
 
@@ -142,7 +154,7 @@ export default function AuthModal() {
       try {
         await loginWithEmail(email.trim(), password);
       } catch (err) {
-        setErrorMessage(err.message || 'Authentication error. Please check your credentials.');
+        setErrorMessage(err.message || "Couldn't sign you in. Please check your email and password.");
       } finally {
         setIsSubmitting(false);
       }
@@ -152,7 +164,7 @@ export default function AuthModal() {
   // Sign In with OTP Request Handler
   const handleRequestSignInOtp = async () => {
     if (!email.trim() || !email.includes('@')) {
-      setErrorMessage('Please enter your email address to receive a login code.');
+      setErrorMessage('Please enter your email to get a sign-in code.');
       return;
     }
 
@@ -162,9 +174,9 @@ export default function AuthModal() {
       await sendOtp(email.trim(), fullName.trim(), 'signin');
       setPendingOtpData({ email: email.trim(), fullName: fullName.trim(), type: 'signin' });
       setAuthModalView('otp');
-      setSuccessNotice(`Login code sent to ${email.trim()}`);
+      setSuccessNotice(`Code sent to ${email.trim()}`);
     } catch (err) {
-      setErrorMessage(err.message || 'Failed to dispatch login code.');
+      setErrorMessage(err.message || "Couldn't send the code. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -211,20 +223,23 @@ export default function AuthModal() {
 
     const enteredOtp = otpDigits.join('').trim();
     if (enteredOtp.length !== 6) {
-      setErrorMessage('Please enter all 6 digits of your verification code.');
+      setErrorMessage('Please enter all 6 digits.');
       return;
     }
 
     const targetEmail = pendingOtpData?.email || email.trim();
     const targetName = pendingOtpData?.fullName || fullName.trim();
-    const targetPass = pendingOtpData?.password || password;
-    const targetConfirmPass = pendingOtpData?.confirmPassword || confirmPassword;
+    // Only a sign-up sets a password. For a sign-in OTP never send the password
+    // field — it may hold a mistyped password that would overwrite the real one.
+    const isSignup = pendingOtpData?.type === 'signup';
+    const targetPass = isSignup ? (pendingOtpData?.password || password) : '';
+    const targetConfirmPass = isSignup ? (pendingOtpData?.confirmPassword || confirmPassword) : '';
 
     setIsSubmitting(true);
     try {
       await verifyOtp(targetEmail, enteredOtp, targetName, targetPass, targetConfirmPass);
     } catch (err) {
-      setErrorMessage(err.message || 'Invalid or expired code. Please try again.');
+      setErrorMessage(err.message || 'That code is wrong or has expired. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -241,10 +256,10 @@ export default function AuthModal() {
       const targetName = pendingOtpData?.fullName || fullName.trim();
       await sendOtp(targetEmail, targetName, pendingOtpData?.type || 'signup');
       setResendCooldown(30);
-      setSuccessNotice(`A fresh 6-digit code was sent to ${targetEmail}`);
+      setSuccessNotice(`New code sent to ${targetEmail}`);
       otpInputRefs[0]?.current?.focus();
     } catch (err) {
-      setErrorMessage(err.message || 'Failed to resend code. Please try again.');
+      setErrorMessage(err.message || "Couldn't resend the code. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -265,7 +280,7 @@ export default function AuthModal() {
         <button 
           className="modal-close-btn" 
           onClick={closeAuthModal}
-          aria-label="Close Authentication Modal"
+          aria-label="Close"
         >
           <X size={20} />
         </button>
@@ -274,22 +289,22 @@ export default function AuthModal() {
         <div className="auth-header">
           <img 
             src="/assets/saak_emblem_transparent.png" 
-            alt="Saak Emblem" 
+            alt="Saak emblem" 
             className="auth-emblem-logo"
           />
           <div className="auth-badge">
             <Sparkles size={13} className="text-gold" />
-            <span>SAAK PATRON CIRCLE</span>
+            <span>Saak by Aprajita</span>
           </div>
           <h2 className="auth-title">
-            {authModalView === 'otp' && 'Verify Your Email'}
+            {authModalView === 'otp' && 'Check your email'}
             {authModalView === 'signin' && 'Welcome to Saak'}
-            {authModalView === 'signup' && 'Create Patron Account'}
+            {authModalView === 'signup' && 'Create an account'}
           </h2>
           <p className="auth-subtitle">
             {authModalView === 'otp' && `Enter the 6-digit code sent to ${pendingOtpData?.email || email || 'your email'}`}
-            {authModalView === 'signin' && 'Sign in to access your bespoke orders, wishlist and VIP drape previews.'}
-            {authModalView === 'signup' && 'Join Saak by Aprajita for saved measurements, order tracking and custom shade requests.'}
+            {authModalView === 'signin' && 'Sign in to see your orders.'}
+            {authModalView === 'signup' && 'Track your orders in one place.'}
           </p>
         </div>
 
@@ -301,14 +316,14 @@ export default function AuthModal() {
               className={`auth-tab-btn ${authModalView === 'signin' ? 'active' : ''}`}
               onClick={() => switchView('signin')}
             >
-              Sign In
+              Sign in
             </button>
             <button
               type="button"
               className={`auth-tab-btn ${authModalView === 'signup' ? 'active' : ''}`}
               onClick={() => switchView('signup')}
             >
-              Create Account
+              Create account
             </button>
           </div>
         )}
@@ -325,7 +340,7 @@ export default function AuthModal() {
                   onClick={handleRequestSignInOtp}
                   className="error-otp-link"
                 >
-                  Sign in with 1-Time Email Code instead →
+                  Sign in with an email code instead →
                 </button>
               )}
             </div>
@@ -351,7 +366,7 @@ export default function AuthModal() {
               <button 
                 type="button" 
                 className="chip-edit-btn"
-                onClick={() => switchView('signup')}
+                onClick={() => switchView(pendingOtpData?.type === 'signin' ? 'signin' : 'signup')}
               >
                 Change
               </button>
@@ -385,11 +400,11 @@ export default function AuthModal() {
               {isSubmitting ? (
                 <>
                   <Loader2 size={16} className="spin" />
-                  <span>Verifying Code...</span>
+                  <span>Checking...</span>
                 </>
               ) : (
                 <>
-                  <span>Verify &amp; Enter</span>
+                  <span>Verify</span>
                   <ArrowRight size={16} />
                 </>
               )}
@@ -409,7 +424,7 @@ export default function AuthModal() {
                   className="resend-action-btn"
                 >
                   <RefreshCw size={13} />
-                  <span>Resend 6-Digit Code</span>
+                  <span>Resend code</span>
                 </button>
               )}
             </div>
@@ -421,7 +436,7 @@ export default function AuthModal() {
               onClick={() => switchView(pendingOtpData?.type === 'signin' ? 'signin' : 'signup')}
             >
               <ArrowLeft size={14} />
-              <span>Back to {pendingOtpData?.type === 'signin' ? 'Sign In' : 'Sign Up'}</span>
+              <span>Back to {pendingOtpData?.type === 'signin' ? 'sign in' : 'sign up'}</span>
             </button>
           </form>
         )}
@@ -431,6 +446,7 @@ export default function AuthModal() {
         {/* ================================================================= */}
         {authModalView !== 'otp' && (
           <>
+            {googleAvailable && (<>
             {/* Google OAuth 1-Tap Button */}
             <button 
               type="button"
@@ -449,38 +465,28 @@ export default function AuthModal() {
               </span>
             </button>
 
-            {/* Google OAuth Provider Setup Notice */}
+            {/* Google OAuth unavailable notice */}
             {googleNotice && (
               <div className="google-setup-notice">
                 <div className="setup-notice-header">
                   <AlertCircle size={15} className="text-terracotta" />
-                  <span>Google Provider Not Yet Enabled in Supabase</span>
+                  <span>Google sign-in isn't available right now. Please use email below.</span>
                 </div>
-                <p className="setup-notice-desc">
-                  To enable real Google accounts, turn on Google in <strong>Supabase Dashboard → Authentication → Providers → Google</strong> with your Google Cloud Client ID.
-                </p>
-                <button
-                  type="button"
-                  className="demo-patron-btn"
-                  onClick={() => loginWithDemoPatron()}
-                >
-                  <Sparkles size={14} className="text-gold" />
-                  <span>Instant Patron Sign-In (Test Drive)</span>
-                </button>
               </div>
             )}
 
             {/* Divider */}
             <div className="auth-divider">
-              <span>or with email {authModalView === 'signup' ? '& verification code' : '& password'}</span>
+              <span>or with email {authModalView === 'signup' ? '& code' : '& password'}</span>
             </div>
+            </>)}
 
             {/* Email & Password Form */}
             <form onSubmit={handleSubmit} className="auth-form">
               {/* Full Name (Sign Up only) */}
               {authModalView === 'signup' && (
                 <div className="auth-input-group">
-                  <label htmlFor="auth-fullName">Full Name</label>
+                  <label htmlFor="auth-fullName">Full name</label>
                   <div className="input-with-icon">
                     <UserIcon size={16} className="input-icon" />
                     <input 
@@ -498,7 +504,7 @@ export default function AuthModal() {
 
               {/* Email */}
               <div className="auth-input-group">
-                <label htmlFor="auth-email">Email Address</label>
+                <label htmlFor="auth-email">Email</label>
                 <div className="input-with-icon">
                   <Mail size={16} className="input-icon" />
                   <input 
@@ -516,14 +522,14 @@ export default function AuthModal() {
               {/* Password */}
               <div className="auth-input-group">
                 <div className="label-row">
-                  <label htmlFor="auth-password">{authModalView === 'signup' ? 'Create Password' : 'Password'}</label>
+                  <label htmlFor="auth-password">{authModalView === 'signup' ? 'Create password' : 'Password'}</label>
                   {authModalView === 'signin' ? (
                     <button
                       type="button"
                       onClick={handleRequestSignInOtp}
                       className="forgot-pass-link"
                     >
-                      Sign In with OTP?
+                      Use an email code?
                     </button>
                   ) : (
                     <span className="password-hint">Min. 6 characters</span>
@@ -556,12 +562,12 @@ export default function AuthModal() {
               {authModalView === 'signup' && (
                 <div className="auth-input-group">
                   <div className="label-row">
-                    <label htmlFor="auth-confirm-password">Retype Password</label>
+                    <label htmlFor="auth-confirm-password">Confirm password</label>
                     {confirmPassword ? (
                       confirmPassword === password ? (
                         <span className="password-match-tag success">✓ Passwords match</span>
                       ) : (
-                        <span className="password-match-tag error">⚠️ Passwords do not match</span>
+                        <span className="password-match-tag error">⚠️ Passwords don't match</span>
                       )
                     ) : (
                       <span className="password-hint">Repeat your password</span>
@@ -600,11 +606,11 @@ export default function AuthModal() {
                 {isSubmitting ? (
                   <>
                     <Loader2 size={16} className="spin" />
-                    <span>{authModalView === 'signup' ? 'Dispatching Verification Code...' : 'Signing In...'}</span>
+                    <span>{authModalView === 'signup' ? 'Sending code...' : 'Signing in...'}</span>
                   </>
                 ) : (
                   <>
-                    <span>{authModalView === 'signin' ? 'Sign In to Saak' : 'Create Account'}</span>
+                    <span>{authModalView === 'signin' ? 'Sign in' : 'Create account'}</span>
                     <ArrowRight size={16} />
                   </>
                 )}
@@ -612,7 +618,7 @@ export default function AuthModal() {
 
               {authModalView === 'signup' && (
                 <p className="signup-otp-hint">
-                  ✨ A 6-digit verification code will be sent to your email from <strong>Saak by Aprajita</strong> to complete registration.
+                  We'll email you a 6-digit code to finish signing up.
                 </p>
               )}
 
@@ -625,7 +631,7 @@ export default function AuthModal() {
                   className="otp-magic-signin-btn"
                 >
                   <KeyRound size={14} className="text-gold" />
-                  <span>Sign In with 1-Time Email Code</span>
+                  <span>Sign in with an email code</span>
                 </button>
               )}
             </form>
@@ -651,7 +657,7 @@ export default function AuthModal() {
                     onClick={() => switchView('signin')}
                     className="link-btn"
                   >
-                    Sign In
+                    Sign in
                   </button>
                 </p>
               )}
@@ -662,7 +668,7 @@ export default function AuthModal() {
         {/* Privacy & Trust Guarantee */}
         <div className="auth-trust-note">
           <ShieldCheck size={14} className="text-gold" />
-          <span>Encrypted Session • Official Saak by Aprajita Guarantee</span>
+          <span>Secure sign-in</span>
         </div>
       </div>
 
@@ -695,7 +701,7 @@ export default function AuthModal() {
           border: none;
           background: transparent;
           font-family: inherit;
-          font-size: 13px;
+          font-size: var(--text-sm);
           font-weight: 600;
           color: var(--text-secondary);
           border-radius: 4px;
@@ -711,7 +717,7 @@ export default function AuthModal() {
           color: var(--text-primary);
         }
         .signup-otp-hint {
-          font-size: 11.5px;
+          font-size: var(--text-xs);
           color: #7A726D;
           text-align: center;
           margin-top: 10px;
@@ -732,7 +738,7 @@ export default function AuthModal() {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           letter-spacing: 0.15em;
           text-transform: uppercase;
           color: var(--accent-terracotta);
@@ -741,13 +747,13 @@ export default function AuthModal() {
         }
         .auth-title {
           font-family: var(--font-serif);
-          font-size: 26px;
+          font-size: var(--text-2xl);
           font-weight: 400;
           color: var(--text-primary);
           margin-bottom: 8px;
         }
         .auth-subtitle {
-          font-size: 13px;
+          font-size: var(--text-sm);
           line-height: 1.5;
           color: var(--text-secondary);
         }
@@ -760,7 +766,7 @@ export default function AuthModal() {
           border: 1px solid #F5C6CB;
           padding: 10px 14px;
           border-radius: 3px;
-          font-size: 13px;
+          font-size: var(--text-sm);
           margin-bottom: 20px;
           text-align: left;
         }
@@ -778,7 +784,7 @@ export default function AuthModal() {
           border: none;
           padding: 0;
           color: #A34835;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           text-decoration: underline;
           cursor: pointer;
@@ -791,7 +797,7 @@ export default function AuthModal() {
           background: none;
           border: none;
           padding: 0;
-          font-size: 11.5px;
+          font-size: var(--text-xs);
           color: #A34835;
           cursor: pointer;
           text-decoration: underline;
@@ -801,7 +807,7 @@ export default function AuthModal() {
           color: #7A2E20;
         }
         .password-match-tag {
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 600;
         }
         .password-match-tag.success {
@@ -826,7 +832,7 @@ export default function AuthModal() {
           border: 1px solid #C3E6CB;
           padding: 10px 14px;
           border-radius: 3px;
-          font-size: 13px;
+          font-size: var(--text-sm);
           margin-bottom: 20px;
           text-align: left;
         }
@@ -841,7 +847,7 @@ export default function AuthModal() {
           color: var(--text-primary);
           padding: 12px 18px;
           border-radius: 2px;
-          font-size: 14px;
+          font-size: var(--text-base);
           font-weight: 500;
           cursor: pointer;
           transition: var(--transition);
@@ -863,13 +869,13 @@ export default function AuthModal() {
           display: flex;
           align-items: center;
           gap: 8px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           color: var(--accent-terracotta);
           margin-bottom: 6px;
         }
         .setup-notice-desc {
-          font-size: 12px;
+          font-size: var(--text-xs);
           line-height: 1.45;
           color: var(--text-secondary);
           margin-bottom: 12px;
@@ -888,7 +894,7 @@ export default function AuthModal() {
           color: var(--text-primary);
           padding: 9px 12px;
           border-radius: 3px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           cursor: pointer;
           transition: var(--transition);
@@ -903,7 +909,7 @@ export default function AuthModal() {
           text-align: center;
           margin: 22px 0;
           color: var(--text-muted);
-          font-size: 11px;
+          font-size: var(--text-xs);
           letter-spacing: 0.06em;
           text-transform: uppercase;
         }
@@ -928,7 +934,7 @@ export default function AuthModal() {
           text-align: left;
         }
         .auth-input-group label {
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           letter-spacing: 0.05em;
           text-transform: uppercase;
@@ -940,7 +946,7 @@ export default function AuthModal() {
           align-items: center;
         }
         .password-hint {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
         }
         .input-with-icon {
@@ -960,7 +966,7 @@ export default function AuthModal() {
           background: #FFFFFF;
           border: 1px solid var(--border-light);
           border-radius: 2px;
-          font-size: 14px;
+          font-size: var(--text-base);
           color: var(--text-primary);
           transition: var(--transition);
         }
@@ -991,7 +997,7 @@ export default function AuthModal() {
           align-items: center;
           justify-content: center;
           gap: 8px;
-          font-size: 14px;
+          font-size: var(--text-base);
           font-weight: 600;
           letter-spacing: 0.08em;
           text-transform: uppercase;
@@ -1007,7 +1013,7 @@ export default function AuthModal() {
           color: var(--text-primary);
           padding: 10px 14px;
           border-radius: 2px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           cursor: pointer;
           transition: var(--transition);
@@ -1030,7 +1036,7 @@ export default function AuthModal() {
           border: 1px solid var(--border-light);
           padding: 8px 14px;
           border-radius: 20px;
-          font-size: 13px;
+          font-size: var(--text-sm);
           color: var(--text-primary);
           margin: 0 auto;
         }
@@ -1038,7 +1044,7 @@ export default function AuthModal() {
           background: none;
           border: none;
           color: var(--accent-terracotta);
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 600;
           text-decoration: underline;
           cursor: pointer;
@@ -1054,7 +1060,7 @@ export default function AuthModal() {
           width: 46px;
           height: 56px;
           text-align: center;
-          font-size: 24px;
+          font-size: var(--text-2xl);
           font-weight: 700;
           font-family: monospace;
           background: #FFFFFF;
@@ -1078,7 +1084,7 @@ export default function AuthModal() {
           margin-top: 4px;
         }
         .resend-timer-text {
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: var(--text-secondary);
         }
         .resend-action-btn {
@@ -1088,7 +1094,7 @@ export default function AuthModal() {
           align-items: center;
           gap: 6px;
           color: var(--accent-terracotta);
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           cursor: pointer;
           transition: var(--transition);
@@ -1105,7 +1111,7 @@ export default function AuthModal() {
           justify-content: center;
           gap: 6px;
           color: var(--text-secondary);
-          font-size: 12px;
+          font-size: var(--text-xs);
           cursor: pointer;
           margin-top: 8px;
         }
@@ -1116,7 +1122,7 @@ export default function AuthModal() {
         .auth-footer-prompt {
           text-align: center;
           margin-top: 22px;
-          font-size: 13px;
+          font-size: var(--text-sm);
           color: var(--text-secondary);
         }
         .link-btn {
@@ -1137,7 +1143,7 @@ export default function AuthModal() {
           align-items: center;
           justify-content: center;
           gap: 6px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
           margin-top: 18px;
           text-align: center;
@@ -1149,19 +1155,19 @@ export default function AuthModal() {
             overflow-y: auto;
           }
           .auth-title {
-            font-size: 22px;
+            font-size: var(--text-xl);
           }
           .auth-subtitle {
-            font-size: 12px;
+            font-size: var(--text-xs);
           }
           .google-auth-btn {
-            font-size: 13px;
+            font-size: var(--text-sm);
             padding: 10px 14px;
           }
           .otp-digit-box {
             width: 38px;
             height: 48px;
-            font-size: 20px;
+            font-size: var(--text-xl);
           }
         }
       `}</style>

@@ -1,28 +1,14 @@
 import React from 'react';
 import { useShop } from '../context/ShopContext';
 import { useAuth } from '../context/AuthContext';
-import { Sparkles, MessageCircle, Mail, ShieldCheck, Heart } from 'lucide-react';
+import { Mail } from 'lucide-react';
 
 export default function Footer() {
-  const { setIsAtelierModalOpen, openOrdersAdmin, openPolicyModal } = useShop();
+  const { openAdminConsole, openOrdersAdmin, openPolicyModal } = useShop();
   const { isAdmin } = useAuth();
 
   return (
     <footer className="atelier-footer">
-      {/* Brand Manifesto Strip */}
-      <div className="footer-manifesto-strip">
-        <div className="container manifesto-content">
-          <div className="manifesto-badge">
-            <Sparkles size={14} className="text-gold" />
-            <span>THE SAAK ETHOS</span>
-          </div>
-          <h3 className="manifesto-headline">
-            "We believe the saree should feel like freedom — featherlight to carry, effortless to wear, and sculpted to celebrate you."
-          </h3>
-          <span className="manifesto-signoff">— Aprajita, Creative Director</span>
-        </div>
-      </div>
-
       <div className="container footer-main-grid">
         {/* Col 1: Brand Info */}
         <div className="footer-col brand-col">
@@ -34,8 +20,8 @@ export default function Footer() {
               tabIndex={0}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') window.scrollTo({ top: 0, behavior: 'smooth' }); }}
               style={{ cursor: 'pointer' }}
-              title="Return to top of page"
-              aria-label="Saak by Aprajita - Return to top of page"
+              title="Back to top"
+              aria-label="Saak by Aprajita - back to top"
             >
               <img 
                 src="/assets/saak_emblem_transparent.png" 
@@ -49,7 +35,7 @@ export default function Footer() {
             </div>
           </div>
           <p className="footer-brand-desc">
-            Born from a desire to create something timeless and classic, deeply rooted in Indian tradition yet reimagined with a contemporary sensibility.
+            Timeless Indian weaves, made for how you live now.
           </p>
 
           <div className="footer-social-row">
@@ -97,28 +83,28 @@ export default function Footer() {
 
         {/* Col 2: Textile & Garment Care Guide */}
         <div className="footer-col">
-          <h4 className="footer-col-title">Garment Care Guide</h4>
+          <h4 className="footer-col-title">Care guide</h4>
           <ul className="footer-care-list">
             <li>
-              <strong>Crushed Metallic Tissue:</strong>
-              <span>Dry clean only. Store gently rolled in breathable muslin. Never iron directly over the crushed luster.</span>
+              <strong>Tissue sarees:</strong>
+              <span>Dry clean only. Store rolled in muslin. Don't iron directly on the fabric.</span>
             </li>
             <li>
-              <strong>Pure Crepe Drapes:</strong>
-              <span>Gentle vertical steam iron on reverse. Keep hooks fastened during storage.</span>
+              <strong>Crepe sarees:</strong>
+              <span>Steam gently on the reverse. Keep hooks fastened when stored.</span>
             </li>
             <li>
-              <strong>Antique Gold Corset:</strong>
-              <span>Keep away from direct sprays/perfumes. Wrap in soft cotton fabric to preserve zardozi sheen.</span>
+              <strong>Gold corset:</strong>
+              <span>Keep away from perfume. Wrap in soft cotton to protect the zardozi.</span>
             </li>
           </ul>
         </div>
 
         {/* Col 3: Styling & Support */}
         <div className="footer-col concierge-col">
-          <h4 className="footer-col-title">Styling &amp; Support</h4>
+          <h4 className="footer-col-title">Help &amp; styling</h4>
           <p className="concierge-desc">
-            Planning your bridesmaid troupe, college farewell, or need custom colourways? Speak directly with Aprajita’s styling team.
+            Dressing a group, or need a custom colour? Write to Aprajita's team.
           </p>
 
           <a 
@@ -135,26 +121,26 @@ export default function Footer() {
               type="button" 
               onClick={openPolicyModal} 
               className="footer-policy-link-btn"
-              title="View SAAK Returns, Exchanges & Refunds Policy"
+              title="Returns, exchanges & refunds"
             >
-              Returns, Exchanges &amp; Refunds →
+              Returns, exchanges &amp; refunds →
             </button>
           </div>
 
           {isAdmin && (
             <div className="footer-admin-links">
               <button 
-                onClick={() => setIsAtelierModalOpen(true)}
+                onClick={openAdminConsole}
                 className="portal-link-btn"
               >
-                Admin Portal (Catalog &amp; Inventory)
+                Admin: products
               </button>
               <span className="divider-dot">•</span>
               <button 
                 onClick={openOrdersAdmin}
                 className="portal-link-btn"
               >
-                Orders &amp; UPI Ledger
+                Admin: orders
               </button>
             </div>
           )}
@@ -164,18 +150,18 @@ export default function Footer() {
       {/* Copyright Bar */}
       <div className="footer-bottom-bar">
         <div className="container bottom-content">
-          <p>© 2026 Saak by Aprajita. Handcrafted with reverence for Indian textiles.</p>
+          <p>© {new Date().getFullYear()} Saak by Aprajita. Made with love for Indian textiles.</p>
           <div className="bottom-badges">
-            <span>Pure Handcrafted Heritage</span>
-            <span>•</span>
-            <span>Worldwide Insured Shipping</span>
-            <span>•</span>
+            <span>Handcrafted</span>
+            <span className="bottom-sep" aria-hidden="true">•</span>
+            <span>Free insured shipping across India</span>
+            <span className="bottom-sep" aria-hidden="true">•</span>
             <button 
               type="button" 
               onClick={openPolicyModal} 
               className="bottom-policy-link"
             >
-              Returns, Exchanges &amp; Refunds
+              Returns, exchanges &amp; refunds
             </button>
           </div>
         </div>
@@ -205,7 +191,7 @@ export default function Footer() {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 700;
           letter-spacing: 0.14em;
           color: var(--accent-gold);
@@ -219,7 +205,7 @@ export default function Footer() {
           font-weight: 400;
         }
         .manifesto-signoff {
-          font-size: 12px;
+          font-size: var(--text-xs);
           letter-spacing: 0.08em;
           color: var(--accent-gold-light);
           text-transform: uppercase;
@@ -260,14 +246,14 @@ export default function Footer() {
         }
         .footer-brand-title {
           font-family: var(--font-serif);
-          font-size: 32px;
+          font-size: var(--text-3xl);
           font-weight: 500;
           letter-spacing: 0.06em;
           color: #FFFFFF;
           line-height: 1;
         }
         .footer-brand-sub {
-          font-size: 10px;
+          font-size: var(--text-xs);
           letter-spacing: 0.22em;
           text-transform: uppercase;
           color: var(--accent-gold);
@@ -275,7 +261,7 @@ export default function Footer() {
           font-weight: 600;
         }
         .footer-brand-desc {
-          font-size: 13px;
+          font-size: var(--text-sm);
           color: rgba(250, 246, 239, 0.7);
           line-height: 1.6;
         }
@@ -303,7 +289,7 @@ export default function Footer() {
         }
         .footer-insta-tag {
           display: inline-block;
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--accent-gold);
           text-decoration: none;
           margin-top: 4px;
@@ -315,7 +301,7 @@ export default function Footer() {
         }
         .footer-col-title {
           font-family: var(--font-serif);
-          font-size: 17px;
+          font-size: var(--text-lg);
           color: var(--accent-gold-light);
           margin-bottom: 2px;
         }
@@ -324,13 +310,13 @@ export default function Footer() {
           display: flex;
           flex-direction: column;
           gap: 12px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: rgba(250, 246, 239, 0.75);
         }
         .footer-care-list strong {
           display: block;
           color: #FFFFFF;
-          font-size: 12px;
+          font-size: var(--text-xs);
           margin-bottom: 2px;
         }
         .footer-links-list {
@@ -338,7 +324,7 @@ export default function Footer() {
           display: flex;
           flex-direction: column;
           gap: 10px;
-          font-size: 13px;
+          font-size: var(--text-sm);
         }
         .footer-links-list a {
           color: rgba(250, 246, 239, 0.75);
@@ -350,7 +336,7 @@ export default function Footer() {
           padding-left: 3px;
         }
         .concierge-desc {
-          font-size: 13px;
+          font-size: var(--text-sm);
           color: rgba(250, 246, 239, 0.7);
           line-height: 1.5;
         }
@@ -358,7 +344,7 @@ export default function Footer() {
           margin-top: 6px;
           color: #FAF6EF;
           border-color: var(--accent-gold);
-          font-size: 12px;
+          font-size: var(--text-xs);
           padding: 10px 16px;
           display: inline-flex;
           align-items: center;
@@ -374,7 +360,7 @@ export default function Footer() {
           background: none;
           border: none;
           color: rgba(250, 246, 239, 0.45);
-          font-size: 11px;
+          font-size: var(--text-xs);
           text-align: left;
           cursor: pointer;
           margin-top: 10px;
@@ -387,7 +373,7 @@ export default function Footer() {
           background: #100D0C;
           padding: 18px 0;
           border-top: 1px solid rgba(255, 255, 255, 0.05);
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: rgba(250, 246, 239, 0.5);
         }
         .bottom-content {
@@ -408,7 +394,7 @@ export default function Footer() {
           padding: 0;
           color: rgba(250, 246, 239, 0.7);
           font-family: inherit;
-          font-size: 13px;
+          font-size: var(--text-sm);
           cursor: pointer;
           text-align: left;
           transition: color 0.2s;
@@ -422,13 +408,28 @@ export default function Footer() {
           padding: 0;
           color: rgba(250, 246, 239, 0.7);
           font-family: inherit;
-          font-size: 11px;
+          font-size: var(--text-xs);
           cursor: pointer;
           text-decoration: underline;
           transition: color 0.2s;
         }
         .bottom-policy-link:hover {
           color: var(--accent-gold);
+        }
+        @media (max-width: 600px) {
+          .bottom-content {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 10px;
+          }
+          .bottom-badges {
+            flex-direction: column;
+            gap: 6px;
+          }
+          .bottom-sep {
+            display: none;
+          }
         }
         @media (max-width: 992px) {
           .footer-main-grid {

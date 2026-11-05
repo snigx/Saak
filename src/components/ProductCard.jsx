@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
-import { Heart, Eye, Sparkles, Palette, ShoppingBag, Check, ChevronLeft, ChevronRight, Edit3 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { requiresSizeChoice } from '../utils/pricing';
+import { Heart, Check, Plus, Edit3 } from 'lucide-react';
+import { getDisplayTag } from '../utils/tags';
+import OfferPrice from './OfferPrice';
 
 export default function ProductCard({ product }) {
   const { 
-    formatPrice, 
     toggleWishlist, 
     wishlist, 
     setSelectedProduct, 
@@ -12,35 +15,29 @@ export default function ProductCard({ product }) {
     addToCart,
     openEditProduct 
   } = useShop();
+  const { isAdmin } = useAuth();
 
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isAddedAnimation, setIsAddedAnimation] = useState(false);
 
   const isWishlisted = wishlist.includes(product.id);
 
-  // Collect clean isolated gallery images
+  // Primary photo + an alternate shown on hover (desktop)
   const galleryImages = (product.images.gallery && product.images.gallery.length > 0)
     ? product.images.gallery
-    : [
-        product.images.modelView,
-        product.images.flatlayView,
-        product.images.swatchZoom
-      ].filter(Boolean);
+    : [product.images.modelView, product.images.flatlayView].filter(Boolean);
+  const primaryImage = product.images.modelView || galleryImages[0];
+  const hoverImage = galleryImages.find(src => src && src !== primaryImage);
+  const tagLabel = getDisplayTag(product.tag);
 
-  const activeImage = galleryImages[currentImageIndex] || product.images.modelView;
-
-  const handlePrevImage = (e) => {
-    e.stopPropagation();
-    setCurrentImageIndex((prev) => (prev === 0 ? galleryImages.length - 1 : prev - 1));
-  };
-
-  const handleNextImage = (e) => {
-    e.stopPropagation();
-    setCurrentImageIndex((prev) => (prev === galleryImages.length - 1 ? 0 : prev + 1));
-  };
+  const needsSize = requiresSizeChoice(product);
 
   const handleQuickAdd = (e) => {
     e.stopPropagation();
+    if (needsSize) {
+      // Fitted pieces: open details so the shopper picks their size
+      setSelectedProduct(product);
+      return;
+    }
     addToCart(product);
     setIsAddedAnimation(true);
     setTimeout(() => setIsAddedAnimation(false), 1500);
@@ -52,313 +49,142 @@ export default function ProductCard({ product }) {
   };
 
   return (
-    <div id={`product-card-${product.id}`} className="product-card" onClick={() => setSelectedProduct(product)}>
-      {/* Media Container with Carousel Slider */}
+    <article id={`product-card-${product.id}`} className="product-card" onClick={() => setSelectedProduct(product)}>
       <div className="card-media-wrapper">
         <img 
-          src={activeImage} 
-          alt={`${product.name} - View ${currentImageIndex + 1}`}
-          className="product-main-img" 
+          src={primaryImage} 
+          alt={product.name}
+          className="product-main-img"
+          loading="lazy"
         />
-
-        {/* Carousel Side Navigation Arrows */}
-        {galleryImages.length > 1 && (
-          <>
-            <button 
-              className="carousel-arrow arrow-left"
-              onClick={handlePrevImage}
-              aria-label="Previous Photo"
-              title="Previous photo"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <button 
-              className="carousel-arrow arrow-right"
-              onClick={handleNextImage}
-              aria-label="Next Photo"
-              title="Next photo"
-            >
-              <ChevronRight size={18} />
-            </button>
-
-            {/* Bottom Dots Indicator */}
-            <div className="carousel-dots-row" onClick={(e) => e.stopPropagation()}>
-              {galleryImages.map((_, idx) => (
-                <span 
-                  key={idx} 
-                  className={`carousel-dot ${currentImageIndex === idx ? 'active' : ''}`}
-                  onClick={() => setCurrentImageIndex(idx)}
-                />
-              ))}
-            </div>
-          </>
+        {hoverImage && (
+          <img 
+            src={hoverImage} 
+            alt=""
+            aria-hidden="true"
+            className="product-hover-img"
+            loading="lazy"
+          />
         )}
 
-        {/* Top Badges */}
-        <div className="card-top-badges">
-          {product.tag && (
-            <span 
-              className="card-badge"
-              style={{ backgroundColor: product.tagColor || 'var(--accent-terracotta)' }}
-            >
-              {product.tag}
-            </span>
-          )}
+        {product.offer ? (
+          <span className="saak-tag is-offer card-tag">{product.offer.short}</span>
+        ) : tagLabel && (
+          <span className="saak-tag card-tag">{tagLabel}</span>
+        )}
 
-          {/* Photo type indicator badge */}
-          {galleryImages.length > 1 && (
-            <span className={`card-photo-type-pill ${(product.images?.modelPhotos?.includes(activeImage) || currentImageIndex < (product.images?.modelPhotos?.length || 1)) ? 'type-muse' : 'type-flatlay'}`}>
-              {(product.images?.modelPhotos?.includes(activeImage) || currentImageIndex < (product.images?.modelPhotos?.length || 1)) ? 'On Muse' : 'Flat-lay'} • {currentImageIndex + 1}/{galleryImages.length}
-            </span>
-          )}
-        </div>
-
-        {/* Wishlist Button */}
         <button 
           className={`card-wishlist-btn ${isWishlisted ? 'wishlisted' : ''}`}
           onClick={(e) => {
             e.stopPropagation();
             toggleWishlist(product.id);
           }}
-          title={isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
+          aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          title={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
         >
-          <Heart size={16} fill={isWishlisted ? '#A34835' : 'none'} color={isWishlisted ? '#A34835' : '#1F1A17'} />
+          <Heart size={16} strokeWidth={1.6} fill={isWishlisted ? 'var(--accent-terracotta)' : 'none'} color={isWishlisted ? 'var(--accent-terracotta)' : 'var(--text-primary)'} />
         </button>
 
-        {/* Quick View & Edit Actions on Hover */}
-        <div className="card-hover-actions">
+        {isAdmin && (
           <button 
-            className="card-hover-action-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedProduct(product);
-            }}
-            title="Quick View"
-          >
-            <Eye size={13} />
-            <span>Quick View</span>
-          </button>
-          <button 
-            className="card-hover-action-btn card-edit-action-btn"
+            className="card-edit-action-btn"
             onClick={(e) => {
               e.stopPropagation();
               openEditProduct(product);
             }}
-            title="Edit product price, title & photos"
+            title="Edit product"
           >
             <Edit3 size={13} />
             <span>Edit</span>
           </button>
-        </div>
+        )}
       </div>
 
-      {/* Product Details */}
       <div className="card-details">
-        <div className="card-fabric-tag">
-          <span>{product.fabric}</span>
-          <span className="dot">•</span>
-          <span>{product.drapeWeight}</span>
-        </div>
-
         <h3 className="card-title">{product.name}</h3>
 
-        <div className="card-price-row">
-          <div className="price-group">
-            <span className="card-current-price">{formatPrice(product.price)}</span>
-            {product.originalPrice && (
-              <span className="card-old-price">{formatPrice(product.originalPrice)}</span>
-            )}
-          </div>
-          {product.bundleDiscountPercent && (
-            <span className="save-badge">Save {product.bundleDiscountPercent}%</span>
-          )}
-        </div>
-
-        {/* Custom Colour Palette Preview if available */}
-        {product.isCustomColorAvailable && product.availableCustomColors && (
-          <div className="custom-palette-row" onClick={handleCustomShade}>
-            <span className="palette-label">Custom Shades:</span>
-            <div className="palette-dots">
-              {product.availableCustomColors.slice(0, 5).map((col, idx) => (
-                <span 
-                  key={idx} 
-                  className="color-dot" 
-                  style={{ backgroundColor: col.hex }}
-                  title={col.name}
-                />
-              ))}
-              <span className="more-colors-count">+{product.availableCustomColors.length - 5}</span>
-            </div>
-            <button className="custom-shade-btn" title="Request custom colour on WhatsApp">
-              <Palette size={12} />
-              <span>Customize</span>
-            </button>
-          </div>
-        )}
-
-        {/* Card Actions */}
-        <div className="card-actions-row">
+        <div className="card-meta-row">
+          <OfferPrice className="card-current-price" price={product.price} basePrice={product.basePrice} />
           <button 
-            className={`btn btn-dark card-add-bag-btn ${isAddedAnimation ? 'added' : ''}`}
+            className={`card-quick-btn ${isAddedAnimation ? 'added' : ''}`}
             onClick={handleQuickAdd}
           >
             {isAddedAnimation ? (
-              <>
-                <Check size={14} />
-                <span>Added to Bag</span>
-              </>
+              <><Check size={14} /><span>Added</span></>
             ) : (
-              <>
-                <ShoppingBag size={14} />
-                <span>Add to Bag</span>
-              </>
+              <><Plus size={14} /><span>{needsSize ? 'Choose size' : 'Add to bag'}</span></>
             )}
           </button>
         </div>
+
+        {product.isCustomColorAvailable && product.availableCustomColors?.length > 0 && (
+          <button className="card-shade-link" onClick={handleCustomShade}>
+            <span className="palette-dots" aria-hidden="true">
+              {product.availableCustomColors.slice(0, 4).map((col, idx) => (
+                <span key={idx} className="color-dot" style={{ backgroundColor: col.hex }} />
+              ))}
+            </span>
+            <span>Custom shades</span>
+          </button>
+        )}
       </div>
 
       <style>{`
         .product-card {
-          background: #FFFFFF;
-          border: 1px solid var(--border-light);
-          border-radius: 3px;
-          overflow: hidden;
           display: flex;
           flex-direction: column;
           cursor: pointer;
-          transition: var(--transition);
           position: relative;
-        }
-        .product-card:hover {
-          border-color: var(--accent-terracotta);
-          box-shadow: var(--shadow-md);
-          transform: translateY(-3px);
+          background: transparent;
         }
         .card-media-wrapper {
           position: relative;
-          aspect-ratio: 4/5.2;
-          background: #EAE3D6;
+          aspect-ratio: 3 / 4;
+          background: var(--bg-secondary);
           overflow: hidden;
+          border-radius: 2px;
         }
-        .product-main-img {
+        .product-main-img,
+        .product-hover-img {
+          position: absolute;
+          inset: 0;
           width: 100%;
           height: 100%;
           object-fit: cover;
           object-position: top center;
-          transition: opacity 0.3s ease, transform 0.6s ease;
+          transition: opacity 0.5s ease, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .product-card:hover .product-main-img {
-          transform: scale(1.03);
-        }
-
-        /* Side Navigation Arrows */
-        .carousel-arrow {
-          position: absolute;
-          top: 50%;
-          transform: translateY(-50%);
-          background: rgba(255, 255, 255, 0.88);
-          backdrop-filter: blur(4px);
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          color: var(--text-primary);
-          z-index: 5;
+        .product-hover-img {
           opacity: 0;
-          transition: var(--transition);
-          box-shadow: var(--shadow-sm);
         }
-        .product-card:hover .carousel-arrow {
-          opacity: 1;
+        @media (hover: hover) {
+          .product-card:hover .product-hover-img {
+            opacity: 1;
+          }
+          .product-card:hover .product-main-img,
+          .product-card:hover .product-hover-img {
+            transform: scale(1.025);
+          }
         }
-        .carousel-arrow:hover {
-          background: #FFFFFF;
-          color: var(--accent-terracotta);
-          transform: translateY(-50%) scale(1.12);
-        }
-        .arrow-left {
-          left: 10px;
-        }
-        .arrow-right {
-          right: 10px;
-        }
-
-        /* Dots Indicator */
-        .carousel-dots-row {
+        .card-tag {
           position: absolute;
-          bottom: 12px;
-          left: 50%;
-          transform: translateX(-50%);
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          background: rgba(26, 22, 20, 0.5);
-          backdrop-filter: blur(4px);
-          padding: 4px 8px;
-          border-radius: 12px;
-          z-index: 5;
-        }
-        .carousel-dot {
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          background: rgba(255, 255, 255, 0.5);
-          cursor: pointer;
-          transition: var(--transition);
-        }
-        .carousel-dot.active {
-          background: #FFFFFF;
-          width: 14px;
-          border-radius: 4px;
-        }
-
-        .card-top-badges {
-          position: absolute;
-          top: 10px;
-          left: 10px;
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
+          top: 12px;
+          left: 12px;
           z-index: 2;
-        }
-        .card-badge {
-          font-size: 10px;
-          font-weight: 700;
-          color: #FFFFFF;
-          padding: 3px 8px;
-          border-radius: 2px;
-          letter-spacing: 0.04em;
-        }
-        .card-photo-type-pill {
-          font-size: 9px;
-          font-weight: 700;
-          padding: 2px 7px;
-          border-radius: 10px;
-          backdrop-filter: blur(4px);
-          letter-spacing: 0.03em;
-          width: fit-content;
-        }
-        .card-photo-type-pill.type-muse {
-          background: rgba(163, 72, 53, 0.88);
-          color: #FFFFFF;
-        }
-        .card-photo-type-pill.type-flatlay {
-          background: rgba(31, 26, 23, 0.85);
-          color: var(--accent-gold);
-          border: 1px solid rgba(197, 160, 89, 0.4);
+          max-width: calc(100% - 64px);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: block;
         }
         .card-wishlist-btn {
           position: absolute;
-          top: 10px;
-          right: 10px;
-          background: rgba(255, 255, 255, 0.9);
+          top: 8px;
+          right: 8px;
+          background: rgba(250, 246, 239, 0.85);
           border: none;
-          width: 32px;
-          height: 32px;
+          width: 36px;
+          height: 36px;
           border-radius: 50%;
           display: flex;
           align-items: center;
@@ -366,230 +192,133 @@ export default function ProductCard({ product }) {
           cursor: pointer;
           transition: var(--transition);
           z-index: 2;
-          box-shadow: var(--shadow-sm);
         }
         .card-wishlist-btn:hover {
           background: #FFFFFF;
-          transform: scale(1.1);
         }
-        .card-hover-actions {
+        .card-edit-action-btn {
           position: absolute;
-          bottom: 34px;
+          bottom: 10px;
           right: 10px;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          opacity: 0;
-          transform: translateY(8px);
-          transition: var(--transition);
-          z-index: 4;
-        }
-        .product-card:hover .card-hover-actions {
-          opacity: 1;
-          transform: translateY(0);
-        }
-        .card-hover-action-btn {
-          background: rgba(26, 22, 20, 0.88);
+          z-index: 3;
+          background: rgba(31, 26, 23, 0.85);
           color: #FFFFFF;
-          border: 1px solid rgba(255, 255, 255, 0.15);
+          border: none;
           padding: 6px 10px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 600;
           border-radius: 2px;
           display: flex;
           align-items: center;
           gap: 5px;
           cursor: pointer;
-          transition: var(--transition);
-          backdrop-filter: blur(4px);
-        }
-        .card-hover-action-btn:hover {
-          background: var(--text-primary);
-          color: #FFFFFF;
-        }
-        .card-edit-action-btn {
-          background: rgba(163, 72, 53, 0.9);
-          border-color: rgba(197, 160, 89, 0.4);
-        }
-        .card-edit-action-btn:hover {
-          background: var(--accent-terracotta);
-          color: #FFFFFF;
         }
         .card-details {
-          padding: 16px;
+          padding: 14px 2px 4px;
           display: flex;
           flex-direction: column;
           gap: 6px;
           flex-grow: 1;
         }
-        .card-fabric-tag {
-          font-size: 11px;
-          color: var(--text-muted);
-          display: flex;
-          align-items: center;
-          gap: 5px;
-        }
-        .dot {
-          color: var(--accent-gold);
-        }
         .card-title {
           font-family: var(--font-serif);
-          font-size: 16px;
+          font-size: var(--text-lg);
+          font-weight: 400;
           color: var(--text-primary);
           line-height: 1.3;
-          margin-bottom: 2px;
         }
-        .card-price-row {
+        .card-meta-row {
           display: flex;
-          align-items: baseline;
+          align-items: center;
           justify-content: space-between;
-          margin-top: 2px;
-        }
-        .price-group {
-          display: flex;
-          align-items: baseline;
-          gap: 6px;
+          gap: 8px;
+          flex-wrap: wrap;
         }
         .card-current-price {
-          font-size: 17px;
-          font-weight: 700;
+          font-size: var(--text-base);
+          font-weight: 500;
+          color: var(--text-secondary);
+        }
+        .card-quick-btn {
+          background: none;
+          border: none;
+          padding: 4px 0;
+          font-family: var(--font-sans);
+          font-size: var(--text-sm);
+          font-weight: 600;
+          color: var(--text-primary);
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          cursor: pointer;
+          border-bottom: 1px solid transparent;
+          transition: var(--transition);
+        }
+        .card-quick-btn:hover {
+          color: var(--accent-terracotta);
+          border-bottom-color: currentColor;
+        }
+        .card-quick-btn.added {
+          color: var(--accent-olive);
+        }
+        .card-shade-link {
+          background: none;
+          border: none;
+          padding: 0;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          font-family: var(--font-sans);
+          font-size: var(--text-sm);
+          color: var(--text-muted);
+          cursor: pointer;
+          width: fit-content;
+        }
+        .card-shade-link:hover {
           color: var(--accent-terracotta);
         }
-        .card-old-price {
-          font-size: 12px;
-          color: var(--text-muted);
-          text-decoration: line-through;
-        }
-        .save-badge {
-          font-size: 10px;
-          font-weight: 700;
-          color: #2E7D32;
-          background: rgba(46, 125, 50, 0.1);
-          padding: 1px 6px;
-          border-radius: 2px;
-        }
-        .custom-palette-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 6px 0;
-          border-top: 1px dashed var(--border-light);
-          margin-top: 4px;
-          flex-wrap: wrap;
-          gap: 4px;
-        }
-        .palette-label {
-          font-size: 10px;
-          color: var(--text-muted);
-        }
         .palette-dots {
-          display: flex;
+          display: inline-flex;
           align-items: center;
-          gap: 4px;
         }
         .color-dot {
           width: 12px;
           height: 12px;
           border-radius: 50%;
-          border: 1px solid rgba(0, 0, 0, 0.15);
+          border: 1.5px solid var(--bg-primary);
+          margin-left: -4px;
           display: inline-block;
         }
-        .more-colors-count {
-          font-size: 10px;
-          color: var(--text-muted);
+        .color-dot:first-child {
+          margin-left: 0;
         }
-        .custom-shade-btn {
-          background: none;
-          border: none;
-          color: var(--accent-terracotta);
-          font-size: 11px;
-          font-weight: 600;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          cursor: pointer;
-        }
-        .custom-shade-btn:hover {
-          text-decoration: underline;
-        }
-        .card-actions-row {
-          margin-top: 10px;
-        }
-        .card-add-bag-btn {
-          width: 100%;
-          padding: 9px;
-          font-size: 12px;
-          border-radius: 2px;
-        }
-        .card-add-bag-btn.added {
-          background: #2E7D32;
-        }
-        @media (max-width: 768px) {
-          .carousel-arrow {
-            opacity: 1;
-            width: 26px;
-            height: 26px;
-          }
+        @media (max-width: 600px) {
           .card-details {
-            padding: 10px 8px;
+            padding-top: 10px;
             gap: 4px;
           }
           .card-title {
-            font-size: 13px;
-            margin-bottom: 0;
+            font-size: var(--text-base);
           }
           .card-current-price {
-            font-size: 14px;
-          }
-          .card-old-price {
-            font-size: 11px;
-          }
-          .card-fabric-tag {
-            font-size: 10px;
-          }
-          .card-add-bag-btn {
-            padding: 7px 4px;
-            font-size: 11px;
-          }
-          .custom-shade-btn {
-            font-size: 10px;
-          }
-          .card-hover-actions {
-            display: none;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .custom-palette-row {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 4px;
-          }
-          .card-price-row {
-            flex-wrap: wrap;
-            gap: 2px;
-          }
-          .card-top-badges {
-            top: 6px;
-            left: 6px;
-            gap: 3px;
+            font-size: var(--text-sm);
           }
           .card-wishlist-btn {
-            top: 6px;
-            right: 6px;
-            width: 28px;
-            height: 28px;
+            width: 32px;
+            height: 32px;
           }
-          .card-badge {
-            font-size: 8.5px;
-            padding: 2px 5px;
+          /* Long merchandising tags get cut off on small cards — show them in the product popup instead */
+          .card-tag {
+            display: none;
           }
-          .card-photo-type-pill {
-            font-size: 8px;
-            padding: 1.5px 5px;
+          .card-tag.is-offer {
+            display: block;
+          }
+          .card-quick-btn {
+            font-size: var(--text-xs);
           }
         }
       `}</style>
-    </div>
+    </article>
   );
 }

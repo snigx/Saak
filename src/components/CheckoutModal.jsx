@@ -5,12 +5,29 @@ import { useShop } from '../context/ShopContext';
 import { 
   X, Check, ShieldCheck, ArrowRight, ArrowLeft, Copy, 
   Smartphone, Sparkles, MessageCircle, AlertCircle, ShoppingBag,
-  Upload, Clock, CheckCircle2, Loader2, Banknote, PhoneCall,
+  Upload, Clock, CheckCircle2, Banknote, PhoneCall,
   Truck, ExternalLink, Mail, RotateCcw 
 } from 'lucide-react';
 import { saveOrderToDb } from '../services/ordersService';
 import { uploadImageBlob } from '../services/storageService';
 import { useAuth } from '../context/AuthContext';
+import { useOverlay } from '../hooks/useOverlay';
+import OfferPrice from './OfferPrice';
+
+const INDIAN_STATES_AND_UTS = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat',
+  'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh',
+  'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan',
+  'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+  'Andaman and Nicobar Islands', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu',
+  'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'
+];
+
+const OWNER_WHATSAPP = '916267664409';
+const OWNER_EMAIL = 'Saakbyaprajita@gmail.com';
+
+// Saak sells in INR only
+const formatInr = (amount) => `₹${Number(amount || 0).toLocaleString('en-IN')}`;
 
 export default function CheckoutModal() {
   const { 
@@ -18,14 +35,12 @@ export default function CheckoutModal() {
     setIsCheckoutOpen, 
     cart, 
     cartTotal, 
-    cartSavings, 
-    formatPrice, 
+    cartSavings = 0,
     clearCart,
     atelierUpiId,
-    setAtelierUpiId,
     refreshOrders,
     orders = [],
-    openPolicyModal 
+    openPolicyModal
   } = useShop();
 
   const { user } = useAuth();
@@ -40,7 +55,7 @@ export default function CheckoutModal() {
     email: user?.email || '',
     address: '',
     city: '',
-    state: 'Maharashtra',
+    state: '',
     pincode: '',
     stylingNotes: ''
   });
@@ -58,6 +73,40 @@ export default function CheckoutModal() {
   const [paymentScreenshot, setPaymentScreenshot] = useState(null);
   const [paymentScreenshotFile, setPaymentScreenshotFile] = useState(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [utrError, setUtrError] = useState('');
+  // Snapshot of the order just placed (cart is cleared right after placing it)
+  const [placedOrder, setPlacedOrder] = useState(null);
+
+  // Prefill name/email once the signed-in user loads (never overwrite what was typed)
+  useEffect(() => {
+    if (!user) return;
+    setShippingData(prev => ({
+      ...prev,
+      fullName: prev.fullName || user.fullName || '',
+      email: prev.email || user.email || ''
+    }));
+  }, [user]);
+
+  // Clear per-order payment state so the next order gets a fresh ID
+  const resetPaymentState = () => {
+    setOrderId('');
+    setUtrNumber('');
+    setUtrError('');
+    setPaymentScreenshot(null);
+    setPaymentScreenshotFile(null);
+    setQrDataUrl('');
+  };
+
+  const closeCheckout = () => {
+    if (isVerifying) return;
+    setIsCheckoutOpen(false);
+    resetPaymentState();
+    setPlacedOrder(null);
+    setFormErrors({});
+    setCurrentStep('shipping');
+  };
+
+  useOverlay(isCheckoutOpen, closeCheckout);
 
   const handleCopySuccessAwb = (awbCode) => {
     if (!awbCode) return;
@@ -199,9 +248,9 @@ export default function CheckoutModal() {
     const phoneDigits = phoneRaw.replace(/\D/g, '');
     
     if (!phoneRaw) {
-      errors.phone = 'Mobile contact is required.';
+      errors.phone = 'Please enter your phone number.';
     } else if (/[a-zA-Z]/.test(phoneRaw)) {
-      errors.phone = 'Phone number cannot contain letters.';
+      errors.phone = 'Phone number can only have digits.';
     } else if (phoneDigits.length < 10) {
       errors.phone = 'Please enter a valid 10-digit number.';
     } else if (phoneDigits.length > 15) {
@@ -219,18 +268,23 @@ export default function CheckoutModal() {
 
     // 4. Address validation
     if (!shippingData.address || !shippingData.address.trim()) {
-      errors.address = 'Please enter delivery address.';
+      errors.address = 'Please enter your address.';
     }
 
     // 5. City validation
     if (!shippingData.city || !shippingData.city.trim()) {
-      errors.city = 'Please enter city.';
+      errors.city = 'Please enter your city.';
     }
 
-    // 6. Pincode validation
+    // 6. State / UT validation
+    if (!shippingData.state || !INDIAN_STATES_AND_UTS.includes(shippingData.state)) {
+      errors.state = 'Please select your state / UT.';
+    }
+
+    // 7. Pincode validation
     const pinDigits = (shippingData.pincode || '').replace(/\D/g, '');
     if (!shippingData.pincode || !shippingData.pincode.trim()) {
-      errors.pincode = 'Pincode is required.';
+      errors.pincode = 'Please enter your pincode.';
     } else if (pinDigits.length !== 6) {
       errors.pincode = 'Please enter a valid 6-digit pincode.';
     }
@@ -247,14 +301,46 @@ export default function CheckoutModal() {
     setCurrentStep('payment');
   };
 
-  const handleConfirmPayment = async (e) => {
-    e.preventDefault();
-    if (!utrNumber || utrNumber.length < 6) {
-      alert('Please enter a valid 12-digit UPI Reference Number (UTR) from your payment app.');
+  // Snapshot what was placed, then show success (or a contact screen if it never persisted)
+  const finishOrder = (savedOrder, method) => {
+    const snapshot = {
+      id: orderId,
+      total: cartTotal,
+      items: cart,
+      utr: method === 'cod' ? null : utrNumber
+    };
+    setPlacedOrder(snapshot);
+    setIsVerifying(false);
+
+    if (!savedOrder || savedOrder.persistedToDb === false) {
+      // Order kept on this device only — keep the cart and ID so the patron can retry or contact us
+      setCurrentStep('failed');
       return;
     }
 
+    setCurrentStep('success');
+    try {
+      confetti({
+        particleCount: 90,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#A34835', '#C5A059', '#FAF6EF']
+      });
+    } catch {}
+    if (clearCart) clearCart();
+    resetPaymentState();
+  };
+
+  const handleConfirmPayment = async (e) => {
+    e.preventDefault();
+    if (!/^\d{12}$/.test(utrNumber)) {
+      setUtrError('UTR must be exactly 12 digits.');
+      return;
+    }
+    setUtrError('');
+
     setIsVerifying(true);
+    let savedOrder = null;
     try {
       let finalScreenshotUrl = paymentScreenshot;
       if (paymentScreenshotFile) {
@@ -265,7 +351,7 @@ export default function CheckoutModal() {
         }
       }
 
-      await saveOrderToDb({
+      savedOrder = await saveOrderToDb({
         orderId,
         fullName: shippingData.fullName,
         phone: shippingData.phone,
@@ -284,17 +370,7 @@ export default function CheckoutModal() {
     } catch (err) {
       console.warn('Could not save order:', err);
     } finally {
-      setIsVerifying(false);
-      setCurrentStep('success');
-      try {
-        confetti({
-          particleCount: 90,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#A34835', '#C5A059', '#FAF6EF']
-        });
-      } catch (e) {}
-      if (clearCart) clearCart();
+      finishOrder(savedOrder, 'upi');
     }
   };
 
@@ -302,8 +378,9 @@ export default function CheckoutModal() {
   const handleConfirmCodOrder = async (e) => {
     e.preventDefault();
     setIsVerifying(true);
+    let savedOrder = null;
     try {
-      await saveOrderToDb({
+      savedOrder = await saveOrderToDb({
         orderId,
         fullName: shippingData.fullName,
         phone: shippingData.phone,
@@ -326,30 +403,20 @@ export default function CheckoutModal() {
     } catch (err) {
       console.warn('Could not save COD order:', err);
     } finally {
-      setIsVerifying(false);
-      setCurrentStep('success');
-      try {
-        confetti({
-          particleCount: 90,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#A34835', '#C5A059', '#FAF6EF']
-        });
-      } catch (e) {}
-      if (clearCart) clearCart();
+      finishOrder(savedOrder, 'cod');
     }
   };
 
   if (!isCheckoutOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={() => setIsCheckoutOpen(false)}>
+    <div className="modal-overlay" onClick={closeCheckout}>
       <div className="modal-container checkout-modal" onClick={(e) => e.stopPropagation()}>
         {/* Close Button */}
         <button 
           className="modal-close-btn"
-          onClick={() => setIsCheckoutOpen(false)}
-          aria-label="Close Checkout"
+          onClick={closeCheckout}
+          aria-label="Close checkout"
         >
           <X size={20} />
         </button>
@@ -358,25 +425,26 @@ export default function CheckoutModal() {
         <div className="checkout-header">
           <div className="checkout-badge">
             <Sparkles size={13} className="text-gold" />
-            <span>SAAK • BESPOKE CLIENT CHECKOUT</span>
+            <span>Checkout</span>
           </div>
           <h2 className="checkout-title">
-            {currentStep === 'shipping' && 'Delivery & Client Details'}
-            {currentStep === 'payment' && (paymentMethod === 'cod' ? 'Cash on Delivery (COD)' : 'Scan & Pay via UPI')}
-            {currentStep === 'success' && (paymentMethod === 'cod' ? 'Cash on Delivery Order Placed!' : 'Order Successfully Placed!')}
+            {currentStep === 'shipping' && 'Delivery details'}
+            {currentStep === 'payment' && (paymentMethod === 'cod' ? 'Cash on Delivery' : 'Pay with UPI')}
+            {currentStep === 'success' && (paymentMethod === 'cod' ? 'Order placed' : 'Order received')}
+            {currentStep === 'failed' && "We couldn't save your order"}
           </h2>
 
           {/* Stepper Navigation */}
-          {currentStep !== 'success' && (
+          {currentStep !== 'success' && currentStep !== 'failed' && (
             <div className="checkout-steps-bar">
               <div className={`step-item ${currentStep === 'shipping' ? 'active' : 'completed'}`}>
                 <span className="step-num">1</span>
-                <span>Delivery Address</span>
+                <span>Address</span>
               </div>
               <div className="step-connector"></div>
               <div className={`step-item ${currentStep === 'payment' ? 'active' : ''}`}>
                 <span className="step-num">2</span>
-                <span>{paymentMethod === 'cod' ? 'Doorstep Payment' : 'Payment Preference'}</span>
+                <span>{paymentMethod === 'cod' ? 'Pay on delivery' : 'Payment'}</span>
               </div>
             </div>
           )}
@@ -390,11 +458,10 @@ export default function CheckoutModal() {
             <div className="form-sections-grid">
               {/* Left: Client Form */}
               <div className="form-col">
-                <h4 className="section-subheading">Shipping Information</h4>
 
                 <div className="form-group">
                   <label className="form-label">
-                    <span>Full Name *</span>
+                    <span>Full name *</span>
                     {formErrors.fullName && <span className="field-error-text">{formErrors.fullName}</span>}
                   </label>
                   <input 
@@ -414,25 +481,25 @@ export default function CheckoutModal() {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">
-                      <span>WhatsApp Contact *</span>
+                      <span>WhatsApp number *</span>
                       {formErrors.phone && <span className="field-error-text">{formErrors.phone}</span>}
                     </label>
                     <input 
                       type="tel" 
                       inputMode="tel"
-                      placeholder="e.g. 98765 43210 or +91 98765 43210"
+                      placeholder="e.g. 98765 43210"
                       value={shippingData.phone}
                       onChange={handlePhoneChange}
                       onKeyDown={handlePhoneKeyDown}
                       onPaste={handlePhonePaste}
                       className={`form-input ${formErrors.phone ? 'input-error' : ''}`}
                     />
-                    <span className="form-hint">Numbers only (no letters). For dispatch tracking &amp; drape fit updates</span>
+                    <span className="form-hint">Digits only. For order and delivery updates.</span>
                   </div>
 
                   <div className="form-group">
                     <label className="form-label">
-                      <span>Email Address (Optional)</span>
+                      <span>Email (optional)</span>
                       {formErrors.email && <span className="field-error-text">{formErrors.email}</span>}
                     </label>
                     <input 
@@ -442,18 +509,18 @@ export default function CheckoutModal() {
                       onChange={handleEmailChange}
                       className={`form-input ${formErrors.email ? 'input-error' : ''}`}
                     />
-                    <span className="form-hint">For order confirmation &amp; courier tracking emails</span>
+                    <span className="form-hint">For your order confirmation and tracking</span>
                   </div>
                 </div>
 
                 <div className="form-group">
                   <label className="form-label">
-                    <span>Delivery Street Address *</span>
+                    <span>Address *</span>
                     {formErrors.address && <span className="field-error-text">{formErrors.address}</span>}
                   </label>
                   <textarea 
                     rows="2"
-                    placeholder="Flat/House number, Apartment name, Street, Landmark..."
+                    placeholder="House no., building, street, landmark"
                     value={shippingData.address}
                     onChange={(e) => {
                       setShippingData({ ...shippingData, address: e.target.value });
@@ -507,10 +574,32 @@ export default function CheckoutModal() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Special Drape or Tailoring Notes</label>
+                  <label className="form-label">
+                    <span>State / UT *</span>
+                    {formErrors.state && <span className="field-error-text">{formErrors.state}</span>}
+                  </label>
+                  <select
+                    value={shippingData.state}
+                    onChange={(e) => {
+                      setShippingData({ ...shippingData, state: e.target.value });
+                      if (formErrors.state && e.target.value) {
+                        setFormErrors(prev => ({ ...prev, state: null }));
+                      }
+                    }}
+                    className={`form-input ${formErrors.state ? 'input-error' : ''}`}
+                  >
+                    <option value="">Select state / UT</option>
+                    {INDIAN_STATES_AND_UTS.map(st => (
+                      <option key={st} value={st}>{st}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Notes (optional)</label>
                   <input 
                     type="text" 
-                    placeholder="e.g. Stitch pleats to 38 height / Sister's sangeet on Dec 14th"
+                    placeholder="e.g. Need it for a wedding on 14 Dec"
                     value={shippingData.stylingNotes}
                     onChange={(e) => setShippingData({ ...shippingData, stylingNotes: e.target.value })}
                     className="form-input"
@@ -520,7 +609,7 @@ export default function CheckoutModal() {
 
               {/* Right: Order Summary Preview */}
               <div className="summary-col">
-                <h4 className="section-subheading">Order Overview</h4>
+                <h4 className="section-subheading">Your order</h4>
                 
                 <div className="summary-items-list">
                   {cart.map(item => (
@@ -533,7 +622,11 @@ export default function CheckoutModal() {
                       <div className="summary-item-info">
                         <span className="summary-item-name">{item.name}</span>
                         <span className="summary-item-meta">{item.selectedSize} {item.customColor && `• ${item.customColor}`} • Qty {item.quantity}</span>
-                        <span className="summary-item-price">{formatPrice(item.price * item.quantity)}</span>
+                        <OfferPrice
+                          className="summary-item-price"
+                          price={item.price * item.quantity}
+                          basePrice={(item.basePrice ?? item.price) * item.quantity}
+                        />
                       </div>
                     </div>
                   ))}
@@ -541,38 +634,38 @@ export default function CheckoutModal() {
 
                 <div className="summary-calc-box">
                   <div className="calc-row">
-                    <span>Subtotal:</span>
-                    <span>{formatPrice(cartTotal)}</span>
+                    <span>Subtotal</span>
+                    <span>{formatInr(cartTotal + cartSavings)}</span>
                   </div>
                   {cartSavings > 0 && (
-                    <div className="calc-row savings-row">
-                      <span>Privilege Savings:</span>
-                      <span>-{formatPrice(cartSavings)}</span>
+                    <div className="calc-row offer-savings-row">
+                      <span>Offer savings</span>
+                      <span>−{formatInr(cartSavings)}</span>
                     </div>
                   )}
                   <div className="calc-row">
-                    <span>Shipping &amp; Insurance:</span>
-                    <span className="text-green">COMPLIMENTARY</span>
+                    <span>Insured shipping</span>
+                    <span className="text-green">Free</span>
                   </div>
                   <div className="calc-row">
-                    <span>Fall &amp; Pico Stitching:</span>
-                    <span className="text-green">INCLUDED</span>
+                    <span>Fall &amp; pico</span>
+                    <span className="text-green">Included</span>
                   </div>
                   <div className="calc-row total-row">
-                    <span>Total Payable:</span>
-                    <span className="total-highlight">{formatPrice(cartTotal)}</span>
+                    <span>Total</span>
+                    <span className="total-highlight">{formatInr(cartTotal)}</span>
                   </div>
                 </div>
 
                 <button type="submit" className="btn btn-primary next-step-btn">
-                  <span>Continue to Payment Method</span>
+                  <span>Continue to payment</span>
                   <ArrowRight size={16} />
                 </button>
 
                 <div className="checkout-policy-reassurance">
                   <ShieldCheck size={14} className="text-gold" />
                   <span>
-                    48-Hour Defect Guarantee • <button type="button" onClick={openPolicyModal} className="policy-inline-trigger">Returns &amp; Exchange Policy</button>
+                    48-hour defect cover • <button type="button" onClick={openPolicyModal} className="policy-inline-trigger">Returns &amp; exchanges</button>
                   </span>
                 </div>
               </div>
@@ -587,7 +680,7 @@ export default function CheckoutModal() {
           <div className="payment-step-wrapper">
             {/* Payment Method Selector Switch */}
             <div className="payment-method-selector-card">
-              <span className="method-picker-label">Choose Payment Preference:</span>
+              <span className="method-picker-label">How would you like to pay?</span>
               <div className="payment-method-options">
                 <button
                   type="button"
@@ -597,12 +690,12 @@ export default function CheckoutModal() {
                   <div className="method-card-header">
                     <div className="method-title-group">
                       <Sparkles size={16} className={paymentMethod === 'upi' ? 'text-gold' : ''} />
-                      <strong>Direct UPI Transfer</strong>
+                      <strong>UPI</strong>
                     </div>
-                    <span className="method-tag green">Zero Fee • Instant</span>
+                    <span className="method-tag green">No fees</span>
                   </div>
                   <p className="method-card-desc">
-                    Scan dynamic QR with Google Pay, PhonePe, Paytm, or CRED for fastest confirmation.
+                    Scan the QR with any UPI app. Quickest to confirm.
                   </p>
                 </button>
 
@@ -614,12 +707,12 @@ export default function CheckoutModal() {
                   <div className="method-card-header">
                     <div className="method-title-group">
                       <Banknote size={16} className={paymentMethod === 'cod' ? 'text-gold' : ''} />
-                      <strong>Cash on Delivery (COD)</strong>
+                      <strong>Cash on Delivery</strong>
                     </div>
-                    <span className="method-tag amber">Pay at Doorstep</span>
+                    <span className="method-tag amber">Pay when it arrives</span>
                   </div>
                   <p className="method-card-desc">
-                    Pay via Cash or UPI to the courier delivery executive upon arrival at your door.
+                    Pay the courier in cash or UPI when your order arrives.
                   </p>
                 </button>
               </div>
@@ -631,8 +724,8 @@ export default function CheckoutModal() {
                 {/* Left: Dynamic QR Code Box */}
                 <div className="qr-container-card">
                   <div className="qr-top-bar">
-                    <span className="amount-label">Exact Payable Amount:</span>
-                    <span className="amount-highlight">₹{cartTotal.toLocaleString('en-IN')}</span>
+                    <span className="amount-label">Amount to pay</span>
+                    <span className="amount-highlight">{formatInr(cartTotal)}</span>
                   </div>
 
                   {/* Dynamic QR Code Render */}
@@ -640,7 +733,7 @@ export default function CheckoutModal() {
                     {qrDataUrl ? (
                       <img src={qrDataUrl} alt="Scan to pay via UPI" className="qr-image" />
                     ) : (
-                      <div className="qr-loading">Generating Dynamic UPI QR...</div>
+                      <div className="qr-loading">Loading QR code...</div>
                     )}
                     <div className="qr-corner corner-tl"></div>
                     <div className="qr-corner corner-tr"></div>
@@ -649,7 +742,7 @@ export default function CheckoutModal() {
                   </div>
 
                   <span className="qr-instruction">
-                    Scan with any UPI App: <strong>GPay, PhonePe, Paytm, CRED, BHIM</strong>
+                    Works with any UPI app: <strong>GPay, PhonePe, Paytm, CRED, BHIM</strong>
                   </span>
 
                   {/* Copy UPI ID Row */}
@@ -668,13 +761,13 @@ export default function CheckoutModal() {
 
                   {/* Mobile 1-Tap Pay Direct App Links */}
                   <div className="mobile-intent-block">
-                    <span className="mobile-intent-hint">Browsing on your phone? Tap below:</span>
+                    <span className="mobile-intent-hint">On your phone? Tap below:</span>
                     <a 
                       href={upiIntentUrl}
                       className="btn btn-primary mobile-pay-btn"
                     >
                       <Smartphone size={15} />
-                      <span>Tap to Pay via any UPI App</span>
+                      <span>Pay with a UPI app</span>
                     </a>
                   </div>
                 </div>
@@ -687,37 +780,45 @@ export default function CheckoutModal() {
                     className="back-btn"
                   >
                     <ArrowLeft size={13} />
-                    <span>Back to Shipping Details</span>
+                    <span>Back to delivery details</span>
                   </button>
 
-                  <h4 className="verif-heading">Verify &amp; Confirm Your Payment</h4>
+                  <h4 className="verif-heading">Confirm your payment</h4>
                   <p className="verif-desc">
-                    After approving the payment in your UPI app, please enter your <strong>12-digit UPI Reference Number (UTR)</strong> below to confirm your order.
+                    Once you've paid, enter the <strong>12-digit UTR</strong> from your UPI app to confirm your order.
                   </p>
 
                   <form onSubmit={handleConfirmPayment} className="verif-form">
                     <div className="form-group">
-                      <label className="form-label">12-Digit UPI Ref Number (UTR) *</label>
+                      <label className="form-label">
+                        <span>12-digit UTR *</span>
+                        {utrError && <span className="field-error-text">{utrError}</span>}
+                      </label>
                       <input 
                         type="text" 
                         required 
+                        inputMode="numeric"
                         placeholder="e.g. 429108472910"
-                        maxLength={16}
+                        maxLength={12}
                         value={utrNumber}
-                        onChange={(e) => setUtrNumber(e.target.value.replace(/[^0-9]/g, ''))}
-                        className="form-input utr-input"
+                        onChange={(e) => {
+                          const cleaned = e.target.value.replace(/[^0-9]/g, '').slice(0, 12);
+                          setUtrNumber(cleaned);
+                          if (utrError && cleaned.length === 12) setUtrError('');
+                        }}
+                        className={`form-input utr-input ${utrError ? 'input-error' : ''}`}
                       />
                       <span className="form-hint">
-                        Found in your GPay / PhonePe / Paytm transaction receipt under "UPI Transaction ID" or "UTR".
+                        You'll find it in your payment receipt as "UPI Transaction ID" or "UTR".
                       </span>
                     </div>
 
                     {/* Optional Screenshot Upload */}
                     <div className="form-group">
-                      <label className="form-label">Payment Screenshot (Optional)</label>
+                      <label className="form-label">Payment screenshot (optional)</label>
                       <label className="screenshot-upload-box">
                         <Upload size={16} />
-                        <span>{paymentScreenshot ? 'Screenshot Uploaded ✓' : 'Upload Payment Screenshot'}</span>
+                        <span>{paymentScreenshot ? 'Screenshot added ✓' : 'Upload screenshot'}</span>
                         <input 
                           type="file" 
                           accept="image/*" 
@@ -730,11 +831,11 @@ export default function CheckoutModal() {
                     <div className="perks-reassurance-box">
                       <div className="reassurance-item">
                         <ShieldCheck size={14} className="text-gold" />
-                        <span>Zero convenience or gateway fees charged.</span>
+                        <span>No extra fees.</span>
                       </div>
                       <div className="reassurance-item">
                         <Clock size={14} className="text-gold" />
-                        <span>Orders confirmed within 15 minutes by Aprajita's studio.</span>
+                        <span>We'll confirm once we've checked your payment.</span>
                       </div>
                     </div>
 
@@ -744,11 +845,11 @@ export default function CheckoutModal() {
                       className="btn btn-primary confirm-order-btn"
                     >
                       {isVerifying ? (
-                        <span>Verifying Transfer...</span>
+                        <span>Placing order...</span>
                       ) : (
                         <>
                           <CheckCircle2 size={16} />
-                          <span>Confirm Order ({formatPrice(cartTotal)})</span>
+                          <span>Confirm order ({formatInr(cartTotal)})</span>
                         </>
                       )}
                     </button>
@@ -756,7 +857,7 @@ export default function CheckoutModal() {
                     <div className="checkout-policy-agreement">
                       <RotateCcw size={12} className="text-gold" />
                       <span>
-                        By confirming, you review our <button type="button" onClick={openPolicyModal} className="policy-inline-trigger">Returns, Exchanges &amp; Refunds Policy</button>.
+                        Please read our <button type="button" onClick={openPolicyModal} className="policy-inline-trigger">returns policy</button> before you confirm.
                       </span>
                     </div>
                   </form>
@@ -771,31 +872,31 @@ export default function CheckoutModal() {
                   <div className="cod-reassurance-card">
                     <h4 className="cod-card-title">
                       <Banknote size={18} className="text-gold" />
-                      <span>Doorstep Payment Assurance</span>
+                      <span>How COD works</span>
                     </h4>
                     
                     <div className="cod-perks-list">
                       <div className="cod-perk-item">
                         <ShieldCheck size={18} className="text-green" />
                         <div>
-                          <strong>Zero Upfront Payment Required</strong>
-                          <p>Pay cash or scan courier's QR code only when your Saak parcel arrives at your hands.</p>
+                          <strong>Nothing to pay now</strong>
+                          <p>Pay in cash or UPI when your parcel arrives.</p>
                         </div>
                       </div>
 
                       <div className="cod-perk-item">
                         <PhoneCall size={18} className="text-gold" />
                         <div>
-                          <strong>Order Confirmation Call</strong>
-                          <p>Our team will call <strong>{shippingData.phone}</strong> to confirm your delivery details and order before shipping.</p>
+                          <strong>We'll call to confirm</strong>
+                          <p>We'll call <strong>{shippingData.phone}</strong> to confirm your order before shipping.</p>
                         </div>
                       </div>
 
                       <div className="cod-perk-item">
                         <Clock size={18} className="text-gold" />
                         <div>
-                          <strong>Complimentary Fall &amp; Pico Stitching</strong>
-                          <p>Bespoke hand-stitching service included with your drape.</p>
+                          <strong>Free fall &amp; pico</strong>
+                          <p>Hand-stitched and included with your saree.</p>
                         </div>
                       </div>
                     </div>
@@ -809,18 +910,18 @@ export default function CheckoutModal() {
                         className="back-btn"
                       >
                         <ArrowLeft size={13} />
-                        <span>Back to Address</span>
+                        <span>Back to address</span>
                       </button>
                       <span className="order-tag">Order #{orderId}</span>
                     </div>
 
                     <h4 className="cod-card-title">
                       <ShoppingBag size={16} className="text-gold" />
-                      <span>Order &amp; Delivery Summary</span>
+                      <span>Order summary</span>
                     </h4>
 
                     <div className="cod-delivery-preview">
-                      <span className="delivery-label">Delivering To:</span>
+                      <span className="delivery-label">Delivering to</span>
                       <strong className="delivery-recipient">{shippingData.fullName}</strong>
                       <p className="delivery-address">{shippingData.address}, {shippingData.city}, {shippingData.state} - {shippingData.pincode}</p>
                       <span className="delivery-phone">Phone: {shippingData.phone}</span>
@@ -831,20 +932,26 @@ export default function CheckoutModal() {
 
                     <div className="cod-amount-breakdown">
                       <div className="breakdown-row">
-                        <span>Items Subtotal:</span>
-                        <span>{formatPrice(cartTotal)}</span>
+                        <span>Subtotal</span>
+                        <span>{formatInr(cartTotal + cartSavings)}</span>
+                      </div>
+                      {cartSavings > 0 && (
+                        <div className="breakdown-row offer-savings-row">
+                          <span>Offer savings</span>
+                          <span>−{formatInr(cartSavings)}</span>
+                        </div>
+                      )}
+                      <div className="breakdown-row">
+                        <span>Insured shipping</span>
+                        <span className="text-green">Free</span>
                       </div>
                       <div className="breakdown-row">
-                        <span>Insured Express Shipping:</span>
-                        <span className="text-green">COMPLIMENTARY</span>
-                      </div>
-                      <div className="breakdown-row">
-                        <span>Cash on Delivery Handling Fee:</span>
-                        <span className="text-green">₹0 (WAIVED)</span>
+                        <span>COD fee</span>
+                        <span className="text-green">₹0</span>
                       </div>
                       <div className="breakdown-row total-row">
-                        <span>Amount to Pay on Arrival:</span>
-                        <span className="total-highlight">{formatPrice(cartTotal)}</span>
+                        <span>Pay on delivery</span>
+                        <span className="total-highlight">{formatInr(cartTotal)}</span>
                       </div>
                     </div>
 
@@ -854,11 +961,11 @@ export default function CheckoutModal() {
                       className="btn btn-primary confirm-order-btn cod-submit-btn"
                     >
                       {isVerifying ? (
-                        <span>Logging COD Order...</span>
+                        <span>Placing order...</span>
                       ) : (
                         <>
                           <CheckCircle2 size={16} />
-                          <span>Place Cash on Delivery Order ({formatPrice(cartTotal)})</span>
+                          <span>Place COD order ({formatInr(cartTotal)})</span>
                         </>
                       )}
                     </button>
@@ -866,7 +973,7 @@ export default function CheckoutModal() {
                     <div className="checkout-policy-agreement">
                       <RotateCcw size={12} className="text-gold" />
                       <span>
-                        By placing your order, you review our <button type="button" onClick={openPolicyModal} className="policy-inline-trigger">Returns, Exchanges &amp; Refunds Policy</button>.
+                        Please read our <button type="button" onClick={openPolicyModal} className="policy-inline-trigger">returns policy</button> before you order.
                       </span>
                     </div>
                   </div>
@@ -879,11 +986,53 @@ export default function CheckoutModal() {
         {/* ========================================================================= */}
         {/* STEP 3: ORDER SUCCESS & TRACKING DETAILS */}
         {/* ========================================================================= */}
-        {currentStep === 'success' && (() => {
-          const currentOrder = (orders || []).find(o => o.id === orderId);
+        {currentStep === 'failed' && placedOrder && (() => {
+          const contactText = `Hello Saak, my order #${placedOrder.id} (${formatInr(placedOrder.total)}${placedOrder.utr ? `, UTR ${placedOrder.utr}` : ''}) could not be recorded at checkout. Please help.`;
+          return (
+            <div className="success-step-container">
+              <div className="success-icon-bubble" style={{ background: '#C62828' }}>
+                <AlertCircle size={32} color="#FFFFFF" />
+              </div>
+              <h3 className="success-title">Your order was not saved</h3>
+              <p className="success-msg">
+                We couldn't reach our order system, so order <strong>#{placedOrder.id}</strong> ({formatInr(placedOrder.total)}) has not been confirmed.
+                {placedOrder.utr && <> If you have already paid, please share your <strong>UTR: {placedOrder.utr}</strong> with us.</>}
+                {' '}Your bag has been kept so you can try again, or contact us and we'll place it for you.
+              </p>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '16px' }}>
+                <a
+                  href={`https://wa.me/${OWNER_WHATSAPP}?text=${encodeURIComponent(contactText)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary"
+                >
+                  <MessageCircle size={16} />
+                  <span>WhatsApp +91 62676 64409</span>
+                </a>
+                <a
+                  href={`mailto:${OWNER_EMAIL}?subject=${encodeURIComponent(`Order #${placedOrder.id} not recorded`)}&body=${encodeURIComponent(contactText)}`}
+                  className="btn btn-outline"
+                >
+                  <Mail size={16} />
+                  <span>Email {OWNER_EMAIL}</span>
+                </a>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCurrentStep('payment')}
+                className="btn btn-outline close-success-btn"
+              >
+                Try again
+              </button>
+            </div>
+          );
+        })()}
+
+        {currentStep === 'success' && placedOrder && (() => {
+          const currentOrder = (orders || []).find(o => o.id === placedOrder.id);
           const isDispatched = currentOrder?.fulfillment_status === 'dispatched' || currentOrder?.fulfillment_status === 'shipped' || Boolean(currentOrder?.dispatch_details?.trackingNumber);
           const dispatchDetails = currentOrder?.dispatch_details || {};
-          const courierName = dispatchDetails.courier || (currentOrder?.tracking_number ? currentOrder.tracking_number.split('#')[0].trim() : 'Insured Courier Partner');
+          const courierName = dispatchDetails.courier || (currentOrder?.tracking_number ? currentOrder.tracking_number.split('#')[0].trim() : 'Our courier partner');
           const trackingAwb = dispatchDetails.trackingNumber || (currentOrder?.tracking_number ? currentOrder.tracking_number.split('#')[1]?.trim() : '');
           const trackingUrl = dispatchDetails.trackingUrl || (trackingAwb ? `https://www.google.com/search?q=${encodeURIComponent(courierName + ' tracking ' + trackingAwb)}` : '');
           const estimatedDelivery = dispatchDetails.estimatedDelivery || '3-5 Business Days';
@@ -892,27 +1041,27 @@ export default function CheckoutModal() {
             <div className="success-step-container">
               <img 
                 src="/assets/saak_emblem_transparent.png" 
-                alt="Saak Emblem Seal" 
+                alt="Saak emblem" 
                 className="success-emblem-seal" 
               />
               <div className="success-icon-bubble">
                 <Check size={32} color="#FFFFFF" />
               </div>
 
-              <span className="success-sub">THANK YOU, {shippingData.fullName.toUpperCase()}</span>
+              <span className="success-sub">Thank you, {shippingData.fullName}</span>
               <h3 className="success-title">
                 {paymentMethod === 'cod' 
-                  ? 'Your Cash on Delivery Order is Confirmed!' 
-                  : 'Your Saak Creation is Being Prepared!'}
+                  ? 'Your order is placed' 
+                  : "We're preparing your order"}
               </h3>
               <p className="success-msg">
                 {paymentMethod === 'cod' ? (
                   <>
-                    Order <strong>#{orderId}</strong> has been logged for Cash on Delivery. Amount to pay upon arrival: <strong>₹{cartTotal.toLocaleString('en-IN')}</strong>. Our team will call you on <strong>{shippingData.phone}</strong> to confirm your delivery availability.
+                    Order <strong>#{placedOrder.id}</strong> is booked for Cash on Delivery. Pay <strong>{formatInr(placedOrder.total)}</strong> when it arrives. We'll call you on <strong>{shippingData.phone}</strong> to confirm.
                   </>
                 ) : (
                   <>
-                    We have received your payment reference <strong>UTR: {utrNumber}</strong> for Order <strong>#{orderId}</strong>. Our master dyers and tailors have begun preparing your ensemble.
+                    We've got your payment reference <strong>UTR: {placedOrder.utr}</strong> for order <strong>#{placedOrder.id}</strong>. We'll confirm once we've checked it.
                   </>
                 )}
               </p>
@@ -920,15 +1069,15 @@ export default function CheckoutModal() {
               {/* Order Card */}
               <div className="success-order-card">
                 <div className="card-top">
-                  <span>Order Reference: <strong>#{orderId}</strong></span>
+                  <span>Order: <strong>#{placedOrder.id}</strong></span>
                   <span>
-                    {paymentMethod === 'cod' ? 'Pay on Delivery: ' : 'Total Paid: '}
-                    <strong>₹{cartTotal.toLocaleString('en-IN')}</strong>
+                    {paymentMethod === 'cod' ? 'Pay on delivery: ' : 'Total paid: '}
+                    <strong>{formatInr(placedOrder.total)}</strong>
                   </span>
                 </div>
                 <div className="card-deliver">
-                  <span>Delivery To:</span>
-                  <strong>{shippingData.address}, {shippingData.city} - {shippingData.pincode}</strong>
+                  <span>Delivering to:</span>
+                  <strong>{shippingData.address}, {shippingData.city}, {shippingData.state} - {shippingData.pincode}</strong>
                 </div>
               </div>
 
@@ -938,7 +1087,7 @@ export default function CheckoutModal() {
                   <div className="tracking-header">
                     <div className="tracking-badge dispatched-badge">
                       <Truck size={14} />
-                      <span>ORDER DISPATCHED</span>
+                      <span>Shipped</span>
                     </div>
                     {dispatchDetails.dispatched_at && (
                       <span className="dispatch-time-meta">
@@ -949,19 +1098,19 @@ export default function CheckoutModal() {
 
                   <div className="tracking-details-grid">
                     <div className="tracking-cell">
-                      <span className="tracking-cell-label">Courier Partner</span>
+                      <span className="tracking-cell-label">Courier</span>
                       <span className="tracking-cell-val font-medium">{courierName}</span>
                     </div>
                     <div className="tracking-cell">
-                      <span className="tracking-cell-label">Waybill / AWB No.</span>
+                      <span className="tracking-cell-label">Tracking number</span>
                       <div className="tracking-awb-wrap">
-                        <span className="tracking-cell-val font-mono">{trackingAwb || 'Provided on Dispatch'}</span>
+                        <span className="tracking-cell-val font-mono">{trackingAwb || 'Shared once shipped'}</span>
                         {trackingAwb && (
                           <button 
                             type="button" 
                             onClick={() => handleCopySuccessAwb(trackingAwb)}
                             className="copy-awb-btn"
-                            title="Copy AWB Number"
+                            title="Copy tracking number"
                           >
                             {copiedSuccessAwb ? <Check size={12} color="#15803d" /> : <Copy size={12} />}
                             <span>{copiedSuccessAwb ? 'Copied' : 'Copy'}</span>
@@ -970,7 +1119,7 @@ export default function CheckoutModal() {
                       </div>
                     </div>
                     <div className="tracking-cell">
-                      <span className="tracking-cell-label">Estimated Delivery</span>
+                      <span className="tracking-cell-label">Expected delivery</span>
                       <span className="tracking-cell-val">{estimatedDelivery}</span>
                     </div>
                   </div>
@@ -983,7 +1132,7 @@ export default function CheckoutModal() {
                       className="btn btn-primary track-consignment-btn"
                     >
                       <Truck size={16} />
-                      <span>Track Consignment Live</span>
+                      <span>Track order</span>
                       <ExternalLink size={14} />
                     </a>
                   )}
@@ -991,7 +1140,7 @@ export default function CheckoutModal() {
                   {shippingData.email && (
                     <div className="tracking-email-note">
                       <Mail size={12} />
-                      <span>Tracking link &amp; status updates also emailed to <strong>{shippingData.email}</strong></span>
+                      <span>Tracking updates also go to <strong>{shippingData.email}</strong></span>
                     </div>
                   )}
                 </div>
@@ -1000,7 +1149,7 @@ export default function CheckoutModal() {
                   <div className="tracking-header">
                     <div className="tracking-badge pending-badge">
                       <Clock size={13} />
-                      <span>AWAITING DISPATCH</span>
+                      <span>Not shipped yet</span>
                     </div>
                   </div>
 
@@ -1010,10 +1159,10 @@ export default function CheckoutModal() {
                     </div>
                     <div className="tracking-pending-info">
                       <h4 className="tracking-pending-title">
-                        Tracking details will be shared as soon as it is available.
+                        We'll share tracking as soon as it ships.
                       </h4>
                       <p className="tracking-pending-desc">
-                        Our artisans are hand-inspecting your pieces and tailoring the complimentary fall &amp; pico. Once handed over to our insured courier partner, your live tracking details and AWB will appear right here.
+                        We're checking your pieces and adding the fall &amp; pico. Once it ships, tracking will show up here.
                       </p>
                     </div>
                   </div>
@@ -1021,7 +1170,7 @@ export default function CheckoutModal() {
                   {shippingData.email && (
                     <div className="tracking-email-note">
                       <Mail size={12} />
-                      <span>Order confirmation &amp; live tracking will be emailed to <strong>{shippingData.email}</strong></span>
+                      <span>We'll email your confirmation and tracking to <strong>{shippingData.email}</strong></span>
                     </div>
                   )}
                 </div>
@@ -1030,19 +1179,16 @@ export default function CheckoutModal() {
               <div className="success-policy-note">
                 <RotateCcw size={12} className="text-gold" />
                 <span>
-                  Questions regarding delivery or unboxing? <button type="button" onClick={openPolicyModal} className="policy-inline-trigger">Read Return &amp; Exchange Policy</button>
+                  Questions about delivery or returns? <button type="button" onClick={openPolicyModal} className="policy-inline-trigger">Read our returns policy</button>
                 </span>
               </div>
 
               <button 
                 type="button"
-                onClick={() => {
-                  setIsCheckoutOpen(false);
-                  setCurrentStep('shipping');
-                }}
+                onClick={closeCheckout}
                 className="btn btn-outline close-success-btn"
               >
-                Continue Exploring Collection
+                Keep shopping
               </button>
             </div>
           );
@@ -1070,7 +1216,7 @@ export default function CheckoutModal() {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 700;
           letter-spacing: 0.12em;
           color: var(--accent-gold);
@@ -1078,7 +1224,7 @@ export default function CheckoutModal() {
         }
         .checkout-title {
           font-family: var(--font-serif);
-          font-size: 26px;
+          font-size: var(--text-2xl);
           color: var(--text-primary);
           margin-bottom: 12px;
         }
@@ -1093,7 +1239,7 @@ export default function CheckoutModal() {
           display: flex;
           align-items: center;
           gap: 6px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           color: var(--text-muted);
         }
@@ -1111,7 +1257,7 @@ export default function CheckoutModal() {
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 10px;
+          font-size: var(--text-xs);
         }
         .step-item.active .step-num {
           background: var(--accent-terracotta);
@@ -1135,7 +1281,7 @@ export default function CheckoutModal() {
         }
         .section-subheading {
           font-family: var(--font-serif);
-          font-size: 17px;
+          font-size: var(--text-lg);
           color: var(--text-primary);
           margin-bottom: 14px;
           border-bottom: 1px solid var(--border-light);
@@ -1156,23 +1302,23 @@ export default function CheckoutModal() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           color: var(--text-primary);
         }
         .field-error-text {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: #C62828;
           font-weight: 500;
           letter-spacing: 0;
         }
         .form-hint {
-          font-size: 10px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
         }
         .form-input, .form-textarea {
           padding: 9px 12px;
-          font-size: 13px;
+          font-size: var(--text-sm);
           border: 1px solid var(--border-light);
           border-radius: 3px;
           background: var(--bg-primary);
@@ -1226,7 +1372,7 @@ export default function CheckoutModal() {
           display: flex;
           flex-direction: column;
           gap: 2px;
-          font-size: 11px;
+          font-size: var(--text-xs);
         }
         .summary-item-name {
           font-weight: 600;
@@ -1245,8 +1391,12 @@ export default function CheckoutModal() {
           display: flex;
           flex-direction: column;
           gap: 8px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           margin-bottom: 20px;
+        }
+        .calc-row.offer-savings-row,
+        .breakdown-row.offer-savings-row {
+          color: var(--accent-terracotta);
         }
         .calc-row {
           display: flex;
@@ -1262,7 +1412,7 @@ export default function CheckoutModal() {
           font-weight: 600;
         }
         .total-row {
-          font-size: 15px;
+          font-size: var(--text-base);
           font-weight: 700;
           color: var(--text-primary);
           border-top: 1px dashed var(--border-light);
@@ -1274,7 +1424,7 @@ export default function CheckoutModal() {
         .next-step-btn {
           width: 100%;
           padding: 12px;
-          font-size: 13px;
+          font-size: var(--text-sm);
           gap: 6px;
         }
 
@@ -1300,12 +1450,12 @@ export default function CheckoutModal() {
         }
         .amount-label {
           display: block;
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
         }
         .amount-highlight {
           font-family: var(--font-serif);
-          font-size: 28px;
+          font-size: var(--text-2xl);
           font-weight: 700;
           color: var(--accent-terracotta);
         }
@@ -1334,7 +1484,7 @@ export default function CheckoutModal() {
         .corner-bl { bottom: -2px; left: -2px; border-bottom: 3px solid; border-left: 3px solid; }
         .corner-br { bottom: -2px; right: -2px; border-bottom: 3px solid; border-right: 3px solid; }
         .qr-instruction {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-secondary);
           margin-bottom: 12px;
         }
@@ -1346,7 +1496,7 @@ export default function CheckoutModal() {
           border: 1px solid var(--border-light);
           padding: 4px 10px;
           border-radius: 20px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-family: monospace;
           color: var(--text-primary);
           margin-bottom: 16px;
@@ -1355,7 +1505,7 @@ export default function CheckoutModal() {
           background: none;
           border: none;
           color: var(--accent-terracotta);
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 600;
           display: flex;
           align-items: center;
@@ -1369,14 +1519,14 @@ export default function CheckoutModal() {
         }
         .mobile-intent-hint {
           display: block;
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
           margin-bottom: 8px;
         }
         .mobile-pay-btn {
           width: 100%;
           padding: 10px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1393,7 +1543,7 @@ export default function CheckoutModal() {
           background: none;
           border: none;
           color: var(--text-muted);
-          font-size: 11px;
+          font-size: var(--text-xs);
           display: flex;
           align-items: center;
           gap: 4px;
@@ -1406,18 +1556,18 @@ export default function CheckoutModal() {
         }
         .verif-heading {
           font-family: var(--font-serif);
-          font-size: 18px;
+          font-size: var(--text-lg);
           color: var(--text-primary);
           margin-bottom: 6px;
         }
         .verif-desc {
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: var(--text-secondary);
           line-height: 1.5;
           margin-bottom: 16px;
         }
         .utr-input {
-          font-size: 16px;
+          font-size: var(--text-lg);
           letter-spacing: 0.1em;
           font-weight: 700;
         }
@@ -1430,7 +1580,7 @@ export default function CheckoutModal() {
           align-items: center;
           justify-content: center;
           gap: 8px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: var(--accent-terracotta);
           cursor: pointer;
           transition: var(--transition);
@@ -1447,7 +1597,7 @@ export default function CheckoutModal() {
           flex-direction: column;
           gap: 6px;
           margin: 14px 0 20px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
         }
         .reassurance-item {
@@ -1458,7 +1608,7 @@ export default function CheckoutModal() {
         .confirm-order-btn {
           width: 100%;
           padding: 14px;
-          font-size: 14px;
+          font-size: var(--text-base);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1492,7 +1642,7 @@ export default function CheckoutModal() {
           box-shadow: 0 8px 24px rgba(46, 125, 50, 0.25);
         }
         .success-sub {
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 800;
           letter-spacing: 0.14em;
           color: #2E7D32;
@@ -1500,12 +1650,12 @@ export default function CheckoutModal() {
         }
         .success-title {
           font-family: var(--font-serif);
-          font-size: 28px;
+          font-size: var(--text-2xl);
           color: var(--text-primary);
           margin-bottom: 10px;
         }
         .success-msg {
-          font-size: 13px;
+          font-size: var(--text-sm);
           color: var(--text-secondary);
           max-width: 520px;
           line-height: 1.5;
@@ -1518,7 +1668,7 @@ export default function CheckoutModal() {
           padding: 16px;
           max-width: 500px;
           width: 100%;
-          font-size: 12px;
+          font-size: var(--text-xs);
           text-align: left;
           margin-bottom: 16px;
         }
@@ -1560,7 +1710,7 @@ export default function CheckoutModal() {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          font-size: 10px;
+          font-size: var(--text-xs);
           font-weight: 700;
           letter-spacing: 0.12em;
           text-transform: uppercase;
@@ -1576,7 +1726,7 @@ export default function CheckoutModal() {
           color: #2E7D32;
         }
         .dispatch-time-meta {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
         }
         .tracking-pending-content {
@@ -1601,14 +1751,14 @@ export default function CheckoutModal() {
         }
         .tracking-pending-title {
           font-family: var(--font-serif);
-          font-size: 15px;
+          font-size: var(--text-base);
           font-weight: 600;
           color: var(--text-primary);
           margin-bottom: 5px;
           line-height: 1.35;
         }
         .tracking-pending-desc {
-          font-size: 12px;
+          font-size: var(--text-xs);
           line-height: 1.5;
           color: var(--text-secondary);
           margin: 0;
@@ -1635,14 +1785,14 @@ export default function CheckoutModal() {
           gap: 3px;
         }
         .tracking-cell-label {
-          font-size: 10px;
+          font-size: var(--text-xs);
           text-transform: uppercase;
           letter-spacing: 0.08em;
           color: var(--text-muted);
           font-weight: 600;
         }
         .tracking-cell-val {
-          font-size: 13px;
+          font-size: var(--text-sm);
           color: var(--text-primary);
         }
         .tracking-cell-val.font-medium {
@@ -1665,7 +1815,7 @@ export default function CheckoutModal() {
           border: 1px solid #DDD;
           border-radius: 3px;
           padding: 2px 6px;
-          font-size: 10px;
+          font-size: var(--text-xs);
           cursor: pointer;
           color: var(--text-secondary);
           transition: all 0.2s;
@@ -1683,7 +1833,7 @@ export default function CheckoutModal() {
           align-items: center;
           justify-content: center;
           gap: 8px;
-          font-size: 13px;
+          font-size: var(--text-sm);
           font-weight: 600;
           text-decoration: none;
           padding: 11px;
@@ -1698,14 +1848,14 @@ export default function CheckoutModal() {
           display: flex;
           align-items: center;
           gap: 6px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
           margin-top: 10px;
           padding-top: 8px;
           border-top: 1px dashed rgba(0, 0, 0, 0.08);
         }
         .close-success-btn {
-          font-size: 12px;
+          font-size: var(--text-xs);
         }
 
         /* Payment Method Selector */
@@ -1724,7 +1874,7 @@ export default function CheckoutModal() {
           gap: 12px;
         }
         .method-picker-label {
-          font-size: 11px;
+          font-size: var(--text-xs);
           text-transform: uppercase;
           letter-spacing: 0.8px;
           font-weight: 700;
@@ -1769,7 +1919,7 @@ export default function CheckoutModal() {
           color: var(--text-primary);
         }
         .method-tag {
-          font-size: 10px;
+          font-size: var(--text-xs);
           font-weight: 700;
           padding: 2px 7px;
           border-radius: 10px;
@@ -1785,7 +1935,7 @@ export default function CheckoutModal() {
           color: #E65100;
         }
         .method-card-desc {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-secondary);
           margin: 0;
           line-height: 1.35;
@@ -1812,7 +1962,7 @@ export default function CheckoutModal() {
         }
         .cod-card-title {
           font-family: var(--font-serif);
-          font-size: 17px;
+          font-size: var(--text-lg);
           color: var(--text-primary);
           margin: 0;
           display: flex;
@@ -1833,12 +1983,12 @@ export default function CheckoutModal() {
         }
         .cod-perk-item strong {
           display: block;
-          font-size: 13px;
+          font-size: var(--text-sm);
           color: var(--text-primary);
           margin-bottom: 2px;
         }
         .cod-perk-item p {
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: var(--text-secondary);
           margin: 0;
           line-height: 1.4;
@@ -1862,19 +2012,19 @@ export default function CheckoutModal() {
           border: 1px dashed var(--border-light);
           padding: 12px;
           border-radius: 4px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           display: flex;
           flex-direction: column;
           gap: 3px;
         }
         .delivery-label {
-          font-size: 10px;
+          font-size: var(--text-xs);
           font-weight: 700;
           color: var(--text-muted);
           text-transform: uppercase;
         }
         .delivery-recipient {
-          font-size: 14px;
+          font-size: var(--text-base);
           color: var(--text-primary);
         }
         .delivery-address, .delivery-phone {
@@ -1885,7 +2035,7 @@ export default function CheckoutModal() {
           margin-top: 4px;
           font-style: italic;
           color: var(--accent-terracotta);
-          font-size: 11px;
+          font-size: var(--text-xs);
         }
         .cod-amount-breakdown {
           display: flex;
@@ -1894,14 +2044,14 @@ export default function CheckoutModal() {
           padding: 12px 0;
           border-top: 1px solid var(--border-light);
           border-bottom: 1px solid var(--border-light);
-          font-size: 12px;
+          font-size: var(--text-xs);
         }
         .cod-amount-breakdown .breakdown-row {
           display: flex;
           justify-content: space-between;
         }
         .cod-amount-breakdown .total-row {
-          font-size: 15px;
+          font-size: var(--text-base);
           font-weight: 700;
           padding-top: 6px;
           margin-top: 4px;
@@ -1910,7 +2060,22 @@ export default function CheckoutModal() {
         .cod-submit-btn {
           width: 100%;
           padding: 12px;
-          font-size: 13px;
+          font-size: var(--text-sm);
+        }
+
+        /* Grid columns must be allowed to shrink below an input's default width */
+        .form-sections-grid > *,
+        .form-col,
+        .form-group,
+        .form-row > * {
+          min-width: 0;
+        }
+        .form-input,
+        .form-select,
+        .form-textarea {
+          width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
         }
 
         @media (max-width: 768px) {
@@ -1951,7 +2116,7 @@ export default function CheckoutModal() {
           align-items: center;
           justify-content: center;
           gap: 6px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
           margin-top: 12px;
           text-align: center;
@@ -1961,7 +2126,7 @@ export default function CheckoutModal() {
           align-items: center;
           justify-content: center;
           gap: 6px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
           margin-top: 10px;
           text-align: center;
@@ -1985,7 +2150,7 @@ export default function CheckoutModal() {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          font-size: 11.5px;
+          font-size: var(--text-xs);
           color: var(--text-secondary);
           margin-bottom: 16px;
           background: #FAF6EF;
@@ -2004,16 +2169,16 @@ export default function CheckoutModal() {
             border-radius: 6px;
           }
           .checkout-title {
-            font-size: 19px;
+            font-size: var(--text-xl);
           }
           .checkout-badge span {
-            font-size: 9.5px;
+            font-size: var(--text-xs);
           }
           .step-connector {
             width: 12px;
           }
           .step-item span:not(.step-num) {
-            font-size: 10px;
+            font-size: var(--text-xs);
           }
           .checkout-steps-bar {
             gap: 4px;
@@ -2022,7 +2187,7 @@ export default function CheckoutModal() {
             padding: 14px 12px;
           }
           .form-input, .form-textarea {
-            font-size: 14px;
+            font-size: var(--text-base);
           }
         }
       `}</style>

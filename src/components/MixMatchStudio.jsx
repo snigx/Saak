@@ -1,68 +1,69 @@
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
-import { Sparkles, Check, ArrowRight, ShieldCheck, Heart } from 'lucide-react';
+import { Sparkles, Check, ArrowRight } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import OfferPrice from './OfferPrice';
 
 const COMBINATION_ASSETS = {
   'midnight-black-crepe-saree_the-gold-corset': {
     model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/sarees/midnight-black-crepe-saree/model_front.jpg',
     flatlay: '/assets/signature_duo_black_gold_flatlay.jpg',
-    styling: "Aprajita's Styling: The Signature Duo — Midnight Black Crepe + Antique Gold Corset"
+    styling: "Aprajita's pick: black crepe + gold corset"
   },
   'midnight-black-crepe-saree_the-ivory-raw-silk-blouse': {
     model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/midnight-black-crepe-saree_the-ivory-raw-silk-blouse_muse_model.jpg',
     flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/midnight-black-crepe-saree_the-ivory-raw-silk-blouse_flatlay.jpg',
-    styling: "Aprajita's Styling: Obsidian Noir & Champagne Ivory — Pure Contrast Elegance"
+    styling: "Aprajita's pick: black crepe + ivory silk blouse"
   },
   'sunset-orange-tissue_the-gold-corset': {
     model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/sunset-orange-tissue_the-gold-corset_model.jpg',
     flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/sunset-orange-tissue_the-gold-corset_flatlay.jpg',
-    styling: "Aprajita's Styling: Sunset Orange Drape + Heavy Zardozi Corset"
+    styling: "Aprajita's pick: sunset orange + gold corset"
   },
   'sunset-orange-tissue_the-ivory-raw-silk-blouse': {
     model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/sunset-orange-tissue_the-ivory-raw-silk-blouse_muse_model.jpg',
     flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/sunset-orange-tissue_the-ivory-raw-silk-blouse_flatlay.jpg',
-    styling: "Aprajita's Styling: Sunset Orange Shimmer + Minimalist Ivory Raw Silk V-Neck"
+    styling: "Aprajita's pick: sunset orange + ivory silk blouse"
   },
   'olive-bloom-tissue_the-gold-corset': {
     model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/olive-bloom-tissue_the-gold-corset_model.jpg',
     flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/olive-bloom-tissue_the-gold-corset_flatlay.jpg',
-    styling: "Aprajita's Styling: Olive Sage Shimmer + Sculpted Antique Gold Corset"
+    styling: "Aprajita's pick: olive tissue + gold corset"
   },
   'olive-bloom-tissue_the-ivory-raw-silk-blouse': {
     model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/olive-bloom-tissue_the-ivory-raw-silk-blouse_muse_model.jpg',
     flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/olive-bloom-tissue_the-ivory-raw-silk-blouse_flatlay.jpg',
-    styling: "Aprajita's Styling: Olive Bloom Tissue + Tailored Ivory Raw Silk V-Neck"
+    styling: "Aprajita's pick: olive bloom + ivory silk blouse"
   },
   'seafoam-emerald-tissue_the-gold-corset': {
     model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/seafoam-emerald-tissue_the-gold-corset_model.jpg',
     flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/seafoam-emerald-tissue_the-gold-corset_flatlay.jpg',
-    styling: "Aprajita's Styling: Seafoam Emerald Tissue + Sculpted Antique Gold Corset"
+    styling: "Aprajita's pick: seafoam tissue + gold corset"
   },
   'seafoam-emerald-tissue_the-ivory-raw-silk-blouse': {
     model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/seafoam-emerald-tissue_the-ivory-raw-silk-blouse_model.jpg',
     flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/seafoam-emerald-tissue_the-ivory-raw-silk-blouse_flatlay.jpg',
-    styling: "Aprajita's Styling: Seafoam Emerald Shimmer + Tailored Ivory Raw Silk V-Neck"
+    styling: "Aprajita's pick: seafoam tissue + ivory silk blouse"
   },
   'sunshine-marigold-tissue_the-gold-corset': {
     model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/sunshine-marigold-tissue_the-gold-corset_model.jpg',
     flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/sunshine-marigold-tissue_the-gold-corset_flatlay.jpg',
-    styling: "Aprajita's Styling: Sunshine Marigold Saree + Sculpted Antique Gold Corset"
+    styling: "Aprajita's pick: marigold saree + gold corset"
   },
   'sunshine-marigold-tissue_the-sunshine-marigold-blouse': {
     model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/sunshine-marigold-tissue_the-sunshine-marigold-blouse_model.jpg',
     flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/sunshine-marigold-tissue_the-sunshine-marigold-blouse_flatlay.jpg',
-    styling: "Aprajita's Styling: Sunshine Marigold Saree + Monochrome Sunshine Silk Bow Blouse"
+    styling: "Aprajita's pick: marigold saree + marigold bow blouse"
   },
   'pearl-ivory-geometric-tissue_the-gold-corset': {
     model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/pearl-ivory-geometric-tissue_the-gold-corset_muse.jpg',
     flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/pearl-ivory-geometric-tissue_the-gold-corset_flatlay.jpg',
-    styling: "Aprajita's Styling: Pearl Ivory Translucent Tissue + Sculpted Antique Gold Corset"
+    styling: "Aprajita's pick: pearl ivory tissue + gold corset"
   },
   'pearl-ivory-geometric-tissue_the-ivory-gold-striped-blouse': {
     model: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/pearl-ivory-geometric-tissue_the-ivory-gold-striped-blouse_model.jpg',
     flatlay: 'https://xafmubfvqsavacqykfwm.supabase.co/storage/v1/object/public/saak-media/combinations/pearl-ivory-geometric-tissue_the-ivory-gold-striped-blouse_flatlay.jpg',
-    styling: "Aprajita's Styling: The Signature Ensemble — Pearl Ivory Saree + Ivory & Gold Striped Zari Blouse"
+    styling: "Aprajita's pick: pearl ivory saree + gold striped blouse"
   }
 };
 
@@ -91,7 +92,7 @@ export const getEligibleBlouseIds = (saree) => {
 };
 
 export default function MixMatchStudio() {
-  const { products, addDuoToCart, addToCart, formatPrice, toggleWishlist, wishlist } = useShop();
+  const { products, addDuoToCart, addToCart, formatPrice, getPairPrice } = useShop();
 
   const sarees = products.filter(p => p.category === 'sarees');
   const blouses = products.filter(p => p.category === 'blouses');
@@ -99,6 +100,7 @@ export default function MixMatchStudio() {
   const [selectedSareeId, setSelectedSareeId] = useState('midnight-black-crepe-saree');
   const [selectedBlouseId, setSelectedBlouseId] = useState('the-gold-corset');
   const [viewMode, setViewMode] = useState('model'); // 'model' or 'flatlay'
+  const [blouseSize, setBlouseSize] = useState('');
 
   // Preload all combo images for instant, seamless transitions
   React.useEffect(() => {
@@ -139,6 +141,21 @@ export default function MixMatchStudio() {
     }
   }, [selectedSareeId, selectedBlouseId, selectedSaree]);
 
+  // Blouse fit must be chosen explicitly; reset when the blouse changes
+  const blouseSizeOptions = selectedBlouse?.sizeOptions || [];
+  React.useEffect(() => {
+    setBlouseSize('');
+  }, [selectedBlouse?.id]);
+  const [sizeError, setSizeError] = useState(false);
+  const requireBlouseSize = () => {
+    if (blouseSizeOptions.length > 1 && !blouseSize) {
+      setSizeError(true);
+      return false;
+    }
+    setSizeError(false);
+    return true;
+  };
+
   const comboKey = `${selectedSaree?.id}_${selectedBlouse?.id}`;
   const currentCombo = COMBINATION_ASSETS[comboKey];
 
@@ -147,15 +164,15 @@ export default function MixMatchStudio() {
     : (currentCombo?.flatlay || selectedSaree?.images.flatlayView);
 
   const stylingNote = currentCombo?.styling 
-    || `Aprajita's Styling: ${selectedSaree?.name} + ${selectedBlouse?.name}`;
+    || `${selectedSaree?.name} + ${selectedBlouse?.name}`;
 
-  const originalTotal = (selectedSaree?.price || 0) + (selectedBlouse?.price || 0);
-  const bundleDiscount = Math.round(originalTotal * 0.1); // 10%
-  const finalBundlePrice = originalTotal - bundleDiscount;
+  // Regular prices unless a product offer or the pair offer is live (never both)
+  const pair = getPairPrice(selectedSaree, selectedBlouse, selectedSaree?.sizeOptions?.[0] || null, blouseSize || null);
 
   const handleAddDuo = () => {
     if (selectedSaree && selectedBlouse) {
-      addDuoToCart(selectedSaree, selectedBlouse);
+      if (!requireBlouseSize()) return;
+      addDuoToCart(selectedSaree, selectedBlouse, null, blouseSize || null);
       try {
         confetti({
           particleCount: 50,
@@ -163,7 +180,7 @@ export default function MixMatchStudio() {
           origin: { y: 0.7 },
           colors: ['#A34835', '#C5A059', '#FAF6EF', '#8C3B2B']
         });
-      } catch (e) {
+      } catch {
         // Confetti fallback
       }
     }
@@ -176,11 +193,11 @@ export default function MixMatchStudio() {
         <div className="studio-header">
           <div className="studio-tag">
             <Sparkles size={13} className="text-gold" />
-            <span>THE SAAK STYLING CANVAS</span>
+            <span>Mix &amp; Match</span>
           </div>
-          <h2 className="studio-title">Mix &amp; Match Studio</h2>
+          <h2 className="studio-title">Build your look</h2>
           <p className="studio-subtitle">
-            Pair our fluid minimalist sarees with heavy statement corsets or tailored silk blouses. Experience the contrast in real-time and unlock a <strong>10% Duo Privilege</strong>.
+            Pick a saree, then pair it with a corset or blouse. See them together before you buy.
           </p>
         </div>
 
@@ -191,8 +208,8 @@ export default function MixMatchStudio() {
             <div className="column-header">
               <span className="step-num">01</span>
               <div>
-                <h3 className="column-title">Select Saree</h3>
-                <span className="column-hint">Fluid tissues &amp; pre-draped crepe</span>
+                <h3 className="column-title">Choose a saree</h3>
+                <span className="column-hint">Tissue and crepe</span>
               </div>
             </div>
 
@@ -227,9 +244,9 @@ export default function MixMatchStudio() {
                       <h4 className="item-name">{saree.name}</h4>
                       <div className="item-meta">
                         <span className="item-fabric">{saree.fabric}</span>
-                        <span className="item-price">{formatPrice(saree.price)}</span>
+                        <OfferPrice className="item-price" price={saree.price} basePrice={saree.basePrice} />
                       </div>
-                      <span className="mini-badge">Fluid Drape</span>
+                      <span className="mini-badge">Easy drape</span>
                     </div>
                   </div>
                 );
@@ -246,13 +263,13 @@ export default function MixMatchStudio() {
                   className={`view-btn ${viewMode === 'model' ? 'active' : ''}`}
                   onClick={() => setViewMode('model')}
                 >
-                  On Model (AI Drape)
+                  On model
                 </button>
                 <button 
                   className={`view-btn ${viewMode === 'flatlay' ? 'active' : ''}`}
                   onClick={() => setViewMode('flatlay')}
                 >
-                  Fabric &amp; Details
+                  Fabric
                 </button>
               </div>
 
@@ -294,8 +311,8 @@ export default function MixMatchStudio() {
             <div className="column-header">
               <span className="step-num">02</span>
               <div>
-                <h3 className="column-title">Pair With Blouse</h3>
-                <span className="column-hint">Ornate boned corsets &amp; raw silk blouses</span>
+                <h3 className="column-title">Add a blouse</h3>
+                <span className="column-hint">Corsets and silk blouses</span>
               </div>
             </div>
 
@@ -324,16 +341,16 @@ export default function MixMatchStudio() {
                       <h4 className="item-name">{blouse.name}</h4>
                       <div className="item-meta">
                         <span className="item-fabric">{blouse.fabric}</span>
-                        <span className="item-price">{formatPrice(blouse.price)}</span>
+                        <OfferPrice className="item-price" price={blouse.price} basePrice={blouse.basePrice} />
                       </div>
                       <span className="mini-badge-gold">
                         {blouse.subCategory === 'corset' 
-                          ? 'Padded Boned Fit' 
+                          ? 'Padded, boned' 
                           : blouse.id === 'the-sunshine-marigold-blouse'
-                            ? 'Statement Bow Neck'
+                            ? 'Bow neck'
                             : blouse.id === 'the-ivory-gold-striped-blouse'
-                              ? 'Gold Zari Boat Neck'
-                              : 'Tailored V-Neck'}
+                              ? 'Zari boat neck'
+                              : 'V-neck'}
                       </span>
                     </div>
                   </div>
@@ -343,31 +360,49 @@ export default function MixMatchStudio() {
 
             {/* Dynamic Price & Checkout Box */}
             <div className="bundle-summary-card">
-              <div className="bundle-header">
-                <span className="bundle-badge">
-                  <Sparkles size={11} />
-                  <span>10% DUO PRIVILEGE</span>
-                </span>
-                <span className="bundle-save-text">Save {formatPrice(bundleDiscount)}</span>
-              </div>
-
               <div className="bundle-price-row">
-                <div className="price-breakdown">
-                  <span className="strike-total">{formatPrice(originalTotal)}</span>
-                  <span className="final-duo-price">{formatPrice(finalBundlePrice)}</span>
-                </div>
-                <span className="set-label">Complete 2-Piece Set</span>
+                <span className="set-label">The pair</span>
+                <OfferPrice className="final-duo-price" price={pair.price} basePrice={pair.basePrice} />
               </div>
+              {pair.offer && (
+                <div className="pair-offer-line">
+                  <span className="saak-tag is-offer">
+                    {pair.offer.label ? `${pair.offer.label} · ${pair.offer.short}` : pair.offer.short}
+                  </span>
+                  <span>
+                    You save {formatPrice(pair.offer.saved)}
+                    {pair.offer.endsLabel && ` · ${pair.offer.endsLabel}`}
+                  </span>
+                </div>
+              )}
 
               <p className="bundle-perk-note">
-                Includes complimentary pre-stitched fall/pico + tailored blouse fit.
+                Fall and pico stitching included. Blouse tailored to your size.
               </p>
+
+              {blouseSizeOptions.length > 1 && (
+                <div className="duo-size-picker">
+                  <label htmlFor="duo-blouse-size">
+                    {selectedBlouse?.subCategory === 'corset' ? 'Corset' : 'Blouse'} size
+                  </label>
+                  <select
+                    id="duo-blouse-size"
+                    value={blouseSize}
+                    onChange={(e) => { setBlouseSize(e.target.value); setSizeError(false); }}
+                    className={sizeError ? 'has-error' : ''}
+                  >
+                    <option value="">Select your size…</option>
+                    {blouseSizeOptions.map(sz => <option key={sz} value={sz}>{sz}</option>)}
+                  </select>
+                  {sizeError && <span className="duo-size-error">Please choose a size first.</span>}
+                </div>
+              )}
 
               <button 
                 onClick={handleAddDuo}
                 className="btn btn-primary add-duo-btn"
               >
-                <span>Add Complete Duo to Bag</span>
+                <span>Add both to bag</span>
                 <ArrowRight size={16} />
               </button>
 
@@ -376,14 +411,14 @@ export default function MixMatchStudio() {
                   onClick={() => selectedSaree && addToCart(selectedSaree)}
                   className="buy-single-link"
                 >
-                  Buy Saree Only ({formatPrice(selectedSaree?.price)})
+                  Saree only ({formatPrice(selectedSaree?.price)})
                 </button>
                 <span className="dot">•</span>
                 <button 
-                  onClick={() => selectedBlouse && addToCart(selectedBlouse)}
+                  onClick={() => selectedBlouse && requireBlouseSize() && addToCart(selectedBlouse, blouseSize || null)}
                   className="buy-single-link"
                 >
-                  Buy {selectedBlouse?.subCategory === 'corset' ? 'Corset' : 'Blouse'} Only ({formatPrice(selectedBlouse?.price)})
+                  {selectedBlouse?.subCategory === 'corset' ? 'Corset' : 'Blouse'} only ({formatPrice(selectedBlouse?.price)})
                 </button>
               </div>
             </div>
@@ -392,6 +427,34 @@ export default function MixMatchStudio() {
       </div>
 
       <style>{`
+        .duo-size-picker {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          margin-bottom: 14px;
+        }
+        .duo-size-picker label {
+          font-size: var(--text-xs);
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: var(--text-muted);
+          font-weight: 600;
+        }
+        .duo-size-picker select {
+          padding: 10px 12px;
+          border: 1px solid var(--border-gold);
+          border-radius: 4px;
+          background: #FFFFFF;
+          font: inherit;
+          font-size: var(--text-sm);
+        }
+        .duo-size-picker select.has-error {
+          border-color: var(--accent-terracotta, #A34835);
+        }
+        .duo-size-error {
+          font-size: var(--text-xs);
+          color: var(--accent-terracotta, #A34835);
+        }
         .studio-section {
           padding: 72px 0;
           background: #FFFFFF;
@@ -406,7 +469,7 @@ export default function MixMatchStudio() {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 700;
           letter-spacing: 0.15em;
           color: var(--accent-gold);
@@ -418,7 +481,7 @@ export default function MixMatchStudio() {
           margin-bottom: 12px;
         }
         .studio-subtitle {
-          font-size: 15px;
+          font-size: var(--text-base);
           color: var(--text-secondary);
           line-height: 1.6;
         }
@@ -427,6 +490,9 @@ export default function MixMatchStudio() {
           grid-template-columns: 1fr 1.3fr 1fr;
           gap: 28px;
           align-items: start;
+        }
+        .studio-canvas-grid > * {
+          min-width: 0; /* let swipe rows scroll instead of widening the page */
         }
         .studio-column {
           background: var(--bg-primary);
@@ -444,18 +510,18 @@ export default function MixMatchStudio() {
         }
         .step-num {
           font-family: var(--font-serif);
-          font-size: 26px;
+          font-size: var(--text-2xl);
           font-weight: 600;
           color: var(--accent-terracotta);
           line-height: 1;
         }
         .column-title {
-          font-size: 16px;
+          font-size: var(--text-lg);
           font-weight: 600;
           color: var(--text-primary);
         }
         .column-hint {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
         }
         .items-selector-list {
@@ -521,7 +587,7 @@ export default function MixMatchStudio() {
         }
         .item-name {
           font-family: var(--font-serif);
-          font-size: 14px;
+          font-size: var(--text-base);
           color: var(--text-primary);
           line-height: 1.25;
         }
@@ -532,7 +598,7 @@ export default function MixMatchStudio() {
           gap: 8px;
         }
         .item-fabric {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
           overflow: hidden;
           text-overflow: ellipsis;
@@ -540,13 +606,13 @@ export default function MixMatchStudio() {
           max-width: 120px;
         }
         .item-price {
-          font-size: 13px;
+          font-size: var(--text-sm);
           font-weight: 700;
           color: var(--accent-terracotta);
         }
         .mini-badge {
           align-self: flex-start;
-          font-size: 9px;
+          font-size: var(--text-xs);
           font-weight: 700;
           color: var(--accent-terracotta);
           background: rgba(163, 72, 53, 0.08);
@@ -556,7 +622,7 @@ export default function MixMatchStudio() {
         }
         .mini-badge-gold {
           align-self: flex-start;
-          font-size: 9px;
+          font-size: var(--text-xs);
           font-weight: 700;
           color: #8C6D2B;
           background: rgba(197, 160, 89, 0.15);
@@ -583,7 +649,7 @@ export default function MixMatchStudio() {
         .view-btn {
           flex: 1;
           padding: 6px 12px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 600;
           border: none;
           background: none;
@@ -622,7 +688,7 @@ export default function MixMatchStudio() {
           backdrop-filter: blur(8px);
           padding: 8px 12px;
           border-radius: 2px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 600;
           color: var(--text-primary);
           display: flex;
@@ -638,7 +704,7 @@ export default function MixMatchStudio() {
           padding: 8px 12px;
           border-radius: 3px;
           border: 1px solid var(--border-subtle);
-          font-size: 11px;
+          font-size: var(--text-xs);
         }
         .preview-chip {
           display: flex;
@@ -676,16 +742,20 @@ export default function MixMatchStudio() {
           gap: 4px;
           background: rgba(163, 72, 53, 0.1);
           color: var(--accent-terracotta);
-          font-size: 10px;
+          font-size: var(--text-xs);
           font-weight: 700;
           letter-spacing: 0.08em;
           padding: 3px 8px;
           border-radius: 2px;
         }
-        .bundle-save-text {
-          font-size: 11px;
-          font-weight: 700;
-          color: #2E7D32;
+        .pair-offer-line {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 6px 10px;
+          margin: -2px 0 12px;
+          font-size: var(--text-sm);
+          color: var(--text-secondary);
         }
         .bundle-price-row {
           display: flex;
@@ -693,27 +763,17 @@ export default function MixMatchStudio() {
           align-items: baseline;
           margin-bottom: 8px;
         }
-        .price-breakdown {
-          display: flex;
-          align-items: baseline;
-          gap: 8px;
-        }
-        .strike-total {
-          font-size: 13px;
-          color: var(--text-muted);
-          text-decoration: line-through;
-        }
         .final-duo-price {
-          font-size: 22px;
+          font-size: var(--text-xl);
           font-weight: 700;
           color: var(--accent-terracotta);
         }
         .set-label {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
         }
         .bundle-perk-note {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-secondary);
           margin-bottom: 14px;
           line-height: 1.4;
@@ -721,7 +781,7 @@ export default function MixMatchStudio() {
         .add-duo-btn {
           width: 100%;
           padding: 12px;
-          font-size: 13px;
+          font-size: var(--text-sm);
           margin-bottom: 10px;
         }
         .buy-individual-row {
@@ -729,7 +789,7 @@ export default function MixMatchStudio() {
           align-items: center;
           justify-content: center;
           gap: 8px;
-          font-size: 11px;
+          font-size: var(--text-xs);
         }
         .buy-single-link {
           background: none;
@@ -737,7 +797,7 @@ export default function MixMatchStudio() {
           color: var(--text-secondary);
           text-decoration: underline;
           cursor: pointer;
-          font-size: 11px;
+          font-size: var(--text-xs);
         }
         .buy-single-link:hover {
           color: var(--accent-terracotta);
@@ -778,8 +838,48 @@ export default function MixMatchStudio() {
           .studio-column {
             padding: 14px;
           }
+          /* Phones: swipeable row of photo tiles instead of a nested scroll box */
           .items-selector-list {
-            max-height: 260px;
+            flex-direction: row;
+            max-height: none;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-snap-type: x mandatory;
+            gap: 10px;
+            padding: 2px 2px 8px;
+            margin: 0 -2px;
+            scrollbar-width: none;
+          }
+          .items-selector-list::-webkit-scrollbar {
+            display: none;
+          }
+          .selector-item-card {
+            flex: 0 0 128px;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+            padding: 6px;
+            scroll-snap-align: start;
+          }
+          .item-thumbnail-wrap {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 3 / 4;
+          }
+          .item-name {
+            font-size: var(--text-sm);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
+          .item-fabric,
+          .mini-badge,
+          .mini-badge-gold {
+            display: none;
+          }
+          .column-header {
+            margin-bottom: 12px;
           }
           .preview-image-container {
             max-width: 100%;
@@ -798,13 +898,13 @@ export default function MixMatchStudio() {
             display: none;
           }
           .preview-chip {
-            font-size: 11px;
+            font-size: var(--text-xs);
             width: 100%;
             display: flex;
             justify-content: space-between;
           }
           .preview-styling-chip {
-            font-size: 10.5px;
+            font-size: var(--text-xs);
             padding: 6px 10px;
             bottom: 8px;
             left: 8px;

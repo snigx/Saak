@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowUpRight, Sparkles } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import InstagramIcon from './InstagramIcon';
 
 export default function InstagramFeed() {
@@ -115,7 +115,7 @@ export default function InstagramFeed() {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 700;
           letter-spacing: 0.12em;
           color: var(--accent-terracotta);
@@ -123,12 +123,12 @@ export default function InstagramFeed() {
         }
         .insta-title {
           font-family: var(--font-serif);
-          font-size: 32px;
+          font-size: var(--text-3xl);
           color: var(--text-primary);
           margin-bottom: 6px;
         }
         .insta-subtitle {
-          font-size: 14px;
+          font-size: var(--text-base);
           color: var(--text-secondary);
           max-width: 580px;
           line-height: 1.5;
@@ -138,7 +138,7 @@ export default function InstagramFeed() {
           align-items: center;
           gap: 8px;
           padding: 10px 20px;
-          font-size: 13px;
+          font-size: var(--text-sm);
           font-weight: 600;
           white-space: nowrap;
           border-color: var(--accent-terracotta);
@@ -200,7 +200,7 @@ export default function InstagramFeed() {
           justify-content: center;
         }
         .insta-overlay-caption {
-          font-size: 11px;
+          font-size: var(--text-xs);
           line-height: 1.45;
           color: #F5EFEB;
           margin-top: auto;
@@ -214,7 +214,7 @@ export default function InstagramFeed() {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          font-size: 10px;
+          font-size: var(--text-xs);
           color: var(--accent-gold);
           border-top: 1px solid rgba(255, 255, 255, 0.2);
           padding-top: 8px;

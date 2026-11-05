@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useShop } from '../context/ShopContext';
-import { Search, X, ArrowRight, Sparkles, CornerDownLeft, ShoppingBag } from 'lucide-react';
+import { useOverlay } from '../hooks/useOverlay';
+import { Search, X, ArrowRight, Sparkles } from 'lucide-react';
 import { searchAndRankProducts } from '../utils/searchUtils';
+import { getDisplayTag } from '../utils/tags';
+import OfferPrice from './OfferPrice';
 
 const POPULAR_SEARCHES = [
   'Midnight Black Crepe',
@@ -17,11 +20,10 @@ export default function SearchModal() {
     products,
     isSearchOpen,
     closeSearch,
+    openSearch,
     setSelectedProduct,
     setActiveCategory,
-    setSearchQuery,
-    formatPrice,
-    addToCart
+    setSearchQuery
   } = useShop();
 
   const [localQuery, setLocalQuery] = useState('');
@@ -43,18 +45,18 @@ export default function SearchModal() {
   // Global keyboard shortcuts: Esc to close, Cmd+K / Ctrl+K or '/' to open
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isSearchOpen) {
-        closeSearch();
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         if (isSearchOpen) closeSearch();
-        else if (inputRef.current) inputRef.current.focus();
+        else openSearch();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSearchOpen, closeSearch]);
+  }, [isSearchOpen, closeSearch, openSearch]);
+
+  // Escape to close + background scroll lock
+  useOverlay(isSearchOpen, closeSearch);
 
   if (!isSearchOpen) return null;
 
@@ -125,7 +127,7 @@ export default function SearchModal() {
         className="search-palette-card" 
         onClick={(e) => e.stopPropagation()}
         role="dialog"
-        aria-label="Search creations"
+        aria-label="Search products"
       >
         {/* Search Header Bar */}
         <form onSubmit={handleSearchSubmit} className="search-palette-header">
@@ -134,7 +136,7 @@ export default function SearchModal() {
             ref={inputRef}
             type="text"
             className="search-palette-input"
-            placeholder="Search tissue sarees, black crepe, corsets, blouses..."
+            placeholder="Search sarees, corsets, blouses..."
             value={localQuery}
             onChange={(e) => setLocalQuery(e.target.value)}
           />
@@ -146,7 +148,7 @@ export default function SearchModal() {
                 setLocalQuery('');
                 if (inputRef.current) inputRef.current.focus();
               }}
-              title="Clear input"
+              title="Clear"
             >
               <X size={15} />
             </button>
@@ -163,7 +165,7 @@ export default function SearchModal() {
 
         {/* Quick Suggestion Chips */}
         <div className="search-chips-container">
-          <span className="chips-label">Popular Searches:</span>
+          <span className="chips-label">Popular:</span>
           <div className="chips-row">
             {POPULAR_SEARCHES.map((term) => (
               <button
@@ -184,7 +186,7 @@ export default function SearchModal() {
             searchResults.length > 0 ? (
               <div className="search-results-list">
                 <div className="results-header-info">
-                  <span>FOUND {searchResults.length} {searchResults.length === 1 ? 'CREATION' : 'CREATIONS'}</span>
+                  <span>{searchResults.length} {searchResults.length === 1 ? 'result' : 'results'}</span>
                   <button 
                     type="button" 
                     className="view-in-catalog-link"
@@ -214,13 +216,8 @@ export default function SearchModal() {
 
                       <div className="search-item-info">
                         <div className="search-item-topline">
-                          {product.tag && (
-                            <span 
-                              className="search-item-tag"
-                              style={{ backgroundColor: `${product.tagColor || '#C5A059'}20`, color: product.tagColor || '#C5A059' }}
-                            >
-                              {product.tag}
-                            </span>
+                          {getDisplayTag(product.tag) && (
+                            <span className="saak-tag search-item-tag">{getDisplayTag(product.tag)}</span>
                           )}
                           <span className="search-item-cat">{product.subCategory || product.category}</span>
                         </div>
@@ -229,15 +226,12 @@ export default function SearchModal() {
                         <p className="search-item-fabric">{product.fabric}</p>
 
                         <div className="search-item-footer">
-                          <span className="search-item-price">{formatPrice(product.price)}</span>
-                          {product.originalPrice && (
-                            <span className="search-item-orig">{formatPrice(product.originalPrice)}</span>
-                          )}
+                          <OfferPrice className="search-item-price" price={product.price} basePrice={product.basePrice} />
                         </div>
                       </div>
 
                       <div className="search-row-action">
-                        <span className="navigate-hint">View Creation</span>
+                        <span className="navigate-hint">View</span>
                         <ArrowRight size={15} className="navigate-arrow" />
                       </div>
                     </div>
@@ -249,9 +243,9 @@ export default function SearchModal() {
                 <div className="empty-icon-circle">
                   <Search size={24} />
                 </div>
-                <h4 className="empty-title">No creations matched "{localQuery}"</h4>
+                <h4 className="empty-title">Nothing found for "{localQuery}"</h4>
                 <p className="empty-subtitle">
-                  Try searching for our signature weaves like <strong>tissue</strong>, <strong>crepe</strong>, or <strong>corset</strong>.
+                  Try <strong>tissue</strong>, <strong>crepe</strong> or <strong>corset</strong>.
                 </p>
                 <div className="empty-action-chips">
                   {POPULAR_SEARCHES.slice(0, 3).map((term) => (
@@ -273,7 +267,7 @@ export default function SearchModal() {
             <div className="search-default-showcase">
               <div className="showcase-header">
                 <Sparkles size={14} className="text-gold" />
-                <span>SIGNATURE CREATIONS</span>
+                <span>Featured</span>
               </div>
               <div className="showcase-grid">
                 {products.slice(0, 4).map((product) => {
@@ -288,9 +282,9 @@ export default function SearchModal() {
                         <img src={thumb} alt={product.name} />
                       </div>
                       <div className="showcase-details">
-                        <span className="showcase-tag">{product.tag || 'Signature'}</span>
+                        <span className="showcase-tag">{getDisplayTag(product.tag) || 'Signature'}</span>
                         <span className="showcase-name">{product.name}</span>
-                        <span className="showcase-price">{formatPrice(product.price)}</span>
+                        <OfferPrice className="showcase-price" price={product.price} basePrice={product.basePrice} />
                       </div>
                     </div>
                   );
@@ -303,10 +297,10 @@ export default function SearchModal() {
         {/* Footer Hint */}
         <div className="search-palette-footer">
           <div className="footer-keys-hint">
-            <span>Click any creation to inspect drapes &amp; customize</span>
+            <span>Tap any piece to see details</span>
           </div>
           <div className="footer-quick-duo">
-            <span>Tip: Type <strong>"black"</strong>, <strong>"orange"</strong>, or <strong>"corset"</strong></span>
+            <span>Try <strong>"black"</strong>, <strong>"orange"</strong> or <strong>"corset"</strong></span>
           </div>
         </div>
       </div>
@@ -377,14 +371,14 @@ export default function SearchModal() {
           outline: none;
           background: transparent;
           font-family: var(--font-sans);
-          font-size: 16px;
+          font-size: var(--text-lg);
           color: var(--text-primary);
           font-weight: 400;
         }
 
         .search-palette-input::placeholder {
           color: #9E9287;
-          font-size: 14.5px;
+          font-size: var(--text-base);
         }
 
         .search-palette-clear {
@@ -416,7 +410,7 @@ export default function SearchModal() {
         .esc-pill {
           background: #EDE6DA;
           color: #6E6359;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 600;
           letter-spacing: 0.05em;
           padding: 3px 7px;
@@ -436,7 +430,7 @@ export default function SearchModal() {
         }
 
         .chips-label {
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 700;
           letter-spacing: 0.08em;
           text-transform: uppercase;
@@ -455,7 +449,7 @@ export default function SearchModal() {
           background: #FFFFFF;
           border: 1px solid #DDD1C0;
           color: #4A3E36;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 500;
           padding: 4px 10px;
           border-radius: 14px;
@@ -482,7 +476,7 @@ export default function SearchModal() {
           align-items: center;
           justify-content: space-between;
           padding: 6px 8px 12px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 700;
           letter-spacing: 0.1em;
           color: #8C7E72;
@@ -497,7 +491,7 @@ export default function SearchModal() {
           align-items: center;
           gap: 4px;
           color: var(--accent-terracotta);
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           cursor: pointer;
           text-transform: none;
@@ -555,15 +549,11 @@ export default function SearchModal() {
         }
 
         .search-item-tag {
-          font-size: 10px;
-          font-weight: 700;
-          letter-spacing: 0.04em;
-          padding: 2px 7px;
-          border-radius: 3px;
+          padding: 2px 8px;
         }
 
         .search-item-cat {
-          font-size: 11px;
+          font-size: var(--text-xs);
           text-transform: uppercase;
           letter-spacing: 0.08em;
           color: #8C7E72;
@@ -572,7 +562,7 @@ export default function SearchModal() {
 
         .search-item-name {
           font-family: var(--font-serif);
-          font-size: 15px;
+          font-size: var(--text-base);
           font-weight: 600;
           color: var(--text-primary);
           margin: 0 0 3px;
@@ -580,7 +570,7 @@ export default function SearchModal() {
         }
 
         .search-item-fabric {
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: #7D7065;
           margin: 0 0 6px;
           white-space: nowrap;
@@ -595,13 +585,13 @@ export default function SearchModal() {
         }
 
         .search-item-price {
-          font-size: 14px;
+          font-size: var(--text-base);
           font-weight: 700;
           color: var(--accent-terracotta);
         }
 
         .search-item-orig {
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
           text-decoration: line-through;
         }
@@ -611,7 +601,7 @@ export default function SearchModal() {
           align-items: center;
           gap: 6px;
           color: var(--accent-gold);
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           flex-shrink: 0;
           opacity: 0.7;
@@ -646,13 +636,13 @@ export default function SearchModal() {
 
         .empty-title {
           font-family: var(--font-serif);
-          font-size: 18px;
+          font-size: var(--text-lg);
           color: var(--text-primary);
           margin: 0 0 6px;
         }
 
         .empty-subtitle {
-          font-size: 13px;
+          font-size: var(--text-sm);
           color: #7D7065;
           margin: 0 0 16px;
           max-width: 380px;
@@ -675,7 +665,7 @@ export default function SearchModal() {
           border: 1px solid #DCD0BF;
           padding: 6px 12px;
           border-radius: 20px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           color: var(--text-primary);
           cursor: pointer;
@@ -695,7 +685,7 @@ export default function SearchModal() {
           display: flex;
           align-items: center;
           gap: 8px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 700;
           letter-spacing: 0.12em;
           color: #8C7E72;
@@ -749,7 +739,7 @@ export default function SearchModal() {
         }
 
         .showcase-tag {
-          font-size: 9.5px;
+          font-size: var(--text-xs);
           font-weight: 700;
           text-transform: uppercase;
           color: var(--accent-terracotta);
@@ -757,7 +747,7 @@ export default function SearchModal() {
         }
 
         .showcase-name {
-          font-size: 12.5px;
+          font-size: var(--text-sm);
           font-weight: 600;
           color: var(--text-primary);
           white-space: nowrap;
@@ -766,7 +756,7 @@ export default function SearchModal() {
         }
 
         .showcase-price {
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 700;
           color: #8C7E72;
         }
@@ -779,7 +769,7 @@ export default function SearchModal() {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          font-size: 11.5px;
+          font-size: var(--text-xs);
           color: #8C7E72;
         }
 

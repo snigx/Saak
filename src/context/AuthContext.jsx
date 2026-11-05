@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
   getCurrentUser, 
   signInWithEmail, 
-  signUpWithEmail, 
   requestEmailOtp,
   verifyEmailOtp,
   signInWithGoogle, 
@@ -39,7 +38,7 @@ export function AuthProvider({ children }) {
         if (mounted) {
           setIsAdmin(Boolean(adminStatus));
         }
-      } catch (err) {
+      } catch {
         if (mounted) setIsAdmin(false);
       }
     }
@@ -101,13 +100,13 @@ export function AuthProvider({ children }) {
 
   const registerWithEmail = async (email, password, confirmPassword, fullName) => {
     if (!password || !confirmPassword) {
-      throw new Error('Please enter and retype your password.');
+      throw new Error('Please enter your password twice.');
     }
     if (password !== confirmPassword) {
-      throw new Error('Passwords do not match. Please ensure both passwords are identical.');
+      throw new Error("Passwords don't match.");
     }
     if (password.length < 6) {
-      throw new Error('Password must be at least 6 characters long.');
+      throw new Error('Password must be at least 6 characters.');
     }
 
     await requestEmailOtp(email, fullName, 'signup', password, confirmPassword);

@@ -1,6 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { initialProducts } from '../data/initialProducts';
-import { fetchProductsFromDb, saveProductToDb, deleteProductFromDb } from '../services/productsService';
+import { getSizeSurcharge } from '../utils/pricing';
+import { fetchProductsFromDb, saveProductToDb, deleteProductFromDb, saveProductOfferToDb } from '../services/productsService';
+import { fetchPairOffer, savePairOffer } from '../services/settingsService';
+import { withOfferPricing, getPairPricing, nextOfferChange, normalizeOffer } from '../utils/offers';
 import { 
   fetchOrdersFromDb, 
   updateOrderStatusInDb, 
@@ -13,10 +16,20 @@ import {
 
 const ShopContext = createContext();
 
+const PRODUCTS_STORAGE_KEY = 'saak_products_v10';
+
+// Fields added for display only; never saved back to the catalog
+function stripPricing(product) {
+  const { basePrice, offer: _offer, ...rest } = product;
+  return basePrice !== undefined ? { ...rest, price: basePrice } : rest;
+}
+
 export function ShopProvider({ children }) {
-  const [products, setProducts] = useState(() => {
+  // `catalog` holds products at their regular prices (what admins edit).
+  // `products` is what customers see: the same list with live offers applied.
+  const [catalog, setProducts] = useState(() => {
     try {
-      const saved = localStorage.getItem('saak_products_v9');
+      const saved = localStorage.getItem(PRODUCTS_STORAGE_KEY);
       return saved ? JSON.parse(saved) : initialProducts;
     } catch {
       return initialProducts;
@@ -91,21 +104,12 @@ export function ShopProvider({ children }) {
       localStorage.setItem('saak_upi_id', atelierUpiId);
     } catch {}
   }, [atelierUpiId]);
-  const [currency, setCurrency] = useState('INR'); // INR, USD, GBP, AED
-
-  // Rates approximation
-  const currencyRates = {
-    INR: { symbol: '₹', rate: 1 },
-    USD: { symbol: '$', rate: 0.012 },
-    GBP: { symbol: '£', rate: 0.0095 },
-    AED: { symbol: 'AED ', rate: 0.044 }
-  };
-
   // Asynchronously sync with Supabase PostgreSQL if configured
   useEffect(() => {
     let isMounted = true;
     fetchProductsFromDb().then(dbProducts => {
-      if (isMounted && dbProducts && dbProducts.length > 0) {
+      // null means "no remote catalog" — keep the locally persisted catalog
+      if (isMounted && Array.isArray(dbProducts) && dbProducts.length > 0) {
         setProducts(dbProducts);
       }
     });
@@ -130,11 +134,68 @@ export function ShopProvider({ children }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem('saak_products_v9', JSON.stringify(products));
+      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(catalog));
     } catch (e) {
       console.error(e);
     }
-  }, [products]);
+  }, [catalog]);
+
+  // ---- Offers -------------------------------------------------------------
+  const [pairOffer, setPairOffer] = useState(null);
+  const [offerClock, setOfferClock] = useState(() => Date.now());
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchPairOffer().then(offer => { if (isMounted) setPairOffer(offer); });
+    return () => { isMounted = false; };
+  }, []);
+
+  // Re-price exactly when the next scheduled offer starts or ends
+  useEffect(() => {
+    const next = nextOfferChange([...catalog.map(p => p.discount), pairOffer], offerClock);
+    if (!Number.isFinite(next)) return undefined;
+    const delay = Math.min(Math.max(next - Date.now(), 0) + 500, 24 * 60 * 60 * 1000);
+    const timer = setTimeout(() => setOfferClock(Date.now()), delay);
+    return () => clearTimeout(timer);
+  }, [catalog, pairOffer, offerClock]);
+
+  const products = useMemo(
+    () => catalog.map(p => withOfferPricing(p, offerClock)),
+    [catalog, offerClock]
+  );
+
+  // The open product, kept in step with live prices
+  const liveSelectedProduct = useMemo(
+    () => (selectedProduct ? (products.find(p => p.id === selectedProduct.id) || selectedProduct) : null),
+    [selectedProduct, products]
+  );
+
+  const getPairPrice = useCallback((saree, blouse, sareeSize = null, blouseSize = null) => {
+    const extras = getSizeSurcharge(sareeSize) + getSizeSurcharge(blouseSize);
+    return getPairPricing(saree, blouse, pairOffer, extras, offerClock);
+  }, [pairOffer, offerClock]);
+
+  // Admin: set or clear the offer on one product. Returns { ok, error? }.
+  const setProductOffer = async (productId, offer) => {
+    const discount = offer ? normalizeOffer(offer) : null;
+    const result = await saveProductOfferToDb(productId, discount);
+    if (result.ok) {
+      setProducts(prev => prev.map(p => (p.id === productId ? { ...p, discount } : p)));
+      setOfferClock(Date.now());
+    }
+    return result;
+  };
+
+  // Admin: set or clear the Mix & Match pair offer. Returns { ok, error? }.
+  const updatePairOffer = async (offer) => {
+    const value = offer ? normalizeOffer(offer) : null;
+    const result = await savePairOffer(value);
+    if (result.ok) {
+      setPairOffer(value);
+      setOfferClock(Date.now());
+    }
+    return result;
+  };
 
   useEffect(() => {
     try {
@@ -144,6 +205,15 @@ export function ShopProvider({ children }) {
     }
   }, [cart]);
 
+  // Drop wishlist entries for products that no longer exist in the catalog
+  useEffect(() => {
+    if (products.length === 0) return;
+    setWishlist(prev => {
+      const pruned = prev.filter(id => products.some(p => p.id === id));
+      return pruned.length === prev.length ? prev : pruned;
+    });
+  }, [products]);
+
   useEffect(() => {
     try {
       localStorage.setItem('saak_wishlist', JSON.stringify(wishlist));
@@ -152,15 +222,16 @@ export function ShopProvider({ children }) {
     }
   }, [wishlist]);
 
-  const formatPrice = (inrPrice) => {
-    const cur = currencyRates[currency] || currencyRates.INR;
-    const converted = Math.round(inrPrice * cur.rate);
-    return `${cur.symbol}${converted.toLocaleString('en-IN')}`;
-  };
+  // Saak sells in INR only
+  const formatPrice = (inrPrice) => `₹${Math.round(Number(inrPrice) || 0).toLocaleString('en-IN')}`;
 
-  const addToCart = (product, size = null, customColor = null, count = 1) => {
+  const addToCart = (incoming, size = null, customColor = null, count = 1, extras = {}) => {
+    // Always price from the live catalog so the current offer applies
+    const product = products.find(p => p.id === incoming.id) || withOfferPricing(stripPricing(incoming), offerClock);
     const chosenSize = size || (product.sizeOptions ? product.sizeOptions[0] : 'Standard');
     const itemKey = `${product.id}-${chosenSize}-${customColor || 'default'}`;
+    // Options like "Pre-Pleated Fall & Pico (+₹450)" carry a surcharge
+    const surcharge = getSizeSurcharge(chosenSize);
 
     setCart(prev => {
       const existing = prev.find(item => item.itemKey === itemKey);
@@ -171,19 +242,26 @@ export function ShopProvider({ children }) {
       }
       return [...prev, {
         ...product,
+        price: Number(product.price) + surcharge,
+        basePrice: Number(product.basePrice ?? product.price) + surcharge,
+        offerLabel: product.offer ? (product.offer.label || product.offer.short) : null,
         itemKey,
         selectedSize: chosenSize,
         customColor,
+        ...(extras.customNote ? { customNote: extras.customNote } : {}),
         quantity: count
       }];
     });
     setIsCartOpen(true);
   };
 
-  const addDuoToCart = (saree, blouse) => {
-    const totalOriginal = saree.price + blouse.price;
-    const discountedTotal = Math.round(totalOriginal * 0.9); // 10% discount
-    const itemKey = `duo-${saree.id}-${blouse.id}`;
+  const addDuoToCart = (sareeIn, blouseIn, sareeSize = null, blouseSize = null) => {
+    const saree = products.find(p => p.id === sareeIn.id) || sareeIn;
+    const blouse = products.find(p => p.id === blouseIn.id) || blouseIn;
+    const chosenSareeSize = sareeSize || saree.sizeOptions?.[0] || 'Standard';
+    const chosenBlouseSize = blouseSize || blouse.sizeOptions?.[0] || 'Standard';
+    const pair = getPairPrice(saree, blouse, chosenSareeSize, chosenBlouseSize);
+    const itemKey = `duo-${saree.id}-${blouse.id}-${chosenSareeSize}-${chosenBlouseSize}`;
 
     setCart(prev => {
       const existing = prev.find(item => item.itemKey === itemKey);
@@ -195,13 +273,16 @@ export function ShopProvider({ children }) {
       return [...prev, {
         id: itemKey,
         itemKey,
-        name: `Curated Duo: ${saree.name} + ${blouse.name}`,
-        price: discountedTotal,
-        originalPrice: totalOriginal,
+        name: `Duo: ${saree.name} + ${blouse.name}`,
+        price: pair.price,
+        basePrice: pair.basePrice,
+        offerLabel: pair.offer ? (pair.offer.label || pair.offer.short) : null,
         isDuo: true,
-        saree,
-        blouse,
-        selectedSize: `${saree.sizeOptions[0]} | ${blouse.sizeOptions[0]}`,
+        saree: stripPricing(saree),
+        blouse: stripPricing(blouse),
+        sareeSize: chosenSareeSize,
+        blouseSize: chosenBlouseSize,
+        selectedSize: `${chosenSareeSize} | ${chosenBlouseSize}`,
         images: {
           modelView: saree.images.modelView || blouse.images.modelView
         },
@@ -210,6 +291,40 @@ export function ShopProvider({ children }) {
     });
     setIsCartOpen(true);
   };
+
+  // Keep bag prices current when an offer starts, ends or is edited
+  useEffect(() => {
+    setCart(prev => {
+      let changed = false;
+      const next = prev.map(item => {
+        let price;
+        let basePrice;
+        let offerLabel;
+        if (item.isDuo) {
+          const saree = products.find(p => p.id === item.saree?.id);
+          const blouse = products.find(p => p.id === item.blouse?.id);
+          if (!saree || !blouse) return item;
+          const [sSize, bSize] = (item.selectedSize || '').split(' | ');
+          const pair = getPairPrice(saree, blouse, item.sareeSize || sSize, item.blouseSize || bSize);
+          ({ price, basePrice } = pair);
+          offerLabel = pair.offer ? (pair.offer.label || pair.offer.short) : null;
+        } else {
+          const product = products.find(p => p.id === item.id);
+          if (!product) return item;
+          const surcharge = getSizeSurcharge(item.selectedSize);
+          price = product.price + surcharge;
+          basePrice = product.basePrice + surcharge;
+          offerLabel = product.offer ? (product.offer.label || product.offer.short) : null;
+        }
+        if (item.price === price && item.basePrice === basePrice && (item.offerLabel ?? null) === offerLabel) {
+          return item;
+        }
+        changed = true;
+        return { ...item, price, basePrice, offerLabel };
+      });
+      return changed ? next : prev;
+    });
+  }, [products, getPairPrice]);
 
   const removeFromCart = (itemKey) => {
     setCart(prev => prev.filter(item => item.itemKey !== itemKey));
@@ -270,7 +385,13 @@ export function ShopProvider({ children }) {
   };
 
   // Update existing product
-  const updateProduct = (updatedProd) => {
+  const updateProduct = (incomingProd) => {
+    const existing = catalog.find(p => p.id === incomingProd.id) || {};
+    const updatedProd = {
+      ...existing,
+      ...stripPricing(incomingProd),
+      images: { ...(existing.images || {}), ...(incomingProd.images || {}) }
+    };
     const modelPhotos = updatedProd.modelPhotos || (updatedProd.images?.modelPhotos) || [updatedProd.modelView || updatedProd.images?.modelView].filter(Boolean);
     const flatlayPhotos = updatedProd.flatlayPhotos || (updatedProd.images?.flatlayPhotos) || [updatedProd.flatlayView || updatedProd.images?.flatlayView].filter(Boolean);
 
@@ -282,7 +403,7 @@ export function ShopProvider({ children }) {
     const mergedProduct = {
       ...updatedProd,
       price: Number(updatedProd.price),
-      originalPrice: updatedProd.originalPrice ? Number(updatedProd.originalPrice) : undefined,
+      originalPrice: undefined,
       images: {
         ...updatedProd.images,
         modelPhotos: modelPhotos.length > 0 ? modelPhotos : [updatedProd.images?.modelView],
@@ -301,15 +422,19 @@ export function ShopProvider({ children }) {
   const deleteProduct = (productId) => {
     deleteProductFromDb(productId);
     setProducts(prev => prev.filter(p => p.id !== productId));
+    setWishlist(prev => prev.filter(id => id !== productId));
   };
 
   const openEditProduct = (product) => {
-    setEditingProduct(product);
+    // Edit the regular-price record, not the offer-priced copy shown to customers
+    setEditingProduct(catalog.find(p => p.id === product.id) || stripPricing(product));
+    setAdminActiveTab('editor');
     setIsAtelierModalOpen(true);
   };
 
   const openCreateProduct = () => {
     setEditingProduct(null);
+    setAdminActiveTab('editor');
     setIsAtelierModalOpen(true);
   };
 
@@ -327,12 +452,15 @@ export function ShopProvider({ children }) {
 
   const resetCatalogToDefault = () => {
     setProducts(initialProducts);
-    localStorage.setItem('saak_products_v6', JSON.stringify(initialProducts));
+    try {
+      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(initialProducts));
+    } catch {}
   };
 
   const updateOrderStatus = async (orderId, updates) => {
-    await updateOrderStatusInDb(orderId, updates);
+    const result = await updateOrderStatusInDb(orderId, updates);
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updates } : o));
+    return result; // may carry _syncWarning when the database couldn't persist every field
   };
 
   const confirmOrder = async (orderId, notes = '', sendEmail = true) => {
@@ -369,26 +497,36 @@ export function ShopProvider({ children }) {
     setOrders(fresh);
   };
 
+  const openAdminConsole = () => {
+    setAdminActiveTab('inventory');
+    setIsAtelierModalOpen(true);
+  };
+
   const openOrdersAdmin = () => {
     setAdminActiveTab('orders');
     setIsAtelierModalOpen(true);
   };
 
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const cartSavings = cart.reduce((sum, item) => {
-    if (item.originalPrice && item.originalPrice > item.price) {
-      return sum + ((item.originalPrice - item.price) * item.quantity);
-    }
-    return sum;
-  }, 0);
+  const cartSavings = cart.reduce(
+    (sum, item) => sum + Math.max(0, ((item.basePrice ?? item.price) - item.price) * item.quantity),
+    0
+  );
 
   return (
     <ShopContext.Provider value={{
       products,
+      catalog,
+      pairOffer,
+      getPairPrice,
+      setProductOffer,
+      updatePairOffer,
+      cartSavings,
       orders,
       adminActiveTab,
       setAdminActiveTab,
       openOrdersAdmin,
+      openAdminConsole,
       refreshOrders,
       updateOrderStatus,
       confirmOrder,
@@ -400,7 +538,7 @@ export function ShopProvider({ children }) {
       wishlist,
       activeCategory,
       setActiveCategory,
-      selectedProduct,
+      selectedProduct: liveSelectedProduct,
       setSelectedProduct,
       isCartOpen,
       setIsCartOpen,
@@ -432,18 +570,16 @@ export function ShopProvider({ children }) {
       deleteProduct,
       customShadeProduct,
       setCustomShadeProduct,
-      currency,
-      setCurrency,
       formatPrice,
       addToCart,
       addDuoToCart,
+      getSizeSurcharge,
       removeFromCart,
       updateCartQty,
       toggleWishlist,
       addNewProduct,
       resetCatalogToDefault,
-      cartTotal,
-      cartSavings
+      cartTotal
     }}>
       {children}
     </ShopContext.Provider>

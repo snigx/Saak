@@ -8,12 +8,25 @@ import {
 
 const TABLE_NAME = 'orders';
 
+// Columns that exist on the live `orders` table before the fulfillment migration
+const CORE_COLUMNS = [
+  'id', 'customer_name', 'customer_phone', 'customer_email', 'shipping_address', 'city', 'state',
+  'pincode', 'styling_notes', 'items', 'total_amount', 'utr_number', 'payment_screenshot_url',
+  'payment_status', 'created_at'
+];
+
+const isMissingColumnError = (error) =>
+  !!error && (error.code === 'PGRST204' || !!error.message?.includes('column'));
+
+// Simulated admin test orders never trigger customer emails
+export const isTestOrderId = (orderId) => String(orderId || '').startsWith('TEST-');
+
 export const SAMPLE_ORDERS = [
   {
     id: 'SAAK-89210',
     customer_name: 'Rhea Singhania',
     customer_phone: '+91 98201 44520',
-    customer_email: 'rhea.singhania@gmail.com',
+    customer_email: 'rhea.singhania@example.com',
     shipping_address: 'Flat 14B, Sea Face Towers, Bandra West',
     city: 'Mumbai',
     state: 'Maharashtra',
@@ -62,7 +75,7 @@ export const SAMPLE_ORDERS = [
     id: 'SAAK-90412',
     customer_name: 'Ananya Mehra',
     customer_phone: '+91 98112 55901',
-    customer_email: 'ananya.mehra@outlook.com',
+    customer_email: 'ananya.mehra@example.com',
     shipping_address: 'B-42, Ring Road, Defence Colony',
     city: 'New Delhi',
     state: 'Delhi',
@@ -98,7 +111,7 @@ export const SAMPLE_ORDERS = [
     id: 'SAAK-88341',
     customer_name: 'Tanvi Kapoor',
     customer_phone: '+91 99304 88129',
-    customer_email: 'tanvi.kapoor@icloud.com',
+    customer_email: 'tanvi.kapoor@example.com',
     shipping_address: 'Plot 77, 12th Main Road, Indiranagar',
     city: 'Bengaluru',
     state: 'Karnataka',
@@ -135,7 +148,7 @@ export const SAMPLE_ORDERS = [
     id: 'SAAK-87102',
     customer_name: 'Dr. Meera Nambiar',
     customer_phone: '+91 97401 22849',
-    customer_email: 'meera.nambiar@aiims.edu',
+    customer_email: 'meera.nambiar@example.com',
     shipping_address: '9A Riverview Enclave, Boat Club Road',
     city: 'Chennai',
     state: 'Tamil Nadu',
@@ -183,7 +196,7 @@ export const SAMPLE_ORDERS = [
     id: 'SAAK-89945',
     customer_name: 'Priyanka Varma',
     customer_phone: '+91 98450 77120',
-    customer_email: 'priyanka.varma@gmail.com',
+    customer_email: 'priyanka.varma@example.com',
     shipping_address: 'Villa 12, Palm Meadows, Whitefield',
     city: 'Bengaluru',
     state: 'Karnataka',
@@ -229,12 +242,16 @@ export async function fetchOrdersFromDb() {
 
       if (error) {
         console.warn('Supabase orders fetch warning:', error.message);
-      } else if (data && data.length > 0) {
-        return data;
+      } else if (Array.isArray(data)) {
+        // Overlay locally-tracked fields for columns the live table doesn't have yet
+        const localById = new Map(readLocalOrders().map(o => [o.id, o]));
+        return data.map(row => ({ ...(localById.get(row.id) || {}), ...row }));
       }
     } catch (err) {
       console.warn('Failed to communicate with Supabase orders table:', err);
     }
+    // Supabase unreachable: show locally saved orders, but never demo samples
+    return readLocalOrders();
   }
 
   // LocalStorage fallback
@@ -246,16 +263,29 @@ export async function fetchOrdersFromDb() {
         return parsed;
       }
     }
-    // Seed sample orders if none exist
+    // Seed sample orders if none exist (demo mode only — Supabase not configured)
     localStorage.setItem('saak_orders_v2', JSON.stringify(SAMPLE_ORDERS));
     return SAMPLE_ORDERS;
-  } catch (e) {
+  } catch {
     return SAMPLE_ORDERS;
   }
 }
 
+// Locally cached orders, excluding demo samples
+function readLocalOrders() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem('saak_orders_v2') || '[]');
+    const sampleIds = new Set(SAMPLE_ORDERS.map(o => o.id));
+    return Array.isArray(parsed) ? parsed.filter(o => o && !sampleIds.has(o.id)) : [];
+  } catch {
+    return [];
+  }
+}
+
 /**
- * Save new customer order and payment verification details
+ * Save new customer order and payment verification details.
+ * The returned order carries `persistedToDb` (true when stored in Supabase, or when
+ * Supabase isn't configured and localStorage is the store of record).
  * @param {Object} orderData
  */
 export async function saveOrderToDb(orderData) {
@@ -297,28 +327,13 @@ export async function saveOrderToDb(orderData) {
       if (!error && data) {
         syncLocalOrder({ ...payload, ...data });
         triggerOrderConfirmation(payload);
-        return { ...payload, ...data };
+        return { ...payload, ...data, persistedToDb: true };
       }
 
       // If schema cache lacks newer columns (code PGRST204), fallback to core columns
-      if (error && (error.code === 'PGRST204' || error.message?.includes('column'))) {
-        const corePayload = {
-          id: payload.id,
-          customer_name: payload.customer_name,
-          customer_phone: payload.customer_phone,
-          customer_email: payload.customer_email,
-          shipping_address: payload.shipping_address,
-          city: payload.city,
-          state: payload.state,
-          pincode: payload.pincode,
-          styling_notes: payload.styling_notes,
-          items: payload.items,
-          total_amount: payload.total_amount,
-          utr_number: payload.utr_number,
-          payment_screenshot_url: payload.payment_screenshot_url,
-          payment_status: payload.payment_status,
-          created_at: payload.created_at
-        };
+      if (isMissingColumnError(error)) {
+        const corePayload = {};
+        CORE_COLUMNS.forEach(k => { corePayload[k] = payload[k]; });
 
         const { data: fallbackData, error: fallbackError } = await supabase
           .from(TABLE_NAME)
@@ -329,23 +344,30 @@ export async function saveOrderToDb(orderData) {
         if (!fallbackError && fallbackData) {
           syncLocalOrder(payload);
           triggerOrderConfirmation(payload);
-          return payload;
+          return { ...payload, persistedToDb: true };
         }
+        console.error('Supabase core-column order insert failed:', fallbackError);
+      } else if (error) {
+        console.error('Supabase order insert failed:', error);
       }
     } catch (err) {
       console.error('Failed to insert order into Supabase:', err);
     }
+
+    // Supabase is the store of record but the order never reached it: keep a local copy only
+    syncLocalOrder(payload);
+    return { ...payload, persistedToDb: false };
   }
 
-  // Local storage save
+  // Local storage save (demo mode — Supabase not configured)
   syncLocalOrder(payload);
   triggerOrderConfirmation(payload);
-  return payload;
+  return { ...payload, persistedToDb: true };
 }
 
 // Background helper to dispatch Order Placed email without blocking checkout UI
 function triggerOrderConfirmation(orderPayload) {
-  if (orderPayload.customer_email) {
+  if (orderPayload.customer_email && !isTestOrderId(orderPayload.id)) {
     setTimeout(() => {
       sendOrderPlacedEmail(orderPayload).catch(e => console.warn('Order placed email trigger error:', e));
     }, 100);
@@ -358,7 +380,7 @@ function syncLocalOrder(newOrder) {
     const filtered = existing.filter(o => o.id !== newOrder.id);
     filtered.unshift(newOrder);
     localStorage.setItem('saak_orders_v2', JSON.stringify(filtered));
-  } catch (e) {}
+  } catch {}
 }
 
 /**
@@ -384,7 +406,7 @@ export async function dispatchOrderInDb(orderId, dispatchDetails, sendEmail = tr
 
   const updatedOrder = await updateOrderStatusInDb(orderId, updates);
 
-  if (sendEmail && updatedOrder && updatedOrder.customer_email) {
+  if (sendEmail && updatedOrder && updatedOrder.customer_email && !isTestOrderId(orderId)) {
     try {
       await sendDispatchNotificationEmail(updatedOrder, dispatchDetails);
     } catch (err) {
@@ -413,7 +435,7 @@ export async function confirmOrderInDb(orderId, adminNotes = '', sendEmail = tru
 
   const updatedOrder = await updateOrderStatusInDb(orderId, updates);
 
-  if (sendEmail && updatedOrder && updatedOrder.customer_email) {
+  if (sendEmail && updatedOrder && updatedOrder.customer_email && !isTestOrderId(orderId)) {
     try {
       await sendOrderConfirmedEmail(updatedOrder);
     } catch (err) {
@@ -438,7 +460,7 @@ export async function deliverOrderInDb(orderId, sendEmail = true) {
 
   const updatedOrder = await updateOrderStatusInDb(orderId, updates);
 
-  if (sendEmail && updatedOrder && updatedOrder.customer_email) {
+  if (sendEmail && updatedOrder && updatedOrder.customer_email && !isTestOrderId(orderId)) {
     try {
       await sendOrderDeliveredEmail(updatedOrder);
     } catch (err) {
@@ -454,8 +476,15 @@ export async function deliverOrderInDb(orderId, sendEmail = true) {
  * @param {string} orderId
  * @param {Object} updates
  */
+/**
+ * Returns the merged order. When Supabase is configured but some/all fields could not be
+ * stored there (e.g. fulfillment columns not migrated yet), the result carries `_syncWarning`
+ * and the change is kept locally on this device only.
+ */
 export async function updateOrderStatusInDb(orderId, updates) {
   if (isSupabaseConfigured && supabase) {
+    let baseRow = null;
+    let syncWarning = 'Saved on this device only — the database update failed.';
     try {
       const { data, error } = await supabase
         .from(TABLE_NAME)
@@ -465,42 +494,65 @@ export async function updateOrderStatusInDb(orderId, updates) {
         .single();
 
       if (!error && data) {
-        updateLocalOrder(orderId, data);
-        return data;
+        return updateLocalOrder(orderId, data, data);
       }
 
-      // If schema cache lacks columns, update local and try known subset
-      if (error && (error.code === 'PGRST204' || error.message?.includes('column'))) {
+      // If schema cache lacks newer columns, retry with only the columns the live table has
+      if (isMissingColumnError(error)) {
         const knownUpdates = {};
-        ['payment_status', 'payment_screenshot_url', 'utr_number', 'styling_notes'].forEach(k => {
-          if (updates[k] !== undefined) knownUpdates[k] = updates[k];
+        Object.keys(updates).forEach(k => {
+          if (CORE_COLUMNS.includes(k) && updates[k] !== undefined) knownUpdates[k] = updates[k];
         });
+        const skipped = Object.keys(updates).filter(k => !(k in knownUpdates));
+        syncWarning = `Saved on this device only — database is missing columns (${skipped.join(', ')}). Run the orders migration.`;
+
         if (Object.keys(knownUpdates).length > 0) {
-          await supabase.from(TABLE_NAME).update(knownUpdates).eq('id', orderId);
+          const { data: partialData, error: partialError } = await supabase
+            .from(TABLE_NAME)
+            .update(knownUpdates)
+            .eq('id', orderId)
+            .select()
+            .single();
+          if (!partialError && partialData) {
+            baseRow = partialData;
+            syncWarning = `Partially saved — ${Object.keys(knownUpdates).join(', ')} stored; ${skipped.join(', ')} kept on this device only. Run the orders migration.`;
+          }
         }
+      }
+
+      if (!baseRow) {
+        const { data: existingRow } = await supabase.from(TABLE_NAME).select('*').eq('id', orderId).maybeSingle();
+        baseRow = existingRow || null;
       }
     } catch (err) {
       console.warn('Supabase update order error:', err);
     }
+
+    const merged = updateLocalOrder(orderId, updates, baseRow);
+    return merged ? { ...merged, _syncWarning: syncWarning } : null;
   }
 
   // LocalStorage update
   return updateLocalOrder(orderId, updates);
 }
 
-function updateLocalOrder(orderId, updates) {
+function updateLocalOrder(orderId, updates, baseRow = null) {
   try {
     const existing = JSON.parse(localStorage.getItem('saak_orders_v2') || '[]');
+    let found = false;
     const updated = existing.map(o => {
       if (o.id === orderId) {
-        return { ...o, ...updates };
+        found = true;
+        return { ...o, ...(baseRow || {}), ...updates };
       }
       return o;
     });
+    // Order lives only in the database: cache it locally so the update is remembered here
+    if (!found && baseRow) updated.unshift({ ...baseRow, ...updates });
     localStorage.setItem('saak_orders_v2', JSON.stringify(updated));
-    return updated.find(o => o.id === orderId);
-  } catch (e) {
-    return null;
+    return updated.find(o => o.id === orderId) || null;
+  } catch {
+    return baseRow ? { ...baseRow, ...updates } : null;
   }
 }
 
@@ -510,9 +562,14 @@ function updateLocalOrder(orderId, updates) {
  */
 export async function deleteOrderFromDb(orderId) {
   if (isSupabaseConfigured && supabase) {
-    try {
-      await supabase.from(TABLE_NAME).delete().eq('id', orderId);
-    } catch (err) {}
+    const { data, error } = await supabase.from(TABLE_NAME).delete().eq('id', orderId).select();
+    if (error || !data || data.length === 0) {
+      // 0 rows deleted: either a local-only order, or RLS silently blocked the delete
+      const { data: stillThere } = await supabase.from(TABLE_NAME).select('id').eq('id', orderId).maybeSingle();
+      if (error || stillThere) {
+        throw new Error('Delete failed — database permission missing');
+      }
+    }
   }
 
   try {
@@ -520,7 +577,7 @@ export async function deleteOrderFromDb(orderId) {
     const filtered = existing.filter(o => o.id !== orderId);
     localStorage.setItem('saak_orders_v2', JSON.stringify(filtered));
     return filtered;
-  } catch (e) {
+  } catch {
     return [];
   }
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Heart, Feather, Compass, ArrowRight } from 'lucide-react';
+import { Sparkles, ArrowRight } from 'lucide-react';
 
 export default function BrandIntro() {
   const handleExploreCreations = () => {
@@ -16,32 +16,32 @@ export default function BrandIntro() {
         <div className="intro-content-col">
           <div className="intro-badge">
             <Sparkles size={13} className="text-gold" />
-            <span>THE SAAK STORY</span>
+            <span>Our story</span>
           </div>
 
           <h2 className="intro-headline">
-            Rooted in Tradition. <br />
-            <span className="intro-headline-italic">Reimagined for Today.</span>
+            Rooted in tradition. <br />
+            <span className="intro-headline-italic">Made for today.</span>
           </h2>
 
           <div className="intro-narrative">
             <p className="intro-lead">
-              SAAK by Aprajita was born from a desire to create something timeless and classic, deeply rooted in Indian tradition yet reimagined with a contemporary sensibility.
+              Saak by Aprajita began with a simple wish: to make timeless pieces rooted in Indian tradition, made for how we live now.
             </p>
 
             <p className="intro-body">
-              Inspired by India’s rich and diverse cultural heritage, SAAK celebrates femininity in all its forms — graceful, confident, and unapologetically individual. We believe tradition is not simply something we inherit, but something we continue to interpret, express, and make our own.
+              We celebrate women in all their forms — graceful, confident and completely themselves. Tradition isn't just something we inherit. It's something we make our own.
             </p>
 
             {/* Featured Quote Card */}
             <div className="intro-quote-card">
               <img 
                 src="/assets/saak_emblem_transparent.png" 
-                alt="Saak Emblem Seal" 
+                alt="Saak emblem" 
                 className="quote-emblem-seal" 
               />
               <p className="intro-quote-text">
-                At its heart, SAAK is a celebration of where we come from and all the ways we can carry it forward — keeping our heritage alive, relevant, and ever-evolving.
+                Saak is a celebration of where we come from, and all the ways we can carry it forward.
               </p>
               <div className="quote-signoff">
                 <span className="signoff-name">— Aprajita</span>
@@ -56,7 +56,7 @@ export default function BrandIntro() {
               onClick={handleExploreCreations} 
               className="btn btn-primary intro-cta-btn"
             >
-              <span>Explore Our Creations</span>
+              <span>Shop the collection</span>
               <ArrowRight size={15} />
             </button>
           </div>
@@ -69,13 +69,13 @@ export default function BrandIntro() {
             <div className="main-frame">
               <img 
                 src="/assets/saak_muse_black_corset_side.jpg" 
-                alt="SAAK by Aprajita — Indian Textile Heritage" 
+                alt="Saak by Aprajita — black saree and corset" 
                 className="main-frame-img"
               />
               <div className="frame-overlay-gradient"></div>
               <div className="frame-tag">
                 <Sparkles size={12} className="text-gold" />
-                <span>HANDCRAFTED IN INDIA</span>
+                <span>Handcrafted in India</span>
               </div>
             </div>
 
@@ -83,7 +83,7 @@ export default function BrandIntro() {
             <div className="inset-frame">
               <img 
                 src="/assets/saak_flatlay_copper_green.jpg" 
-                alt="Artisanal Handloom Fabric Detail" 
+                alt="Handloom fabric detail" 
                 className="inset-frame-img"
               />
             </div>
@@ -93,22 +93,22 @@ export default function BrandIntro() {
               <div className="pillar-row">
                 <div className="pillar-bullet">01</div>
                 <div className="pillar-text">
-                  <strong>Timeless &amp; Classic</strong>
-                  <span>Deeply rooted in Indian handloom craft</span>
+                  <strong>Timeless</strong>
+                  <span>Rooted in Indian handloom craft</span>
                 </div>
               </div>
               <div className="pillar-row">
                 <div className="pillar-bullet">02</div>
                 <div className="pillar-text">
-                  <strong>Graceful &amp; Confident</strong>
-                  <span>Celebrating femininity in all its forms</span>
+                  <strong>Confident</strong>
+                  <span>Made for every kind of woman</span>
                 </div>
               </div>
               <div className="pillar-row">
                 <div className="pillar-bullet">03</div>
                 <div className="pillar-text">
-                  <strong>Ever-Evolving Heritage</strong>
-                  <span>Interpreting tradition with modern freedom</span>
+                  <strong>Modern</strong>
+                  <span>Tradition, worn your way</span>
                 </div>
               </div>
             </div>
@@ -147,7 +147,7 @@ export default function BrandIntro() {
           border: 1px solid rgba(163, 72, 53, 0.22);
           color: var(--accent-terracotta);
           padding: 6px 14px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 700;
           letter-spacing: 0.16em;
           text-transform: uppercase;
@@ -181,14 +181,14 @@ export default function BrandIntro() {
 
         .intro-lead {
           font-family: var(--font-serif);
-          font-size: 19px;
+          font-size: var(--text-xl);
           line-height: 1.6;
           color: var(--text-primary);
           font-weight: 500;
         }
 
         .intro-body {
-          font-size: 15px;
+          font-size: var(--text-base);
           line-height: 1.75;
           color: var(--text-secondary);
         }
@@ -224,18 +224,19 @@ export default function BrandIntro() {
 
         .intro-quote-text {
           font-family: var(--font-serif);
-          font-size: 16.5px;
+          font-size: var(--text-lg);
           font-style: italic;
           line-height: 1.65;
           color: var(--text-primary);
           margin-bottom: 14px;
+          padding-right: 64px; /* keep clear of the emblem */
         }
 
         .quote-signoff {
           display: flex;
           align-items: center;
           gap: 8px;
-          font-size: 12px;
+          font-size: var(--text-xs);
         }
 
         .signoff-name {
@@ -264,7 +265,7 @@ export default function BrandIntro() {
 
         .intro-cta-btn {
           padding: 13px 26px;
-          font-size: 13px;
+          font-size: var(--text-sm);
         }
 
         /* Right Column Visual Composition */
@@ -315,7 +316,7 @@ export default function BrandIntro() {
           border: 1px solid var(--border-gold);
           padding: 5px 12px;
           border-radius: 2px;
-          font-size: 10px;
+          font-size: var(--text-xs);
           font-weight: 700;
           letter-spacing: 0.12em;
           color: var(--accent-terracotta);
@@ -368,7 +369,7 @@ export default function BrandIntro() {
 
         .pillar-bullet {
           font-family: var(--font-serif);
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 700;
           color: var(--accent-terracotta);
           background: #FAF2EA;
@@ -385,12 +386,12 @@ export default function BrandIntro() {
         }
 
         .pillar-text strong {
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: var(--text-primary);
         }
 
         .pillar-text span {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-secondary);
           line-height: 1.35;
         }
@@ -411,15 +412,15 @@ export default function BrandIntro() {
             padding: 56px 0 64px 0;
           }
           .intro-headline {
-            font-size: 28px;
+            font-size: var(--text-2xl);
             line-height: 1.25;
           }
           .intro-lead {
-            font-size: 16px;
+            font-size: var(--text-lg);
             line-height: 1.6;
           }
           .intro-body {
-            font-size: 14px;
+            font-size: var(--text-base);
             line-height: 1.65;
           }
           .intro-quote-card {
@@ -427,7 +428,11 @@ export default function BrandIntro() {
             margin: 20px 0;
           }
           .intro-quote-text {
-            font-size: 13.5px;
+            font-size: var(--text-base);
+            padding-right: 0;
+          }
+          .quote-emblem-seal {
+            display: none;
           }
           .inset-frame {
             display: none !important;

@@ -1,11 +1,12 @@
 import React from 'react';
 import { useShop } from '../context/ShopContext';
 import { useAuth } from '../context/AuthContext';
-import { Sparkles, MessageCircle, PlusCircle, Globe, Receipt } from 'lucide-react';
+import { Sparkles, MessageCircle, Receipt } from 'lucide-react';
 import InstagramIcon from './InstagramIcon';
+import { getWhatsAppLink } from '../utils/contact';
 
 export default function AnnouncementBar() {
-  const { currency, setCurrency, setIsAtelierModalOpen, openOrdersAdmin } = useShop();
+  const { openAdminConsole, openOrdersAdmin } = useShop();
   const { isAdmin } = useAuth();
 
   return (
@@ -16,21 +17,21 @@ export default function AnnouncementBar() {
           {isAdmin && (
             <>
               <button 
-                onClick={() => setIsAtelierModalOpen(true)}
+                onClick={openAdminConsole}
                 className="atelier-btn"
-                title="Manage Products, Inventory & Pricing"
+                title="Manage products, stock and prices"
               >
                 <Sparkles size={13} className="text-gold" />
-                <span>Admin Console</span>
+                <span>Products</span>
               </button>
 
               <button 
                 onClick={openOrdersAdmin}
                 className="atelier-btn"
-                title="Check transactions succeeded, failed, and customer orders"
+                title="View orders and payments"
               >
                 <Receipt size={13} />
-                <span>Orders Ledger</span>
+                <span>Orders</span>
               </button>
             </>
           )}
@@ -49,29 +50,14 @@ export default function AnnouncementBar() {
 
           {/* WhatsApp Stylist */}
           <a 
-            href="https://wa.me/?text=Hi%20Aprajita,%20I'm%20exploring%20Saak%20and%20would%20love%20some%20styling%20advice!" 
+            href={getWhatsAppLink("Hi Aprajita, I'm exploring Saak and would love some styling advice!")}
             target="_blank" 
             rel="noopener noreferrer"
             className="whatsapp-link"
           >
             <MessageCircle size={13} />
-            <span>Stylist WhatsApp</span>
+            <span>WhatsApp us</span>
           </a>
-
-          {/* Currency Toggle */}
-          <div className="currency-selector">
-            <Globe size={13} />
-            <select 
-              value={currency} 
-              onChange={(e) => setCurrency(e.target.value)}
-              className="currency-select"
-            >
-              <option value="INR">INR (₹)</option>
-              <option value="USD">USD ($)</option>
-              <option value="GBP">GBP (£)</option>
-              <option value="AED">AED (AED)</option>
-            </select>
-          </div>
         </div>
       </div>
 
@@ -79,7 +65,7 @@ export default function AnnouncementBar() {
         .announcement-bar {
           background-color: var(--text-primary);
           color: var(--bg-primary);
-          font-size: 11px;
+          font-size: var(--text-xs);
           letter-spacing: 0.04em;
           border-bottom: 1px solid rgba(197, 160, 89, 0.3);
           position: relative;
@@ -107,7 +93,7 @@ export default function AnnouncementBar() {
           border: 1px solid rgba(197, 160, 89, 0.4);
           color: var(--accent-gold-light);
           padding: 3px 9px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           border-radius: 2px;
           display: flex;
           align-items: center;
@@ -142,25 +128,6 @@ export default function AnnouncementBar() {
         .whatsapp-link:hover {
           color: #25D366;
         }
-        .currency-selector {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          color: rgba(250, 246, 239, 0.8);
-        }
-        .currency-select {
-          background: transparent;
-          color: #FAF6EF;
-          border: none;
-          font-size: 11px;
-          font-family: inherit;
-          cursor: pointer;
-          outline: none;
-        }
-        .currency-select option {
-          background: var(--text-primary);
-          color: #FAF6EF;
-        }
         @media (max-width: 650px) {
           .announcement-content {
             padding-top: 5px;
@@ -185,7 +152,7 @@ export default function AnnouncementBar() {
             display: none;
           }
           .whatsapp-link span {
-            font-size: 10px;
+            font-size: var(--text-xs);
           }
         }
       `}</style>

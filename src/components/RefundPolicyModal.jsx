@@ -1,24 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
+import { useOverlay } from '../hooks/useOverlay';
 import { 
-  X, ShieldCheck, RotateCcw, AlertCircle, Camera, Video, 
-  Mail, MessageCircle, Clock, Package, Sparkles, CheckCircle2, ChevronRight 
+  X, ShieldCheck, AlertCircle, Camera, Video, 
+  Clock, Sparkles, ChevronRight 
 } from 'lucide-react';
 
 export default function RefundPolicyModal() {
   const { isPolicyModalOpen, setIsPolicyModalOpen } = useShop();
   const [activeSection, setActiveSection] = useState('all');
 
-  // Close on Escape key
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isPolicyModalOpen) {
-        setIsPolicyModalOpen(false);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPolicyModalOpen, setIsPolicyModalOpen]);
+  // Escape to close + background scroll lock
+  useOverlay(isPolicyModalOpen, () => setIsPolicyModalOpen(false));
 
   if (!isPolicyModalOpen) return null;
 
@@ -44,11 +37,11 @@ export default function RefundPolicyModal() {
           <div className="header-meta">
             <div className="policy-badge">
               <ShieldCheck size={14} className="text-gold" />
-              <span>SAAK • CLIENT ASSURANCE</span>
+              <span>Our policy</span>
             </div>
-            <h2 id="policy-modal-title" className="policy-title">Returns, Exchanges &amp; Refunds</h2>
+            <h2 id="policy-modal-title" className="policy-title">Returns, exchanges &amp; refunds</h2>
             <p className="policy-intro-quote">
-              "At SAAK by Aprajita, each piece is chosen with care. We want you to love your purchase, so please review our policy before placing an order."
+              We want you to love what you buy. Please read this before you order.
             </p>
           </div>
 
@@ -56,7 +49,7 @@ export default function RefundPolicyModal() {
             type="button"
             className="modal-close-btn policy-close-btn"
             onClick={() => setIsPolicyModalOpen(false)}
-            aria-label="Close Returns Policy"
+            aria-label="Close returns policy"
           >
             <X size={20} />
           </button>
@@ -76,7 +69,7 @@ export default function RefundPolicyModal() {
             className={`policy-nav-chip ${activeSection === 'sec-unboxing' ? 'active' : ''}`}
             onClick={() => scrollToSection('sec-unboxing')}
           >
-            2. Unboxing Video
+            2. Unboxing video
           </button>
           <button 
             type="button" 
@@ -97,14 +90,14 @@ export default function RefundPolicyModal() {
             className={`policy-nav-chip ${activeSection === 'sec-shipping' ? 'active' : ''}`}
             onClick={() => scrollToSection('sec-shipping')}
           >
-            5. Return Shipping
+            5. Return shipping
           </button>
           <button 
             type="button" 
             className={`policy-nav-chip ${activeSection === 'sec-variations' ? 'active' : ''}`}
             onClick={() => scrollToSection('sec-variations')}
           >
-            6. Handloom Nuances
+            6. Handloom variations
           </button>
           <button 
             type="button" 
@@ -118,7 +111,7 @@ export default function RefundPolicyModal() {
             className={`policy-nav-chip ${activeSection === 'sec-contact' ? 'active' : ''}`}
             onClick={() => scrollToSection('sec-contact')}
           >
-            8. Contact Support
+            8. Contact us
           </button>
         </div>
 
@@ -128,20 +121,20 @@ export default function RefundPolicyModal() {
           <section id="sec-eligibility" className="policy-section">
             <div className="section-head">
               <span className="section-num">01</span>
-              <h3 className="section-heading">Return Eligibility</h3>
+              <h3 className="section-heading">What can be returned</h3>
             </div>
             <ul className="policy-bullets">
               <li>
-                <strong>Change of Mind:</strong> Returns for a change of mind, colour preference or styling preference are not accepted on standard saree orders.
+                <strong>Change of mind:</strong> We don't accept returns on standard saree orders for a change of mind, colour or style.
               </li>
               <li>
-                <strong>Damage or Defect Coverage:</strong> If you receive a damaged, defective, incorrect or materially misdescribed product, please contact us within <strong>48 hours of delivery</strong>.
+                <strong>Damaged or wrong item:</strong> If your order is damaged, defective, wrong or not as described, contact us within <strong>48 hours of delivery</strong>.
               </li>
               <li>
-                <strong>Resolution Pathway:</strong> Eligible issues will be reviewed and resolved through an appropriate replacement, exchange, repair or refund, as applicable.
+                <strong>What we'll do:</strong> We'll review it and offer a replacement, exchange, repair or refund, as fits.
               </li>
               <li>
-                <strong>Product Condition:</strong> Items that have been worn, washed, altered, stained, or damaged after delivery may not qualify for a return unless the issue is due to an original defect or applicable law requires otherwise.
+                <strong>Condition:</strong> Items worn, washed, altered, stained or damaged after delivery may not qualify, unless the fault was there from the start or the law requires otherwise.
               </li>
             </ul>
           </section>
@@ -150,38 +143,38 @@ export default function RefundPolicyModal() {
           <section id="sec-unboxing" className="policy-section highlight-box">
             <div className="section-head">
               <span className="section-num">02</span>
-              <h3 className="section-heading">Unboxing &amp; Reporting an Issue</h3>
+              <h3 className="section-heading">Reporting a problem</h3>
             </div>
             <p className="policy-lead-text">
-              For a smooth and swift resolution, please follow these simple steps upon receiving your consignment:
+              When your parcel arrives, please:
             </p>
             <div className="unboxing-steps-grid">
               <div className="unboxing-card">
                 <div className="unboxing-icon-bubble">
                   <Video size={18} />
                 </div>
-                <h4>1. Record Video</h4>
-                <p>Record a continuous unboxing video showing the sealed parcel and the product unpackaging.</p>
+                <h4>1. Record a video</h4>
+                <p>Film the sealed parcel being opened, in one go.</p>
               </div>
               <div className="unboxing-card">
                 <div className="unboxing-icon-bubble">
                   <Camera size={18} />
                 </div>
-                <h4>2. Capture Photos</h4>
-                <p>Photograph any visible damage, weave flaw, or incorrect item clearly in natural light.</p>
+                <h4>2. Take photos</h4>
+                <p>Photograph any damage, flaw or wrong item in good light.</p>
               </div>
               <div className="unboxing-card">
                 <div className="unboxing-icon-bubble">
                   <Clock size={18} />
                 </div>
-                <h4>3. Notify in 48 Hours</h4>
-                <p>Contact our support team within 48 hours of delivery with your Order # and video/photo proof.</p>
+                <h4>3. Tell us within 48 hours</h4>
+                <p>Send your order number and the video or photos within 48 hours of delivery.</p>
               </div>
             </div>
             <div className="packaging-note">
               <AlertCircle size={14} className="text-gold" />
               <span>
-                Please retain the original packaging until your concern has been resolved. Missing an unboxing video will not automatically remove any statutory rights you hold under applicable law.
+                Keep the original packaging until we've sorted it out. Not having a video doesn't remove your legal rights.
               </span>
             </div>
           </section>
@@ -193,10 +186,10 @@ export default function RefundPolicyModal() {
               <h3 className="section-heading">Exchanges</h3>
             </div>
             <p className="section-para">
-              Exchanges for a change of mind or colour preference are not routinely offered. However, we will assist with eligible cases involving defective, damaged, incorrect or materially misdescribed products.
+              We don't usually exchange for a change of mind or colour. We will help if your item is damaged, defective, wrong or not as described.
             </p>
             <p className="section-para">
-              Any exchange is subject to product availability in our studio. If a suitable replacement is unavailable, we will discuss an appropriate resolution, including a refund where applicable.
+              Exchanges depend on stock. If we can't replace it, we'll work out another option with you, including a refund where it applies.
             </p>
           </section>
 
@@ -207,10 +200,10 @@ export default function RefundPolicyModal() {
               <h3 className="section-heading">Refunds</h3>
             </div>
             <p className="section-para">
-              Once an eligible return is approved and the returned product has been received or otherwise verified by our artisans, refunds will be processed to the original payment method wherever possible (UPI or bank account).
+              Once we approve a return and receive or check the item, we refund to your original payment method where possible (UPI or bank account).
             </p>
             <p className="section-para">
-              We aim to initiate approved refunds promptly and within the timeframe required by applicable law. The time taken for the amount to appear in your account may depend on your bank or payment provider.
+              We start approved refunds promptly, within the time the law requires. How fast it shows up depends on your bank.
             </p>
           </section>
 
@@ -218,13 +211,13 @@ export default function RefundPolicyModal() {
           <section id="sec-shipping" className="policy-section">
             <div className="section-head">
               <span className="section-num">05</span>
-              <h3 className="section-heading">Return Shipping</h3>
+              <h3 className="section-heading">Return shipping</h3>
             </div>
             <p className="section-para">
-              If the return is due to a confirmed defect, damage, incorrect item or a material mismatch with the product description, <strong>SAAK by Aprajita will arrange or cover reasonable return shipping</strong>.
+              If the item was damaged, defective, wrong or not as described, <strong>we'll arrange or pay for reasonable return shipping</strong>.
             </p>
             <p className="section-para">
-              For any other return or exchange that we voluntarily approve, we will confirm the applicable shipping arrangements and costs with you before proceeding.
+              For any other return or exchange we agree to, we'll confirm shipping and costs with you first.
             </p>
           </section>
 
@@ -232,13 +225,13 @@ export default function RefundPolicyModal() {
           <section id="sec-variations" className="policy-section">
             <div className="section-head">
               <span className="section-num">06</span>
-              <h3 className="section-heading">Colour &amp; Handloom Variations</h3>
+              <h3 className="section-heading">Colour and handloom variations</h3>
             </div>
             <p className="section-para">
-              Handloom fabrics may have minor variations in weave, texture, motifs or finish that represent the authentic touch of artisanal craftsmanship. Product colours can also appear slightly different depending on studio lighting, photography and screen settings.
+              Handloom fabric can vary slightly in weave, texture or finish — that's the mark of handwork. Colours may also look a little different on your screen.
             </p>
             <p className="section-para">
-              Such minor variations are inherent to handcrafted textiles and are not necessarily defects. However, this does not exclude remedies where a product is materially different from its description or images.
+              Small variations like these aren't defects. But if an item is clearly different from its description or photos, you're still covered.
             </p>
           </section>
 
@@ -246,10 +239,10 @@ export default function RefundPolicyModal() {
           <section id="sec-cancellations" className="policy-section">
             <div className="section-head">
               <span className="section-num">07</span>
-              <h3 className="section-heading">Order Cancellations</h3>
+              <h3 className="section-heading">Cancellations</h3>
             </div>
             <p className="section-para">
-              Please contact us as soon as possible if you need to cancel an order. Cancellation depends on whether the order has already been processed, dispatched or specially prepared (such as bespoke color dying or complimentary fall &amp; pico tailoring). Nothing in this policy limits any cancellation or refund rights available under applicable law.
+              Need to cancel? Contact us as soon as you can. It depends on whether your order is already being made, shipped or customised (like custom dyeing or fall &amp; pico). This policy doesn't limit your legal rights.
             </p>
           </section>
 
@@ -257,16 +250,16 @@ export default function RefundPolicyModal() {
           <section id="sec-contact" className="policy-section contact-card">
             <div className="section-head">
               <span className="section-num">08</span>
-              <h3 className="section-heading">Contact Us &amp; Support</h3>
+              <h3 className="section-heading">Contact us</h3>
             </div>
             <p className="section-para">
-              For return, exchange or refund assistance, our dedicated support team is here to support you:
+              For help with a return, exchange or refund:
             </p>
 
             <div className="contact-info-grid">
               <div className="contact-line">
                 <span className="contact-label">Brand:</span>
-                <span className="contact-val">SAAK by Aprajita</span>
+                <span className="contact-val">Saak by Aprajita</span>
               </div>
               <div className="contact-line">
                 <span className="contact-label">Email:</span>
@@ -287,7 +280,7 @@ export default function RefundPolicyModal() {
 
             <div className="order-num-tip">
               <Sparkles size={13} className="text-gold" />
-              <span>Please include your <strong>Order Reference # (e.g. #SAAK-XXXXXX)</strong> in all correspondence so we can assist you promptly.</span>
+              <span>Please include your <strong>order number (e.g. #SAAK-XXXXXX)</strong> so we can help quickly.</span>
             </div>
           </section>
         </div>
@@ -297,7 +290,7 @@ export default function RefundPolicyModal() {
           <div className="footer-left">
             <span className="reassurance-text">
               <ShieldCheck size={14} className="text-gold" />
-              <span>Insured delivery with signature verification</span>
+              <span>Insured delivery</span>
             </span>
           </div>
           <div className="footer-right">
@@ -306,7 +299,7 @@ export default function RefundPolicyModal() {
               onClick={() => setIsPolicyModalOpen(false)}
               className="btn btn-primary policy-done-btn"
             >
-              <span>Understood • Return to Order</span>
+              <span>Got it</span>
               <ChevronRight size={14} />
             </button>
           </div>
@@ -374,7 +367,7 @@ export default function RefundPolicyModal() {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 700;
           letter-spacing: 0.14em;
           text-transform: uppercase;
@@ -384,7 +377,7 @@ export default function RefundPolicyModal() {
 
         .policy-title {
           font-family: var(--font-serif);
-          font-size: 26px;
+          font-size: var(--text-2xl);
           font-weight: 600;
           color: var(--text-primary);
           margin-bottom: 8px;
@@ -392,7 +385,7 @@ export default function RefundPolicyModal() {
         }
 
         .policy-intro-quote {
-          font-size: 13px;
+          font-size: var(--text-sm);
           line-height: 1.55;
           color: var(--text-secondary);
           font-style: italic;
@@ -418,7 +411,7 @@ export default function RefundPolicyModal() {
           border: 1px solid var(--border-light);
           border-radius: 20px;
           padding: 4px 12px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 500;
           color: var(--text-secondary);
           white-space: nowrap;
@@ -440,7 +433,7 @@ export default function RefundPolicyModal() {
           flex-direction: column;
           gap: 24px;
           color: var(--text-primary);
-          font-size: 13px;
+          font-size: var(--text-sm);
           line-height: 1.6;
         }
 
@@ -462,7 +455,7 @@ export default function RefundPolicyModal() {
         }
         .section-num {
           font-family: var(--font-serif);
-          font-size: 13px;
+          font-size: var(--text-sm);
           font-weight: 700;
           color: var(--accent-terracotta);
           background: #FAF2EA;
@@ -471,7 +464,7 @@ export default function RefundPolicyModal() {
         }
         .section-heading {
           font-family: var(--font-serif);
-          font-size: 17px;
+          font-size: var(--text-lg);
           font-weight: 600;
           color: var(--text-primary);
           margin: 0;
@@ -497,7 +490,7 @@ export default function RefundPolicyModal() {
           top: 0;
           color: var(--accent-terracotta);
           font-weight: bold;
-          font-size: 16px;
+          font-size: var(--text-lg);
         }
 
         .section-para {
@@ -518,7 +511,7 @@ export default function RefundPolicyModal() {
           padding: 18px 20px;
         }
         .policy-lead-text {
-          font-size: 13px;
+          font-size: var(--text-sm);
           color: var(--text-secondary);
           margin-bottom: 14px;
         }
@@ -552,13 +545,13 @@ export default function RefundPolicyModal() {
           margin: 0 auto 8px auto;
         }
         .unboxing-card h4 {
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 700;
           margin-bottom: 4px;
           color: var(--text-primary);
         }
         .unboxing-card p {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-secondary);
           line-height: 1.4;
           margin: 0;
@@ -567,7 +560,7 @@ export default function RefundPolicyModal() {
           display: flex;
           align-items: flex-start;
           gap: 8px;
-          font-size: 11.5px;
+          font-size: var(--text-xs);
           color: var(--text-secondary);
           background: rgba(226, 202, 155, 0.15);
           padding: 8px 12px;
@@ -590,7 +583,7 @@ export default function RefundPolicyModal() {
         .contact-line {
           display: flex;
           gap: 8px;
-          font-size: 13px;
+          font-size: var(--text-sm);
         }
         .contact-label {
           font-weight: 600;
@@ -608,7 +601,7 @@ export default function RefundPolicyModal() {
           display: flex;
           align-items: center;
           gap: 6px;
-          font-size: 11.5px;
+          font-size: var(--text-xs);
           color: var(--text-secondary);
           padding-top: 8px;
           border-top: 1px dashed rgba(0, 0, 0, 0.08);
@@ -627,14 +620,14 @@ export default function RefundPolicyModal() {
           display: flex;
           align-items: center;
           gap: 6px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
         }
         .policy-done-btn {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           padding: 8px 18px;
         }
@@ -658,7 +651,7 @@ export default function RefundPolicyModal() {
             padding: 18px 16px 14px 16px;
           }
           .policy-title {
-            font-size: 20px;
+            font-size: var(--text-xl);
           }
           .policy-nav-strip {
             padding: 8px 14px;

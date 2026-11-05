@@ -1,34 +1,52 @@
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
-import { X, Palette, MessageCircle, Check, ShoppingBag, Sparkles } from 'lucide-react';
+import { getSizeSurcharge } from '../utils/pricing';
+import { X, Palette, MessageCircle, Check, ShoppingBag } from 'lucide-react';
 import InstagramIcon from './InstagramIcon';
+import { useOverlay } from '../hooks/useOverlay';
+import { getWhatsAppLink } from '../utils/contact';
+
+const DEFAULT_SHADES = [
+    { name: 'Sunset Terracotta', hex: '#A34835', description: 'Warm and earthy' },
+    { name: 'Olive Bloom', hex: '#5B664B', description: 'Leaf green with a sheen' },
+    { name: 'Champagne Gold', hex: '#E2CA9B', description: 'Soft and subtle' },
+    { name: 'Lilac Lavender', hex: '#C6B2DC', description: 'Fresh pastel' },
+    { name: 'Powder Sage', hex: '#9EB09E', description: 'Calm, good for day events' },
+    { name: 'Crimson Wine', hex: '#6B2228', description: 'Deep, for evenings' },
+    { name: 'Midnight Obsidian', hex: '#1F1A17', description: 'Bold and modern' },
+    { name: 'Dusty Rose', hex: '#D9A0A0', description: 'Soft blush' }
+];
 
 export default function CustomShadeModal() {
-  const { customShadeProduct, setCustomShadeProduct, addToCart, formatPrice } = useShop();
+  const { customShadeProduct, setCustomShadeProduct } = useShop();
+  useOverlay(Boolean(customShadeProduct), () => setCustomShadeProduct(null));
 
   if (!customShadeProduct) return null;
+  // Keyed so all local state resets when a different product is opened
+  return <ShadeStudio key={customShadeProduct.id} customShadeProduct={customShadeProduct} />;
+}
 
-  const defaultShades = [
-    { name: 'Sunset Terracotta', hex: '#A34835', description: 'Rich earthy glow' },
-    { name: 'Olive Bloom', hex: '#5B664B', description: 'Leaf green metallic sheen' },
-    { name: 'Champagne Gold', hex: '#E2CA9B', description: 'Understated royal luster' },
-    { name: 'Lilac Lavender', hex: '#C6B2DC', description: 'Fresh pastel youth elegance' },
-    { name: 'Powder Sage', hex: '#9EB09E', description: 'Earthy calm day-wedding tone' },
-    { name: 'Crimson Wine', hex: '#6B2228', description: 'Deep cocktail night grandeur' },
-    { name: 'Midnight Obsidian', hex: '#1F1A17', description: 'Dramatic modern monochrome' },
-    { name: 'Dusty Rose', hex: '#D9A0A0', description: 'Soft romantic blush' }
-  ];
+function ShadeStudio({ customShadeProduct }) {
+  const { setCustomShadeProduct, addToCart, formatPrice } = useShop();
+
+  // Prefer the shades configured on the product (what the card advertises)
+  const defaultShades = (customShadeProduct.availableCustomColors?.length > 0)
+    ? customShadeProduct.availableCustomColors.map(c => ({ description: '', ...c }))
+    : DEFAULT_SHADES;
+  const sizeOptions = customShadeProduct.sizeOptions?.length > 0 ? customShadeProduct.sizeOptions : ['Standard'];
+  const itemNoun = customShadeProduct.category === 'blouses' ? 'blouse' : 'saree';
 
   const [selectedShade, setSelectedShade] = useState(defaultShades[0]);
+  const [selectedSize, setSelectedSize] = useState(sizeOptions[0]);
   const [customNote, setCustomNote] = useState('');
   const [isAdded, setIsAdded] = useState(false);
 
   const whatsappMessage = encodeURIComponent(
-    `Hi Aprajita, I am looking at the *${customShadeProduct.name}* on Saak by Aprajita and would love to customize it in the *${selectedShade.name}* shade (${selectedShade.hex}). ${customNote ? `Note: ${customNote}` : ''}`
+    `Hi Aprajita, I am looking at the *${customShadeProduct.name}* (${selectedSize}) on Saak by Aprajita and would love to customize it in the *${selectedShade.name}* shade (${selectedShade.hex}). ${customNote ? `Note: ${customNote}` : ''}`
   );
 
   const handleAddCustomToBag = () => {
-    addToCart(customShadeProduct, 'Custom Shade', selectedShade.name);
+    addToCart(customShadeProduct, selectedSize, selectedShade.name, 1, { customNote: customNote.trim() });
     setIsAdded(true);
     setTimeout(() => {
       setIsAdded(false);
@@ -50,11 +68,11 @@ export default function CustomShadeModal() {
         <div className="shade-modal-header">
           <div className="shade-badge">
             <Palette size={13} className="text-gold" />
-            <span>COLOUR CUSTOMISATION STUDIO</span>
+            <span>Custom colour</span>
           </div>
-          <h2 className="shade-title">Tailor Your Palette</h2>
+          <h2 className="shade-title">Pick your colour</h2>
           <p className="shade-subtitle">
-            Choose your signature shade for the <strong>{customShadeProduct.name}</strong>. Our master dyers will custom weave and finish your saree to your exact vision.
+            Choose a colour for the <strong>{customShadeProduct.name}</strong>. We'll make your {itemNoun} in that shade.
           </p>
         </div>
 
@@ -65,7 +83,7 @@ export default function CustomShadeModal() {
             style={{ backgroundColor: selectedShade.hex }}
           ></div>
           <div className="spotlight-text">
-            <span className="spotlight-tag">Currently Selected Shade:</span>
+            <span className="spotlight-tag">Selected colour:</span>
             <h3 className="spotlight-name" style={{ color: selectedShade.hex }}>{selectedShade.name}</h3>
             <span className="spotlight-desc">{selectedShade.description}</span>
           </div>
@@ -93,9 +111,23 @@ export default function CustomShadeModal() {
           })}
         </div>
 
+        {sizeOptions.length > 1 && (
+          <div className="custom-note-block">
+            <label className="note-label" htmlFor="shade-size-select">Size / finish</label>
+            <select
+              id="shade-size-select"
+              className="note-input"
+              value={selectedSize}
+              onChange={(e) => setSelectedSize(e.target.value)}
+            >
+              {sizeOptions.map(sz => <option key={sz} value={sz}>{sz}</option>)}
+            </select>
+          </div>
+        )}
+
         {/* Custom note / reference */}
         <div className="custom-note-block">
-          <label className="note-label">Have a specific pantone shade or bridesmaid palette?</label>
+          <label className="note-label">Have a specific shade in mind?</label>
           <input 
             type="text" 
             placeholder="e.g., Match my sister's mehendi lehenga / Pantone 18-1438"
@@ -114,22 +146,22 @@ export default function CustomShadeModal() {
             {isAdded ? (
               <>
                 <Check size={15} />
-                <span>Custom Order Added!</span>
+                <span>Added to bag</span>
               </>
             ) : (
               <>
                 <ShoppingBag size={15} />
-                <span>Add with Custom Shade ({formatPrice(customShadeProduct.price)})</span>
+                <span>Add to bag ({formatPrice(customShadeProduct.price + getSizeSurcharge(selectedSize))})</span>
               </>
             )}
           </button>
 
           <a 
-            href={`https://wa.me/?text=${whatsappMessage}`}
+            href={getWhatsAppLink(decodeURIComponent(whatsappMessage))}
             target="_blank" 
             rel="noopener noreferrer"
             className="btn btn-outline-gold whatsapp-shade-btn"
-            title="Chat directly with stylist on WhatsApp"
+            title="Chat with us on WhatsApp"
           >
             <MessageCircle size={15} />
             <span>WhatsApp</span>
@@ -140,7 +172,7 @@ export default function CustomShadeModal() {
             target="_blank" 
             rel="noopener noreferrer"
             className="btn btn-outline insta-shade-btn"
-            title="Direct Message on Instagram @saakbyaprajita"
+            title="Message us on Instagram @saakbyaprajita"
           >
             <InstagramIcon size={15} />
             <span>DM on Instagram</span>
@@ -169,19 +201,19 @@ export default function CustomShadeModal() {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 700;
           letter-spacing: 0.12em;
           color: var(--accent-gold);
           margin-bottom: 8px;
         }
         .shade-title {
-          font-size: 26px;
+          font-size: var(--text-2xl);
           color: var(--text-primary);
           margin-bottom: 8px;
         }
         .shade-subtitle {
-          font-size: 13px;
+          font-size: var(--text-sm);
           color: var(--text-secondary);
           line-height: 1.5;
         }
@@ -209,18 +241,18 @@ export default function CustomShadeModal() {
           flex-direction: column;
         }
         .spotlight-tag {
-          font-size: 10px;
+          font-size: var(--text-xs);
           text-transform: uppercase;
           letter-spacing: 0.08em;
           color: var(--text-muted);
         }
         .spotlight-name {
           font-family: var(--font-serif);
-          font-size: 20px;
+          font-size: var(--text-xl);
           font-weight: 600;
         }
         .spotlight-desc {
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: var(--text-secondary);
         }
         .palette-grid {
@@ -260,7 +292,7 @@ export default function CustomShadeModal() {
           justify-content: center;
         }
         .tile-name {
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 600;
           color: var(--text-primary);
           text-align: center;
@@ -270,7 +302,7 @@ export default function CustomShadeModal() {
         }
         .note-label {
           display: block;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           color: var(--text-primary);
           margin-bottom: 6px;
@@ -278,7 +310,7 @@ export default function CustomShadeModal() {
         .note-input {
           width: 100%;
           padding: 10px 14px;
-          font-size: 13px;
+          font-size: var(--text-sm);
           font-family: inherit;
           border: 1px solid var(--border-light);
           border-radius: 3px;
@@ -295,18 +327,18 @@ export default function CustomShadeModal() {
         .shade-add-btn {
           flex: 1.2;
           padding: 12px;
-          font-size: 13px;
+          font-size: var(--text-sm);
         }
         .whatsapp-shade-btn {
           flex: 0.8;
           padding: 12px;
-          font-size: 13px;
+          font-size: var(--text-sm);
           text-decoration: none;
         }
         .insta-shade-btn {
           flex: 0.9;
           padding: 12px;
-          font-size: 13px;
+          font-size: var(--text-sm);
           text-decoration: none;
           color: var(--accent-terracotta);
           border-color: rgba(163, 72, 53, 0.3);

@@ -1,6 +1,9 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useShop } from '../context/ShopContext';
-import { X, Heart, ShoppingBag, Trash2, ArrowRight, Eye, Sparkles } from 'lucide-react';
+import { useOverlay } from '../hooks/useOverlay';
+import { requiresSizeChoice } from '../utils/pricing';
+import { X, Heart, ShoppingBag, Trash2, ArrowRight, Eye } from 'lucide-react';
+import OfferPrice from './OfferPrice';
 
 export default function WishlistDrawer() {
   const { 
@@ -15,39 +18,31 @@ export default function WishlistDrawer() {
     setIsCartOpen 
   } = useShop();
 
-  // Close on Escape key press
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isWishlistOpen) {
-        setIsWishlistOpen(false);
-      }
-    };
-    if (isWishlistOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
-    };
-  }, [isWishlistOpen, setIsWishlistOpen]);
+  // Escape to close + background scroll lock
+  useOverlay(isWishlistOpen, () => setIsWishlistOpen(false));
 
   if (!isWishlistOpen) return null;
 
   const wishlistedProducts = products.filter(p => wishlist.includes(p.id));
   const totalWishlistValue = wishlistedProducts.reduce((sum, p) => sum + (p.price || 0), 0);
 
+  // Fitted pieces (blouses / sets) need a size, so they can't be moved blindly
+  const readyToMove = wishlistedProducts.filter(p => !requiresSizeChoice(p));
+  const needsSizeCount = wishlistedProducts.length - readyToMove.length;
+
   const handleMoveAllToBag = () => {
-    wishlistedProducts.forEach(product => {
+    readyToMove.forEach(product => {
       addToCart(product);
       toggleWishlist(product.id);
     });
-    setIsWishlistOpen(false);
+    if (needsSizeCount === 0) {
+      setIsWishlistOpen(false);
+    }
     setIsCartOpen(true);
   };
 
   const handleClearWishlist = () => {
-    if (window.confirm('Remove all saved creations from your wishlist?')) {
+    if (window.confirm('Remove everything from your wishlist?')) {
       wishlistedProducts.forEach(product => toggleWishlist(product.id));
     }
   };
@@ -84,7 +79,7 @@ export default function WishlistDrawer() {
               <Heart size={16} fill="var(--accent-terracotta)" color="var(--accent-terracotta)" />
             </div>
             <div>
-              <h3 className="wishlist-title">Curated Wishlist</h3>
+              <h3 className="wishlist-title">Wishlist</h3>
               <span className="wishlist-count-text">
                 {wishlist.length} {wishlist.length === 1 ? 'saved piece' : 'saved pieces'}
               </span>
@@ -93,8 +88,8 @@ export default function WishlistDrawer() {
           <button 
             className="wishlist-close-btn"
             onClick={() => setIsWishlistOpen(false)}
-            aria-label="Close Wishlist"
-            title="Close Wishlist (Esc)"
+            aria-label="Close wishlist"
+            title="Close (Esc)"
           >
             <X size={20} />
           </button>
@@ -107,15 +102,15 @@ export default function WishlistDrawer() {
               <div className="empty-wishlist-halo">
                 <Heart size={38} strokeWidth={1.5} className="empty-heart-icon" />
               </div>
-              <h4 className="empty-title">Your Wishlist is Empty</h4>
+              <h4 className="empty-title">Your wishlist is empty</h4>
               <p className="empty-desc">
-                Save your favourite fluid tissue sarees, sculpted zardozi corsets, and curated festive duos here to review anytime.
+                Tap the heart on any piece to save it here.
               </p>
               <button 
                 onClick={handleExploreCatalog}
                 className="btn btn-primary explore-catalog-btn"
               >
-                <span>Discover All Creations</span>
+                <span>Start shopping</span>
                 <ArrowRight size={14} />
               </button>
             </div>
@@ -124,14 +119,14 @@ export default function WishlistDrawer() {
               {/* Quick Actions Strip */}
               <div className="wishlist-actions-bar">
                 <span className="wishlist-subtotal-hint">
-                  Total Value: <strong>{formatPrice(totalWishlistValue)}</strong>
+                  Total: <strong>{formatPrice(totalWishlistValue)}</strong>
                 </span>
                 <button 
                   onClick={handleClearWishlist}
                   className="wishlist-clear-link"
                   title="Remove all items from wishlist"
                 >
-                  Clear All
+                  Clear all
                 </button>
               </div>
 
@@ -144,7 +139,7 @@ export default function WishlistDrawer() {
                       <div 
                         className="wishlist-item-thumb-wrapper"
                         onClick={() => handleViewProduct(product)}
-                        title="Click to view full creation details"
+                        title="View details"
                       >
                         <img 
                           src={thumb} 
@@ -161,14 +156,14 @@ export default function WishlistDrawer() {
                           <h4 
                             className="wishlist-item-name"
                             onClick={() => handleViewProduct(product)}
-                            title="Click to view creation details"
+                            title="View details"
                           >
                             {product.name}
                           </h4>
                           <button 
                             onClick={() => toggleWishlist(product.id)}
                             className="item-remove-btn"
-                            title="Remove from Wishlist"
+                            title="Remove from wishlist"
                             aria-label={`Remove ${product.name} from wishlist`}
                           >
                             <Trash2 size={13} />
@@ -176,42 +171,43 @@ export default function WishlistDrawer() {
                         </div>
 
                         <div className="item-meta-strip">
-                          <span className="wishlist-spec-pill">{product.fabric || 'Artisanal Weave'}</span>
+                          <span className="wishlist-spec-pill">{product.fabric || 'Handwoven'}</span>
                           {product.category === 'sets' && (
-                            <span className="wishlist-spec-pill duo-tag">Set Privilege (Save 10%)</span>
+                            <span className="wishlist-spec-pill duo-tag">Duo set</span>
                           )}
                           {product.isCustomColorAvailable && (
-                            <span className="wishlist-spec-pill custom-color-tag">Custom Shades Available</span>
+                            <span className="wishlist-spec-pill custom-color-tag">Custom colours available</span>
                           )}
                         </div>
 
                         <div className="item-bottom-row">
                           <div className="wishlist-price-tag">
-                            <span className="current-price">{formatPrice(product.price)}</span>
-                            {product.originalPrice && product.originalPrice > product.price && (
-                              <span className="original-price">{formatPrice(product.originalPrice)}</span>
-                            )}
+                            <OfferPrice className="current-price" price={product.price} basePrice={product.basePrice} />
                           </div>
 
                           <div className="wishlist-item-cta-group">
                             <button 
                               onClick={() => handleViewProduct(product)}
                               className="btn btn-outline quick-view-btn"
-                              title="Quick View Details"
+                              title="View details"
                             >
                               <Eye size={12} />
                               <span>View</span>
                             </button>
                             <button 
                               onClick={() => {
+                                if (requiresSizeChoice(product)) {
+                                  handleViewProduct(product);
+                                  return;
+                                }
                                 addToCart(product);
                                 toggleWishlist(product.id);
                               }}
                               className="btn btn-primary move-to-bag-btn"
-                              title="Move this piece into your Shopping Bag"
+                              title={requiresSizeChoice(product) ? 'Choose your size' : 'Move to bag'}
                             >
                               <ShoppingBag size={12} />
-                              <span>Move to Bag</span>
+                              <span>{requiresSizeChoice(product) ? 'Choose size' : 'Move to bag'}</span>
                             </button>
                           </div>
                         </div>
@@ -228,21 +224,30 @@ export default function WishlistDrawer() {
         {wishlistedProducts.length > 0 && (
           <div className="wishlist-footer">
             <div className="wishlist-summary-row">
-              <span className="summary-label">Wishlist Estimated Total:</span>
+              <span className="summary-label">Total</span>
               <span className="summary-val">{formatPrice(totalWishlistValue)}</span>
             </div>
-            <button 
-              onClick={handleMoveAllToBag}
-              className="btn btn-primary move-all-btn"
-            >
-              <ShoppingBag size={15} />
-              <span>Move All to Shopping Bag ({wishlistedProducts.length})</span>
-            </button>
+            {readyToMove.length > 0 && (
+              <button 
+                onClick={handleMoveAllToBag}
+                className="btn btn-primary move-all-btn"
+              >
+                <ShoppingBag size={15} />
+                <span>
+                  {needsSizeCount > 0 ? `Move ${readyToMove.length} ${readyToMove.length === 1 ? "piece" : "pieces"} to bag` : `Move all to bag (${readyToMove.length})`}
+                </span>
+              </button>
+            )}
+            {needsSizeCount > 0 && (
+              <p className="wishlist-size-note">
+                {needsSizeCount} fitted {needsSizeCount === 1 ? 'piece needs' : 'pieces need'} a size — tap “Choose size” on {needsSizeCount === 1 ? 'it' : 'each'}.
+              </p>
+            )}
             <button 
               onClick={handleExploreCatalog}
               className="btn btn-outline continue-btn"
             >
-              Continue Exploring Catalog
+              Keep shopping
             </button>
           </div>
         )}
@@ -310,13 +315,13 @@ export default function WishlistDrawer() {
         }
         .wishlist-title {
           font-family: var(--font-serif, Georgia, serif);
-          font-size: 20px;
+          font-size: var(--text-xl);
           margin: 0;
           color: var(--text-dark, #1F1A17);
           font-weight: 500;
         }
         .wishlist-count-text {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted, #7A726D);
           letter-spacing: 0.04em;
           text-transform: uppercase;
@@ -369,12 +374,12 @@ export default function WishlistDrawer() {
         }
         .empty-title {
           font-family: var(--font-serif, Georgia, serif);
-          font-size: 20px;
+          font-size: var(--text-xl);
           margin: 0 0 8px 0;
           color: var(--text-dark, #1F1A17);
         }
         .empty-desc {
-          font-size: 13px;
+          font-size: var(--text-sm);
           line-height: 1.5;
           color: var(--text-muted, #7A726D);
           margin: 0 0 24px 0;
@@ -385,7 +390,7 @@ export default function WishlistDrawer() {
           align-items: center;
           gap: 8px;
           padding: 12px 24px;
-          font-size: 13px;
+          font-size: var(--text-sm);
         }
         .wishlist-actions-bar {
           display: flex;
@@ -394,7 +399,7 @@ export default function WishlistDrawer() {
           margin-bottom: 16px;
           padding-bottom: 12px;
           border-bottom: 1px solid var(--border-light, #EFEAE1);
-          font-size: 12px;
+          font-size: var(--text-xs);
         }
         .wishlist-subtotal-hint {
           color: var(--text-muted, #7A726D);
@@ -406,7 +411,7 @@ export default function WishlistDrawer() {
         .wishlist-clear-link {
           background: none;
           border: none;
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted, #7A726D);
           text-decoration: underline;
           cursor: pointer;
@@ -478,7 +483,7 @@ export default function WishlistDrawer() {
         }
         .wishlist-item-name {
           font-family: var(--font-serif, Georgia, serif);
-          font-size: 15px;
+          font-size: var(--text-base);
           color: var(--text-dark, #1F1A17);
           margin: 0;
           line-height: 1.3;
@@ -506,7 +511,7 @@ export default function WishlistDrawer() {
           margin: 4px 0 8px 0;
         }
         .wishlist-spec-pill {
-          font-size: 10px;
+          font-size: var(--text-xs);
           background: #FAF6EF;
           border: 1px solid var(--border-light, #EFEAE1);
           padding: 2px 6px;
@@ -538,11 +543,11 @@ export default function WishlistDrawer() {
         }
         .current-price {
           font-weight: 600;
-          font-size: 14px;
+          font-size: var(--text-base);
           color: var(--text-dark, #1F1A17);
         }
         .original-price {
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: var(--text-muted, #7A726D);
           text-decoration: line-through;
         }
@@ -553,17 +558,23 @@ export default function WishlistDrawer() {
         }
         .quick-view-btn {
           padding: 5px 9px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           display: inline-flex;
           align-items: center;
           gap: 4px;
         }
         .move-to-bag-btn {
           padding: 6px 12px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           display: inline-flex;
           align-items: center;
           gap: 5px;
+        }
+        .wishlist-size-note {
+          margin: 0;
+          font-size: var(--text-xs);
+          color: var(--text-muted);
+          text-align: center;
         }
         .wishlist-footer {
           border-top: 1px solid var(--border-light, #EFEAE1);
@@ -580,13 +591,13 @@ export default function WishlistDrawer() {
           margin-bottom: 2px;
         }
         .summary-label {
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: var(--text-muted, #7A726D);
           text-transform: uppercase;
           letter-spacing: 0.05em;
         }
         .summary-val {
-          font-size: 18px;
+          font-size: var(--text-lg);
           font-weight: 700;
           color: var(--accent-terracotta, #A34835);
           font-family: var(--font-serif, Georgia, serif);
@@ -598,12 +609,12 @@ export default function WishlistDrawer() {
           justify-content: center;
           gap: 8px;
           padding: 13px 20px;
-          font-size: 13px;
+          font-size: var(--text-sm);
         }
         .continue-btn {
           width: 100%;
           padding: 10px 16px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           text-align: center;
         }
 

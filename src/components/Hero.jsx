@@ -39,13 +39,13 @@ export default function Hero() {
   };
 
   return (
-    <section className="hero-editorial-opening" aria-label="SAAK Editorial Opening Page">
+    <section className="hero-editorial-opening" aria-label="Saak by Aprajita">
       {/* Background Layer with Original Model & Matching Heritage Architecture from Blob Storage */}
       <div className="hero-slides-layer">
         <div className="hero-bg-slide active">
           <img 
             src={HERO_BLOB_IMAGE_URL} 
-            alt="SAAK by Aprajita — Midnight Black Saree & Sculpted Gold Corset" 
+            alt="Saak by Aprajita — black saree with gold corset" 
             className="hero-slide-image"
             loading="eager"
             fetchPriority="high"
@@ -60,7 +60,7 @@ export default function Hero() {
         <div className="hero-editorial-content">
           {/* Eyebrow Label */}
           <div className="hero-eyebrow-text">
-            <span>TIMELESS INDIAN WEAVES • CONTEMPORARY SILHOUETTES</span>
+            <span>Handwoven sarees • Made for today</span>
           </div>
 
           {/* Main Headline */}
@@ -81,7 +81,7 @@ export default function Hero() {
               onClick={handleExplore}
               className="hero-editorial-btn"
             >
-              <span>EXPLORE THE COLLECTION</span>
+              <span>Shop the collection</span>
               <ArrowRight size={16} className="btn-arrow-icon" />
             </button>
 
@@ -90,10 +90,10 @@ export default function Hero() {
               type="button"
               onClick={handleShopIconicDuo}
               className="hero-duo-quick-tag"
-              title="Shop the Black Crepe & Gold Corset Duo"
+              title="Shop the black crepe and gold corset duo"
             >
               <Sparkles size={13} className="text-gold" />
-              <span>Shop This Look: Black Crepe + Gold Corset</span>
+              <span>Shop this look: black crepe + gold corset</span>
             </button>
           </div>
         </div>
@@ -107,7 +107,7 @@ export default function Hero() {
               <div className="pagination-track-line">
                 <div className="pagination-track-fill" />
               </div>
-              <span className="pagination-label-text">SAAK • SIGNATURE DUO</span>
+              <span className="pagination-label-text">Signature duo</span>
             </div>
           </div>
 
@@ -117,10 +117,10 @@ export default function Hero() {
               type="button" 
               onClick={handleScrollDown} 
               className="hero-scroll-btn"
-              aria-label="Scroll down to explore story"
-              title="Discover Our Story"
+              aria-label="Scroll down to our story"
+              title="Our story"
             >
-              <span className="scroll-hint-text">OUR STORY</span>
+              <span className="scroll-hint-text">Our story</span>
               <ChevronDown size={16} className="scroll-chevron-icon" />
             </button>
           </div>
@@ -202,7 +202,7 @@ export default function Hero() {
         /* Eyebrow */
         .hero-eyebrow-text {
           font-family: var(--font-sans);
-          font-size: 11.5px;
+          font-size: var(--text-xs);
           font-weight: 600;
           letter-spacing: 0.22em;
           text-transform: uppercase;
@@ -254,7 +254,7 @@ export default function Hero() {
           border: 1px solid rgba(255, 255, 255, 0.75);
           color: #FFFFFF;
           font-family: var(--font-sans);
-          font-size: 11.5px;
+          font-size: var(--text-xs);
           font-weight: 600;
           letter-spacing: 0.18em;
           text-transform: uppercase;
@@ -289,7 +289,7 @@ export default function Hero() {
           padding: 12px 18px;
           border-radius: 2px;
           color: #F0EAE1;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 500;
           letter-spacing: 0.04em;
           cursor: pointer;
@@ -333,7 +333,7 @@ export default function Hero() {
 
         .pagination-num-text {
           font-family: var(--font-sans);
-          font-size: 13px;
+          font-size: var(--text-sm);
           font-weight: 700;
           letter-spacing: 0.08em;
           color: #FAF7F2;
@@ -355,7 +355,7 @@ export default function Hero() {
         }
 
         .pagination-label-text {
-          font-size: 11px;
+          font-size: var(--text-xs);
           letter-spacing: 0.16em;
           color: rgba(255, 255, 255, 0.65);
           text-transform: uppercase;
@@ -376,7 +376,7 @@ export default function Hero() {
           align-items: center;
           gap: 6px;
           cursor: pointer;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 600;
           letter-spacing: 0.16em;
           text-transform: uppercase;
@@ -440,16 +440,16 @@ export default function Hero() {
             object-position: 78% center;
           }
           .hero-eyebrow-text {
-            font-size: 10px;
+            font-size: var(--text-xs);
             letter-spacing: 0.16em;
             margin-bottom: 16px;
           }
           .hero-editorial-title {
-            font-size: 34px;
+            font-size: var(--text-3xl);
             margin-bottom: 14px;
           }
           .hero-editorial-tagline {
-            font-size: 20px;
+            font-size: var(--text-xl);
             margin-bottom: 28px;
           }
           .hero-action-row {

@@ -7,7 +7,6 @@ export const initialProducts = [
     category: 'blouses',
     subCategory: 'corset',
     price: 5450,
-    originalPrice: 6200,
     tag: 'Hero Statement Corset',
     tagColor: '#C5A059',
     description: 'A masterpiece of modern Indian corsetry. Structured boned bodice with dense antique gold zardozi, micro-sequins, and intricate threadwork. Features a sculpted sweetheart plunge neckline and slender straps. Acts as the jewelry statement of your ensemble, designed to pair across multiple fluid sarees.',
@@ -37,7 +36,6 @@ export const initialProducts = [
       ]
     },
     recommendedPairings: ['midnight-black-crepe-saree', 'sunset-orange-tissue', 'olive-bloom-tissue', 'seafoam-emerald-tissue', 'sunshine-marigold-tissue', 'pearl-ivory-geometric-tissue'],
-    bundleDiscountPercent: 10,
     inStock: true,
     featured: true
   },
@@ -47,7 +45,6 @@ export const initialProducts = [
     category: 'blouses',
     subCategory: 'blouse',
     price: 3850,
-    originalPrice: 4400,
     tag: 'Essential Minimalist',
     tagColor: '#C5A059',
     description: 'A masterclass in understated elegance. Tailored from premium pure raw silk in warm champagne ivory, featuring a sculpted plunging V-neckline, broad comfortable straps, and neat under-bust darting. Designed as the ultimate versatile companion to contrast and elevate fluid metallic tissue sarees.',
@@ -82,7 +79,6 @@ export const initialProducts = [
       ]
     },
     recommendedPairings: ['midnight-black-crepe-saree', 'sunset-orange-tissue', 'olive-bloom-tissue', 'seafoam-emerald-tissue'],
-    bundleDiscountPercent: 10,
     inStock: true,
     featured: true
   },
@@ -92,7 +88,6 @@ export const initialProducts = [
     category: 'blouses',
     subCategory: 'blouse',
     price: 3950,
-    originalPrice: 4600,
     tag: 'Monochrome Haldi Statement',
     tagColor: '#D49B00',
     description: 'Tailored from pure chanderi raw silk in radiant sunshine marigold. Features an architectural high-neck collar with an artisanal statement bow-tie front and clean-cut sleeves. Perfectly matched in shade and weave with our Sunshine Marigold Saree.',
@@ -121,7 +116,6 @@ export const initialProducts = [
       ]
     },
     recommendedPairings: ['sunshine-marigold-tissue'],
-    bundleDiscountPercent: 10,
     inStock: true,
     featured: true
   },
@@ -131,7 +125,6 @@ export const initialProducts = [
     category: 'blouses',
     subCategory: 'blouse',
     price: 3950,
-    originalPrice: 4650,
     tag: 'Original Runway Pairing',
     tagColor: '#C5A059',
     description: 'The authentic signature pairing shown with our Pearl Ivory Architectural Zari Saree. Tailored from lustrous pure silk blend in soft ivory, accented with fine horizontal metallic gold zari stripes. Features an elegant boat-round neckline, elbow-length sleeves, and structured comfort fit.',
@@ -160,7 +153,6 @@ export const initialProducts = [
       ]
     },
     recommendedPairings: ['pearl-ivory-geometric-tissue'],
-    bundleDiscountPercent: 10,
     inStock: true,
     featured: true
   },
@@ -170,7 +162,6 @@ export const initialProducts = [
     category: 'sarees',
     subCategory: 'crepe',
     price: 3950,
-    originalPrice: 4500,
     tag: 'Pre-Draped Fluid Crepe',
     tagColor: '#1A1614',
     description: 'Sculpted from pure featherlight fluid crepe in deep obsidian black. Falls in effortless, liquid drapes with a modern, sensual minimalist silhouette. Designed to provide high-impact contrast with heavy statement corsets or tailored raw silk blouses.',
@@ -199,7 +190,6 @@ export const initialProducts = [
       ]
     },
     recommendedPairings: ['the-gold-corset', 'the-ivory-raw-silk-blouse'],
-    bundleDiscountPercent: 10,
     inStock: true,
     featured: true
   },
@@ -209,7 +199,6 @@ export const initialProducts = [
     category: 'sarees',
     subCategory: 'tissue',
     price: 4850,
-    originalPrice: 5500,
     tag: 'Custom Shade Available',
     tagColor: '#A34835',
     description: 'Sunset orange tissue saree with a subtle golden sheen, perfect for festive occasions. The crushed metallic weave glints with dual-tone warmth under ambient light, bordered with an antique Banarasi zari weave. Colour customisation available on request.',
@@ -249,7 +238,6 @@ export const initialProducts = [
       ]
     },
     recommendedPairings: ['the-gold-corset', 'the-ivory-raw-silk-blouse'],
-    bundleDiscountPercent: 10,
     inStock: true,
     featured: true
   },
@@ -259,7 +247,6 @@ export const initialProducts = [
     category: 'sarees',
     subCategory: 'tissue',
     price: 4550,
-    originalPrice: 5200,
     tag: 'Bestselling Sheen',
     tagColor: '#5B664B',
     description: 'Leaf green crushed tissue saree illuminated with a delicate golden metallic sheen. Unfolds with airy grace and effortless volume, accented by an intricately woven antique zari border. Lightweight, radiant, and comfortable.',
@@ -292,7 +279,6 @@ export const initialProducts = [
       ]
     },
     recommendedPairings: ['the-gold-corset', 'the-ivory-raw-silk-blouse'],
-    bundleDiscountPercent: 10,
     inStock: true,
     featured: true
   },
@@ -302,7 +288,6 @@ export const initialProducts = [
     category: 'sarees',
     subCategory: 'tissue',
     price: 4750,
-    originalPrice: 5400,
     tag: 'Festive Dual-Tone Weave',
     tagColor: '#2E8B75',
     description: 'Artisanal crushed metallic shimmer tissue saree in layered vertical ombre stripes of turquoise teal, vibrant emerald green, and mint seafoam. Embellished with delicate hand-embroidered gold zari butis and framed by an ornate antique Banarasi floral zari jaal border. Lightweight, luminous, and draped with effortless grace.',
@@ -332,7 +317,6 @@ export const initialProducts = [
       ]
     },
     recommendedPairings: ['the-gold-corset', 'the-ivory-raw-silk-blouse'],
-    bundleDiscountPercent: 10,
     inStock: true,
     featured: true
   },
@@ -342,7 +326,6 @@ export const initialProducts = [
     category: 'sarees',
     subCategory: 'tissue',
     price: 4650,
-    originalPrice: 5200,
     tag: 'Festive Haldi Radiance',
     tagColor: '#D49B00',
     description: 'Radiant sunshine marigold saree handcrafted in fine metallic shimmer tissue and chanderi silk. Woven with subtle translucent alternating vertical and horizontal stripes, finished with delicate gold zari accents and hand-knotted pallu tassels. Luminous, airy, and celebratory.',
@@ -372,7 +355,6 @@ export const initialProducts = [
       ]
     },
     recommendedPairings: ['the-sunshine-marigold-blouse', 'the-gold-corset'],
-    bundleDiscountPercent: 10,
     inStock: true,
     featured: true
   },
@@ -382,7 +364,6 @@ export const initialProducts = [
     category: 'sarees',
     subCategory: 'tissue',
     price: 4950,
-    originalPrice: 5600,
     tag: 'Sculpted Dual-Tone Border',
     tagColor: '#C49A2C',
     description: 'Ethereal translucent pearl ivory organza tissue saree illuminated by delicate handwoven silver and gold floral butis. Grounded by a statement architectural border in mustard yellow and antique gold zari featuring sculptural circular loop chain motifs. Featherlight, structured, and modern.',
@@ -413,7 +394,6 @@ export const initialProducts = [
       ]
     },
     recommendedPairings: ['the-ivory-gold-striped-blouse', 'the-gold-corset'],
-    bundleDiscountPercent: 10,
     inStock: true,
     featured: true
   },
@@ -422,9 +402,8 @@ export const initialProducts = [
     name: 'The Iconic Signature Duo (Black Crepe + Gold Corset)',
     category: 'sets',
     subCategory: 'curated-duo',
-    price: 8460,
-    originalPrice: 9400,
-    tag: 'Save 10% as a Set',
+    price: 9400,
+    tag: 'Styled by Aprajita',
     tagColor: '#8C3B2B',
     description: 'The definitive Saak by Aprajita look: our fluid Black Crepe Pre-Draped Saree paired with the showstopper Sculpted Antique Gold Corset. Minimalist effortless drape meets high-impact royal embellishment.',
     fabric: 'Black Pure Crepe Saree + Raw Silk Gold Zardozi Corset',
@@ -451,7 +430,6 @@ export const initialProducts = [
       ]
     },
     recommendedPairings: [],
-    bundleDiscountPercent: 10,
     inStock: true,
     featured: true
   }

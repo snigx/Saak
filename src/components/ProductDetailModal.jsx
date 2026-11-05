@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useShop } from '../context/ShopContext';
-import { X, Heart, Sparkles, Check, ShoppingBag, ShieldCheck, Ruler, Palette, Edit3, ChevronLeft, ChevronRight, Camera, Layers, RotateCcw } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { useOverlay } from '../hooks/useOverlay';
+import { getSizeSurcharge, requiresSizeChoice } from '../utils/pricing';
+import { X, Heart, Sparkles, Check, ShoppingBag, ShieldCheck, Ruler, Palette, Edit3, Share2, ChevronLeft, ChevronRight, Camera, Layers, RotateCcw } from 'lucide-react';
+import { getDisplayTag } from '../utils/tags';
+import OfferPrice from './OfferPrice';
 
 export default function ProductDetailModal() {
   const { 
@@ -14,18 +19,25 @@ export default function ProductDetailModal() {
     openEditProduct,
     openPolicyModal
   } = useShop();
+  const { isAdmin } = useAuth();
+
+  useOverlay(Boolean(selectedProduct), () => setSelectedProduct(null));
 
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [photoFilterTab, setPhotoFilterTab] = useState('all'); // 'all', 'model', 'flatlay'
   const [selectedSize, setSelectedSize] = useState('Standard');
   const [isAdded, setIsAdded] = useState(false);
+  const [sizeError, setSizeError] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // Automatically reset to the primary On-Muse photo when modal opens or product changes
   useEffect(() => {
     if (selectedProduct) {
       setActivePhotoIndex(0);
       setPhotoFilterTab('all');
-      setSelectedSize(selectedProduct.sizeOptions?.[0] || 'Standard');
+      // Fitted pieces start unselected so shoppers never silently get the first size
+      setSelectedSize(requiresSizeChoice(selectedProduct) ? '' : (selectedProduct.sizeOptions?.[0] || 'Standard'));
+      setSizeError(false);
     }
   }, [selectedProduct?.id]);
 
@@ -38,12 +50,12 @@ export default function ProductDetailModal() {
   const flatlayPhotos = selectedProduct.images?.flatlayPhotos || [selectedProduct.images?.flatlayView, selectedProduct.images?.swatchZoom].filter(Boolean);
 
   const allPhotos = [
-    ...modelPhotos.map((url, idx) => ({ url, type: 'model', label: `On Muse (Look #${idx + 1})` })),
-    ...flatlayPhotos.map((url, idx) => ({ url, type: 'flatlay', label: `Flat-lay & Details (#${idx + 1})` }))
+    ...modelPhotos.map((url, idx) => ({ url, type: 'model', label: `On model (${idx + 1})` })),
+    ...flatlayPhotos.map((url, idx) => ({ url, type: 'flatlay', label: `Fabric detail (${idx + 1})` }))
   ];
 
   // If activePhotoIndex is out of range, fallback
-  const currentPhoto = allPhotos[activePhotoIndex] || allPhotos[0] || { url: selectedProduct.images?.modelView, type: 'model', label: 'On Muse' };
+  const currentPhoto = allPhotos[activePhotoIndex] || allPhotos[0] || { url: selectedProduct.images?.modelView, type: 'model', label: 'On model' };
 
   const visiblePhotos = photoFilterTab === 'all' 
     ? allPhotos 
@@ -60,9 +72,28 @@ export default function ProductDetailModal() {
   };
 
   const handleAddToCart = () => {
+    if (!selectedSize) {
+      setSizeError(true);
+      return;
+    }
     addToCart(selectedProduct, selectedSize);
     setIsAdded(true);
     setTimeout(() => setIsAdded(false), 1500);
+  };
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/product/${encodeURIComponent(selectedProduct.id)}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: selectedProduct.name, text: `${selectedProduct.name} — Saak by Aprajita`, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 1800);
+    } catch {
+      // Share sheet dismissed or clipboard blocked — nothing to do
+    }
   };
 
   const handleOpenCustomShades = () => {
@@ -77,7 +108,7 @@ export default function ProductDetailModal() {
         <button 
           className="modal-close-btn"
           onClick={() => setSelectedProduct(null)}
-          aria-label="Close Modal"
+          aria-label="Close"
         >
           <X size={20} />
         </button>
@@ -92,7 +123,7 @@ export default function ProductDetailModal() {
                 className={`filter-tab-pill ${photoFilterTab === 'all' ? 'active' : ''}`}
                 onClick={() => setPhotoFilterTab('all')}
               >
-                <span>All Views ({allPhotos.length})</span>
+                <span>All ({allPhotos.length})</span>
               </button>
               {modelPhotos.length > 0 && (
                 <button 
@@ -105,7 +136,7 @@ export default function ProductDetailModal() {
                   }}
                 >
                   <Camera size={12} />
-                  <span>On Muse ({modelPhotos.length})</span>
+                  <span>On model ({modelPhotos.length})</span>
                 </button>
               )}
               {flatlayPhotos.length > 0 && (
@@ -119,7 +150,7 @@ export default function ProductDetailModal() {
                   }}
                 >
                   <Layers size={12} />
-                  <span>Flat-lays &amp; Craft ({flatlayPhotos.length})</span>
+                  <span>Fabric ({flatlayPhotos.length})</span>
                 </button>
               )}
             </div>
@@ -139,7 +170,7 @@ export default function ProductDetailModal() {
                     type="button"
                     className="modal-nav-arrow arrow-left"
                     onClick={handlePrevPhoto}
-                    aria-label="Previous Photo"
+                    aria-label="Previous photo"
                     title="Previous photo"
                   >
                     <ChevronLeft size={20} />
@@ -148,7 +179,7 @@ export default function ProductDetailModal() {
                     type="button"
                     className="modal-nav-arrow arrow-right"
                     onClick={handleNextPhoto}
-                    aria-label="Next Photo"
+                    aria-label="Next photo"
                     title="Next photo"
                   >
                     <ChevronRight size={20} />
@@ -158,13 +189,8 @@ export default function ProductDetailModal() {
 
               {/* Top Badges */}
               <div className="viewport-badges-row">
-                {selectedProduct.tag && (
-                  <span 
-                    className="viewport-tag"
-                    style={{ backgroundColor: selectedProduct.tagColor || 'var(--accent-terracotta)' }}
-                  >
-                    {selectedProduct.tag}
-                  </span>
+                {getDisplayTag(selectedProduct.tag) && (
+                  <span className="saak-tag">{getDisplayTag(selectedProduct.tag)}</span>
                 )}
                 
                 {/* Photo Type Indicator */}
@@ -172,12 +198,12 @@ export default function ProductDetailModal() {
                   {currentPhoto.type === 'model' ? (
                     <>
                       <Camera size={11} />
-                      <span>On Muse • {modelPhotos.indexOf(currentPhoto.url) + 1}/{modelPhotos.length}</span>
+                      <span>On model • {modelPhotos.indexOf(currentPhoto.url) + 1}/{modelPhotos.length}</span>
                     </>
                   ) : (
                     <>
                       <Layers size={11} />
-                      <span>Studio Flat-lay • {flatlayPhotos.indexOf(currentPhoto.url) + 1}/{flatlayPhotos.length}</span>
+                      <span>Fabric • {flatlayPhotos.indexOf(currentPhoto.url) + 1}/{flatlayPhotos.length}</span>
                     </>
                   )}
                 </span>
@@ -199,7 +225,7 @@ export default function ProductDetailModal() {
                   >
                     <img src={img.url} alt={img.label} className="thumb-img" />
                     <span className={`thumb-badge ${img.type === 'model' ? 'thumb-badge-model' : 'thumb-badge-flatlay'}`}>
-                      {img.type === 'model' ? 'Muse' : 'Flat-lay'}
+                      {img.type === 'model' ? 'Model' : 'Fabric'}
                     </span>
                   </button>
                 );
@@ -218,12 +244,19 @@ export default function ProductDetailModal() {
             <h2 className="detail-title">{selectedProduct.name}</h2>
 
             <div className="detail-price-box">
-              <span className="detail-price">{formatPrice(selectedProduct.price)}</span>
-              {selectedProduct.originalPrice && (
-                <span className="detail-old-price">{formatPrice(selectedProduct.originalPrice)}</span>
-              )}
-              {selectedProduct.bundleDiscountPercent && (
-                <span className="detail-discount-tag">Save {selectedProduct.bundleDiscountPercent}%</span>
+              <OfferPrice className="detail-price" price={selectedProduct.price} basePrice={selectedProduct.basePrice} />
+              {selectedProduct.offer && (
+                <div className="detail-offer-line">
+                  <span className="saak-tag is-offer">
+                    {selectedProduct.offer.label
+                      ? `${selectedProduct.offer.label} · ${selectedProduct.offer.short}`
+                      : selectedProduct.offer.short}
+                  </span>
+                  <span className="detail-offer-meta">
+                    You save {formatPrice(selectedProduct.offer.saved)}
+                    {selectedProduct.offer.endsLabel && ` · ${selectedProduct.offer.endsLabel}`}
+                  </span>
+                </div>
               )}
             </div>
 
@@ -232,21 +265,21 @@ export default function ProductDetailModal() {
             {/* Craft & Technical Highlights */}
             <div className="specs-list">
               <div className="spec-row">
-                <span className="spec-label">Drape Style:</span>
+                <span className="spec-label">Drape:</span>
                 <span className="spec-val">
                   <strong>{selectedProduct.drapeStyle}</strong>
                 </span>
               </div>
               {selectedProduct.zariWork && (
                 <div className="spec-row">
-                  <span className="spec-label">Zari / Work:</span>
+                  <span className="spec-label">Work:</span>
                   <span className="spec-val">{selectedProduct.zariWork}</span>
                 </div>
               )}
               {selectedProduct.isPadded && (
                 <div className="spec-row">
-                  <span className="spec-label">Tailoring:</span>
-                  <span className="spec-val">In-built padded cups + 2" side margin for easy alteration</span>
+                  <span className="spec-label">Fit:</span>
+                  <span className="spec-val">Padded cups, with 2" side margin to alter</span>
                 </div>
               )}
             </div>
@@ -257,15 +290,15 @@ export default function ProductDetailModal() {
                 <div className="callout-content">
                   <Palette size={16} className="text-gold" />
                   <div>
-                    <strong>Colour Customisation Available</strong>
-                    <p>Have this saree dyed in your personal shade of choice.</p>
+                    <strong>Want another colour?</strong>
+                    <p>We can dye this {selectedProduct.category === 'blouses' ? 'blouse' : 'saree'} in a shade you choose.</p>
                   </div>
                 </div>
                 <button 
                   onClick={handleOpenCustomShades}
                   className="btn btn-outline-gold callout-btn"
                 >
-                  Pick Shade
+                  Pick colour
                 </button>
               </div>
             )}
@@ -274,7 +307,7 @@ export default function ProductDetailModal() {
             {selectedProduct.sizeOptions && (
               <div className="size-selector-block">
                 <div className="size-header">
-                  <span className="size-label">Select Sizing:</span>
+                  <span className="size-label">Size</span>
                   <span className="size-guide-hint">
                     <Ruler size={12} />
                     <span>Free custom sizing available</span>
@@ -285,12 +318,15 @@ export default function ProductDetailModal() {
                     <button
                       key={sz}
                       className={`size-chip ${selectedSize === sz ? 'active' : ''}`}
-                      onClick={() => setSelectedSize(sz)}
+                      onClick={() => { setSelectedSize(sz); setSizeError(false); }}
                     >
                       {sz}
                     </button>
                   ))}
                 </div>
+                {sizeError && (
+                  <p className="size-error-text" role="alert">Please select a size to continue.</p>
+                )}
               </div>
             )}
 
@@ -303,12 +339,12 @@ export default function ProductDetailModal() {
                 {isAdded ? (
                   <>
                     <Check size={16} />
-                    <span>Added to Bag</span>
+                    <span>Added to bag</span>
                   </>
                 ) : (
                   <>
                     <ShoppingBag size={16} />
-                    <span>Add to Bag • {formatPrice(selectedProduct.price)}</span>
+                    <span>Add to bag • {formatPrice(selectedProduct.price + getSizeSurcharge(selectedSize))}</span>
                   </>
                 )}
               </button>
@@ -320,30 +356,41 @@ export default function ProductDetailModal() {
               >
                 <Heart size={18} fill={isWishlisted ? '#A34835' : 'none'} color={isWishlisted ? '#A34835' : '#1F1A17'} />
               </button>
+
+              <button 
+                type="button"
+                onClick={handleShare}
+                className="btn btn-outline detail-wishlist-btn"
+                title={linkCopied ? 'Link copied' : 'Share this piece'}
+                aria-label={linkCopied ? 'Link copied' : 'Share this piece'}
+              >
+                {linkCopied ? <Check size={18} color="#1F1A17" /> : <Share2 size={18} color="#1F1A17" />}
+              </button>
             </div>
 
             {/* Guarantees */}
             <div className="detail-perks">
               <div className="perk-item">
                 <ShieldCheck size={14} className="text-gold" />
-                <span>100% Authentic Handloom / Artisanal Zari</span>
+                <span>Authentic handloom and zari</span>
               </div>
               <div className="perk-item">
                 <Sparkles size={14} className="text-gold" />
-                <span>Complimentary Fall &amp; Pico Stitching Included</span>
+                <span>Free fall &amp; pico stitching</span>
               </div>
               <button 
                 type="button" 
                 onClick={openPolicyModal} 
                 className="perk-item perk-policy-btn"
-                title="View SAAK Returns, Exchanges &amp; Refunds Policy"
+                title="Returns, exchanges &amp; refunds"
               >
                 <RotateCcw size={14} className="text-gold" />
-                <span>Returns &amp; Exchange Policy (48h Coverage)</span>
+                <span>Returns &amp; exchanges (48-hour window)</span>
               </button>
             </div>
 
             {/* Admin Direct Edit */}
+            {isAdmin && (
             <div className="detail-admin-edit-box">
               <button 
                 type="button"
@@ -353,17 +400,23 @@ export default function ProductDetailModal() {
                   openEditProduct(prod);
                 }}
                 className="btn btn-outline detail-edit-btn"
-                title="Open product in Admin Console to update photos, price, or title"
+                title="Edit this product's photos, price or name"
               >
                 <Edit3 size={13} />
-                <span>Edit Product Details &amp; Photos</span>
+                <span>Edit product</span>
               </button>
             </div>
+            )}
           </div>
         </div>
       </div>
 
       <style>{`
+        .size-error-text {
+          margin: 8px 0 0;
+          font-size: var(--text-xs);
+          color: var(--accent-terracotta);
+        }
         .detail-modal {
           background: #FFFFFF;
           border-radius: 4px;
@@ -402,6 +455,13 @@ export default function ProductDetailModal() {
           gap: 36px;
           padding: 32px;
         }
+        /* Grid columns must be able to shrink below the thumbnail strip's width */
+        .detail-grid > * {
+          min-width: 0;
+        }
+        .detail-modal {
+          overflow-x: hidden;
+        }
         .detail-gallery-col {
           display: flex;
           flex-direction: column;
@@ -409,7 +469,7 @@ export default function ProductDetailModal() {
         }
         .main-image-viewport {
           position: relative;
-          aspect-ratio: 4/5;
+          aspect-ratio: 2/3; /* tall enough to show the full drape and pallu */
           border-radius: 3px;
           overflow: hidden;
           background: #EAE3D6;
@@ -423,7 +483,7 @@ export default function ProductDetailModal() {
         }
         .viewport-tag {
           color: #FFFFFF;
-          font-size: 10px;
+          font-size: var(--text-xs);
           font-weight: 700;
           padding: 3px 10px;
           border-radius: 2px;
@@ -440,7 +500,7 @@ export default function ProductDetailModal() {
           background: #FAF6EF;
           border: 1px solid var(--border-light);
           padding: 5px 10px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 600;
           border-radius: 14px;
           color: var(--text-secondary);
@@ -461,7 +521,8 @@ export default function ProductDetailModal() {
         }
         .main-image-viewport {
           position: relative;
-          aspect-ratio: 4/5;
+          aspect-ratio: 2/3; /* tall enough to show the full drape and pallu */
+          max-height: 66vh;
           border-radius: 3px;
           overflow: hidden;
           background: #EAE3D6;
@@ -508,7 +569,7 @@ export default function ProductDetailModal() {
         }
         .viewport-tag {
           color: #FFFFFF;
-          font-size: 10px;
+          font-size: var(--text-xs);
           font-weight: 700;
           padding: 3px 9px;
           border-radius: 2px;
@@ -518,7 +579,7 @@ export default function ProductDetailModal() {
           background: rgba(26, 22, 20, 0.82);
           backdrop-filter: blur(4px);
           color: #FFFFFF;
-          font-size: 10px;
+          font-size: var(--text-xs);
           font-weight: 600;
           padding: 3px 9px;
           border-radius: 12px;
@@ -565,7 +626,7 @@ export default function ProductDetailModal() {
           bottom: 5px;
           left: 5px;
           right: 5px;
-          font-size: 8px;
+          font-size: var(--text-xs);
           font-weight: 700;
           text-align: center;
           padding: 2px 0;
@@ -589,40 +650,38 @@ export default function ProductDetailModal() {
           display: flex;
           align-items: center;
           gap: 6px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
         }
         .detail-title {
           font-family: var(--font-serif);
-          font-size: 24px;
+          font-size: var(--text-2xl);
           color: var(--text-primary);
           line-height: 1.25;
         }
         .detail-price-box {
           display: flex;
-          align-items: baseline;
-          gap: 10px;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 8px;
+        }
+        .detail-offer-line {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 6px 10px;
+        }
+        .detail-offer-meta {
+          font-size: var(--text-sm);
+          color: var(--text-secondary);
         }
         .detail-price {
-          font-size: 24px;
+          font-size: var(--text-2xl);
           font-weight: 700;
           color: var(--accent-terracotta);
         }
-        .detail-old-price {
-          font-size: 14px;
-          color: var(--text-muted);
-          text-decoration: line-through;
-        }
-        .detail-discount-tag {
-          font-size: 11px;
-          font-weight: 700;
-          color: #2E7D32;
-          background: rgba(46, 125, 50, 0.1);
-          padding: 2px 8px;
-          border-radius: 2px;
-        }
         .detail-description {
-          font-size: 14px;
+          font-size: var(--text-base);
           color: var(--text-secondary);
           line-height: 1.6;
         }
@@ -634,7 +693,7 @@ export default function ProductDetailModal() {
           background: var(--bg-primary);
           border-radius: 3px;
           border: 1px solid var(--border-subtle);
-          font-size: 12px;
+          font-size: var(--text-xs);
         }
         .spec-row {
           display: flex;
@@ -661,14 +720,14 @@ export default function ProductDetailModal() {
           display: flex;
           align-items: flex-start;
           gap: 10px;
-          font-size: 12px;
+          font-size: var(--text-xs);
         }
         .callout-content p {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-secondary);
         }
         .callout-btn {
-          font-size: 11px;
+          font-size: var(--text-xs);
           padding: 6px 12px;
           white-space: nowrap;
         }
@@ -680,7 +739,7 @@ export default function ProductDetailModal() {
         .size-header {
           display: flex;
           justify-content: space-between;
-          font-size: 12px;
+          font-size: var(--text-xs);
         }
         .size-label {
           font-weight: 600;
@@ -690,7 +749,7 @@ export default function ProductDetailModal() {
           display: flex;
           align-items: center;
           gap: 4px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--accent-terracotta);
         }
         .size-chips-grid {
@@ -702,7 +761,7 @@ export default function ProductDetailModal() {
           background: #FFFFFF;
           border: 1px solid var(--border-light);
           padding: 6px 12px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 500;
           color: var(--text-primary);
           border-radius: 2px;
@@ -725,7 +784,7 @@ export default function ProductDetailModal() {
         .detail-add-btn {
           flex-grow: 1;
           padding: 14px;
-          font-size: 14px;
+          font-size: var(--text-base);
         }
         .detail-wishlist-btn {
           padding: 14px 18px;
@@ -736,7 +795,7 @@ export default function ProductDetailModal() {
           gap: 6px;
           padding-top: 12px;
           border-top: 1px solid var(--border-subtle);
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
         }
         .perk-item {
@@ -772,7 +831,7 @@ export default function ProductDetailModal() {
           align-items: center;
           justify-content: center;
           gap: 6px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 600;
           color: var(--accent-terracotta);
           border-color: rgba(163, 72, 53, 0.3);
@@ -791,18 +850,25 @@ export default function ProductDetailModal() {
           }
         }
         @media (max-width: 600px) {
+          /* Phones: full-screen sheet with the buy button pinned at the bottom */
           .detail-modal {
-            max-height: 94vh;
-            width: 95%;
-            max-width: 95%;
-            margin: auto;
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            max-width: 100%;
+            height: 100dvh;
+            max-height: 100dvh;
+            border-radius: 0;
+            border: none;
+            margin: 0;
           }
           .detail-grid {
             padding: 14px 10px;
             gap: 14px;
           }
           .main-image-viewport {
-            max-height: 48vh;
+            aspect-ratio: 3/4;
+            max-height: 70vh;
             border-radius: 2px;
           }
           .gallery-filter-tabs {
@@ -810,7 +876,7 @@ export default function ProductDetailModal() {
           }
           .filter-tab-pill {
             padding: 4px 8px;
-            font-size: 10px;
+            font-size: var(--text-xs);
           }
           .modal-close-btn {
             top: 8px;
@@ -820,11 +886,11 @@ export default function ProductDetailModal() {
             z-index: 10;
           }
           .detail-title {
-            font-size: 20px;
+            font-size: var(--text-xl);
             line-height: 1.25;
           }
           .detail-price {
-            font-size: 20px;
+            font-size: var(--text-xl);
           }
           .size-pills-row {
             display: flex;
@@ -833,20 +899,25 @@ export default function ProductDetailModal() {
           }
           .size-pill-btn {
             padding: 7px 10px;
-            font-size: 11px;
+            font-size: var(--text-xs);
           }
           .detail-actions {
-            flex-direction: column;
+            position: sticky;
+            bottom: 0;
+            z-index: 5;
             gap: 8px;
+            margin: 8px -10px 0;
+            padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+            background: #FFFFFF;
+            border-top: 1px solid var(--border-light);
           }
-          .modal-add-bag-btn {
-            width: 100%;
-            padding: 13px;
-            font-size: 13px;
+          .detail-add-btn {
+            padding: 14px 10px;
+            font-size: var(--text-sm);
           }
           .detail-wishlist-btn {
-            width: 100%;
-            justify-content: center;
+            padding: 12px 14px;
+            flex-shrink: 0;
           }
         }
       `}</style>

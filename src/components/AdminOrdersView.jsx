@@ -1,14 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useShop } from '../context/ShopContext';
 import { 
-  Check, X, Search, Filter, Eye, Copy, 
-  MessageCircle, ExternalLink, Receipt, Truck, Download, 
-  ShieldCheck, AlertCircle, Clock, PlusCircle, RefreshCw,
-  Trash2, Sparkles, ChevronRight, CheckCheck, Printer,
+  Check, X, Search, Eye, Copy, 
+  MessageCircle, ExternalLink, Receipt, Truck, ShieldCheck, AlertCircle, Clock, PlusCircle, RefreshCw,
+  Trash2, Sparkles, CheckCheck, Printer,
   FileText, Banknote, PhoneCall, Mail, Send, CheckCircle
 } from 'lucide-react';
-import InstagramIcon from './InstagramIcon';
 import { getOutboxEmails } from '../services/emailService';
+import { saveOrderToDb, isTestOrderId } from '../services/ordersService';
+import { isSupabaseConfigured } from '../services/supabaseClient';
+
+// Older orders use 'shipped'; dispatchOrderInDb writes 'dispatched'
+const isShippedStatus = (status) => status === 'shipped' || status === 'dispatched';
+
+// customColor is a plain string in cart items, an object { name, hex } in older/sample orders
+const getColorName = (color) => (typeof color === 'string' ? color : color?.name) || 'Custom colour';
+const getColorHex = (color) => {
+  if (color && typeof color === 'object' && color.hex) return color.hex;
+  if (typeof color === 'string' && /^#[0-9a-f]{3,8}$/i.test(color)) return color;
+  return '#A34835';
+};
+
+const OUTBOX_TYPE_LABELS = {
+  order_placed: '✨ Order Placed',
+  order_confirmed: '💛 Order Confirmed',
+  order_dispatched: '🚚 Dispatch Tracking',
+  order_delivered: '🌸 Order Delivered',
+  auth_otp: '🔑 Verification Code'
+};
+
+const buildTrackingUrl = (courier, trackingNumber) => {
+  const awb = trackingNumber || '12345678';
+  if (courier.includes('BlueDart')) return `https://www.bluedart.com/tracking?trackNumber=${awb}`;
+  if (courier.includes('Delhivery')) return `https://www.delhivery.com/track/package/${awb}`;
+  if (courier.includes('DTDC')) return `https://www.dtdc.in/tracking.asp?strCNNo=${awb}`;
+  if (courier.includes('Speed Post') || courier.includes('India Post')) {
+    return `https://www.indiapost.gov.in/_layouts/15/dpt.cept.tracking/trackconsignment.aspx`;
+  }
+  return `https://www.google.com/search?q=${encodeURIComponent(courier + ' tracking ' + awb)}`;
+};
 
 export default function AdminOrdersView() {
   const { 
@@ -45,10 +75,21 @@ export default function AdminOrdersView() {
   const [trackingNumberInput, setTrackingNumberInput] = useState('');
   const [trackingUrlInput, setTrackingUrlInput] = useState('');
   const [estimatedDeliveryInput, setEstimatedDeliveryInput] = useState('');
-  const [dispatchNotesInput, setDispatchNotesInput] = useState('Fall & pico inspected and hand-stitched. Packaged in signature keepsake box.');
+  const [dispatchNotesInput, setDispatchNotesInput] = useState('Fall & pico hand-stitched and checked. Packed with care.');
   const [sendDispatchEmail, setSendDispatchEmail] = useState(true);
   const [isSubmittingDispatch, setIsSubmittingDispatch] = useState(false);
   const [dispatchToast, setDispatchToast] = useState(null);
+  const toastTimerRef = useRef(null);
+
+  // Single toast timer so an older timeout never closes a newer toast early
+  const showToast = (toast, duration = 5000) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setDispatchToast(toast);
+    toastTimerRef.current = setTimeout(() => {
+      setDispatchToast(null);
+      toastTimerRef.current = null;
+    }, duration);
+  };
 
   // Email Outbox & Preview state
   const [showOutboxModal, setShowOutboxModal] = useState(false);
@@ -57,9 +98,9 @@ export default function AdminOrdersView() {
 
   const [showSimulateModal, setShowSimulateModal] = useState(false);
   const [simData, setSimData] = useState({
-    customerName: 'Kareena Kapoor',
+    customerName: 'Test Customer',
     customerPhone: '+91 98200 11223',
-    customerEmail: 'kareena@saak.in',
+    customerEmail: 'test.customer@example.com',
     city: 'Mumbai',
     state: 'Maharashtra',
     pincode: '400050',
@@ -83,8 +124,18 @@ export default function AdminOrdersView() {
 
   // Status transitions
   const handleMarkSucceeded = async (order) => {
+    const isTest = isTestOrderId(order.id);
+
+    // COD cash collection only settles payment — fulfillment stays as-is and no handcrafting email
+    if (order.payment_method?.includes('COD')) {
+      await updateOrderStatus(order.id, { payment_status: 'succeeded' });
+      showToast({ title: 'COD paid', msg: `Order #${order.id} marked as paid.` });
+      return;
+    }
+
+    let updated = null;
     if (confirmOrder) {
-      await confirmOrder(order.id, `Payment verified by admin on ${new Date().toLocaleDateString('en-IN')}`, true);
+      updated = await confirmOrder(order.id, `Payment verified by admin on ${new Date().toLocaleDateString('en-IN')}`, true);
     } else {
       updateOrderStatus(order.id, {
         payment_status: 'succeeded',
@@ -96,18 +147,20 @@ export default function AdminOrdersView() {
       });
     }
     setOutboxEmails(getOutboxEmails());
-    setDispatchToast({
-      title: 'Order Confirmed!',
-      msg: order.customer_email 
-        ? `Payment verified & Order Confirmed email dispatched to ${order.customer_email}!` 
-        : 'Payment verified and marked succeeded.'
-    });
-    setTimeout(() => setDispatchToast(null), 5000);
+    showToast({
+      title: updated?._syncWarning ? 'Order confirmed (not fully saved)' : 'Order confirmed',
+      isWarning: Boolean(updated?._syncWarning),
+      msg: (order.customer_email && !isTest
+        ? `Payment verified. Confirmation email sent to ${order.customer_email}.` 
+        : 'Payment verified.') + (updated?._syncWarning ? ` ${updated._syncWarning}` : '')
+    }, updated?._syncWarning ? 9000 : 5000);
   };
 
   const handleMarkDelivered = async (order) => {
+    const isTest = isTestOrderId(order.id);
+    let updated = null;
     if (deliverOrder) {
-      await deliverOrder(order.id, true);
+      updated = await deliverOrder(order.id, true);
     } else {
       updateOrderStatus(order.id, {
         fulfillment_status: 'delivered',
@@ -115,13 +168,13 @@ export default function AdminOrdersView() {
       });
     }
     setOutboxEmails(getOutboxEmails());
-    setDispatchToast({
-      title: 'Order Delivered!',
-      msg: order.customer_email 
-        ? `Order marked delivered & delivery celebration email dispatched to ${order.customer_email}!` 
-        : 'Order marked delivered.'
-    });
-    setTimeout(() => setDispatchToast(null), 5000);
+    showToast({
+      title: updated?._syncWarning ? 'Order delivered (not fully saved)' : 'Order delivered',
+      isWarning: Boolean(updated?._syncWarning),
+      msg: (order.customer_email && !isTest
+        ? `Marked delivered. Email sent to ${order.customer_email}.` 
+        : 'Marked delivered.') + (updated?._syncWarning ? ` ${updated._syncWarning}` : '')
+    }, updated?._syncWarning ? 9000 : 5000);
   };
 
   const handleConfirmFailed = () => {
@@ -147,7 +200,7 @@ export default function AdminOrdersView() {
     const defaultAwb = existing.trackingNumber || (order.tracking_number ? order.tracking_number.split('#')[1]?.trim() : `BD-${Math.floor(100000 + Math.random() * 900000)}`);
     setCourierPartner(defaultCourier);
     setTrackingNumberInput(defaultAwb);
-    setTrackingUrlInput(existing.trackingUrl || `https://www.bluedart.com/tracking?trackNumber=${defaultAwb}`);
+    setTrackingUrlInput(existing.trackingUrl || buildTrackingUrl(defaultCourier, defaultAwb));
     
     const inThreeDays = new Date(Date.now() + 3 * 86400000).toLocaleDateString('en-IN', {
       day: 'numeric',
@@ -155,23 +208,16 @@ export default function AdminOrdersView() {
       year: 'numeric'
     });
     setEstimatedDeliveryInput(existing.estimatedDelivery || inThreeDays);
-    setDispatchNotesInput(existing.notes || 'Inspected by Aprajita. Handcrafted fall & pico finished. Packaged in luxury gold box.');
+    setDispatchNotesInput(existing.notes || 'Checked by Aprajita. Fall & pico done. Packed with care.');
     setSendDispatchEmail(Boolean(order.customer_email));
   };
 
-  const handleCourierChange = (newCourier) => {
+  // Regenerate the tracking URL only if it is still the auto-generated one (never clobber a pasted URL)
+  const handleCourierChange = (newCourier, awb = trackingNumberInput) => {
+    const isAutoUrl = !trackingUrlInput || trackingUrlInput === buildTrackingUrl(courierPartner, trackingNumberInput);
     setCourierPartner(newCourier);
-    const awb = trackingNumberInput || '12345678';
-    if (newCourier.includes('BlueDart')) {
-      setTrackingUrlInput(`https://www.bluedart.com/tracking?trackNumber=${awb}`);
-    } else if (newCourier.includes('Delhivery')) {
-      setTrackingUrlInput(`https://www.delhivery.com/track/package/${awb}`);
-    } else if (newCourier.includes('DTDC')) {
-      setTrackingUrlInput(`https://www.dtdc.in/tracking.asp?strCNNo=${awb}`);
-    } else if (newCourier.includes('Speed Post') || newCourier.includes('India Post')) {
-      setTrackingUrlInput(`https://www.indiapost.gov.in/_layouts/15/dpt.cept.tracking/trackconsignment.aspx`);
-    } else {
-      setTrackingUrlInput(`https://www.google.com/search?q=${encodeURIComponent(newCourier + ' tracking ' + awb)}`);
+    if (isAutoUrl) {
+      setTrackingUrlInput(buildTrackingUrl(newCourier, awb));
     }
   };
 
@@ -181,8 +227,8 @@ export default function AdminOrdersView() {
     else if (courierPartner.includes('DTDC')) prefix = 'DTDC';
     else if (courierPartner.includes('India Post')) prefix = 'SP';
     const newAwb = `${prefix}-${Math.floor(10000000 + Math.random() * 90000000)}`;
+    handleCourierChange(courierPartner, newAwb);
     setTrackingNumberInput(newAwb);
-    handleCourierChange(courierPartner);
   };
 
   const setQuickDays = (days) => {
@@ -209,15 +255,16 @@ export default function AdminOrdersView() {
     };
 
     try {
-      await dispatchOrder(shipModalOrder.id, dispatchDetails, sendDispatchEmail);
+      const updated = await dispatchOrder(shipModalOrder.id, dispatchDetails, sendDispatchEmail);
       setOutboxEmails(getOutboxEmails());
-      setDispatchToast({
-        title: 'Order Dispatched Successfully!',
-        msg: sendDispatchEmail && shipModalOrder.customer_email 
-          ? `Dispatched via ${courierPartner} (AWB: ${awb}). Tracking notification email delivered to ${shipModalOrder.customer_email}!`
-          : `Dispatched via ${courierPartner} (AWB: ${awb}). Live tracking updated in patron UI.`
-      });
-      setTimeout(() => setDispatchToast(null), 6000);
+      const syncWarning = updated?._syncWarning;
+      showToast({
+        title: syncWarning ? 'Order shipped (not fully saved)' : 'Order shipped',
+        isWarning: Boolean(syncWarning),
+        msg: (sendDispatchEmail && shipModalOrder.customer_email && !isTestOrderId(shipModalOrder.id)
+          ? `Shipped via ${courierPartner} (AWB: ${awb}). Tracking email sent to ${shipModalOrder.customer_email}.`
+          : `Shipped via ${courierPartner} (AWB: ${awb}). Tracking now shows in the customer's account.`) + (syncWarning ? ` ${syncWarning}` : '')
+      }, syncWarning ? 9000 : 6000);
     } catch (err) {
       console.error(err);
     } finally {
@@ -226,9 +273,9 @@ export default function AdminOrdersView() {
     }
   };
 
-  const handleSimulateOrder = () => {
+  const handleSimulateOrder = async () => {
     const newSimOrder = {
-      orderId: `SAAK-${Math.floor(10000 + Math.random() * 90000)}`,
+      orderId: `TEST-${Math.floor(10000 + Math.random() * 90000)}`,
       fullName: simData.customerName,
       phone: simData.customerPhone,
       email: simData.customerEmail,
@@ -263,8 +310,23 @@ export default function AdminOrdersView() {
       adminNotes: 'Generated via Admin Simulator for testing transaction states.'
     };
 
-    updateOrderStatus(newSimOrder.orderId, newSimOrder);
     setShowSimulateModal(false);
+    // Simulated orders are flagged by the TEST- prefix and never trigger customer emails
+    const saved = await saveOrderToDb(newSimOrder);
+    await refreshOrders();
+    showToast(saved?.persistedToDb === false
+      ? { title: 'Test order not saved', isWarning: true, msg: `#${newSimOrder.orderId} could not be written to the database (kept on this device only).` }
+      : { title: 'Test order created', msg: `Simulated order #${newSimOrder.orderId} added. No emails are sent for TEST- orders.` });
+  };
+
+  const handleDeleteOrder = async (order) => {
+    try {
+      await deleteOrder(order.id);
+      showToast({ title: 'Order deleted', msg: `Order #${order.id} was removed.` });
+    } catch (err) {
+      console.error('Delete order failed:', err);
+      showToast({ title: 'Delete failed — database permission missing', isWarning: true, msg: `Order #${order.id} was not deleted. ${err?.message || ''}`.trim() }, 8000);
+    }
   };
 
   // WhatsApp formatted message link
@@ -273,33 +335,33 @@ export default function AdminOrdersView() {
     let msg = '';
 
     if (order.payment_method?.includes('COD')) {
-      msg = `✨ *SAAK • CASH ON DELIVERY CONFIRMATION*\n\n` +
+      msg = `✨ *Saak • Cash on Delivery order*\n\n` +
         `Namaste ${order.customer_name},\n\n` +
-        `We have received your Cash on Delivery order *#${order.id}* for *₹${Number(order.total_amount).toLocaleString('en-IN')}*.\n\n` +
-        `Our team is reaching out to confirm your delivery address in ${order.city} and saree fall & pico preferences before dispatch.\n\n` +
-        `*Amount Payable upon Arrival:* ₹${Number(order.total_amount).toLocaleString('en-IN')}\n\n` +
+        `Thank you for your Cash on Delivery order *#${order.id}* for *₹${Number(order.total_amount).toLocaleString('en-IN')}*.\n\n` +
+        `We're getting in touch to confirm your address in ${order.city} and your fall & pico preferences before we ship.\n\n` +
+        `*Pay on delivery:* ₹${Number(order.total_amount).toLocaleString('en-IN')}\n\n` +
         `Warm regards,\nAprajita | Saak`;
     } else if (order.payment_status === 'succeeded') {
-      msg = `✨ *SAAK • PAYMENT VERIFIED*\n\n` +
+      msg = `✨ *Saak • Payment confirmed*\n\n` +
         `Namaste ${order.customer_name},\n\n` +
-        `We are delighted to confirm that your payment of *₹${Number(order.total_amount).toLocaleString('en-IN')}* for Order *#${order.id}* has been successfully verified by our team.\n\n` +
-        `*UTR Reference:* ${order.utr_number}\n` +
-        `*Status:* Confirmed & In Handcrafting\n\n` +
-        `Our artisans are preparing your drape with utmost care. You will receive dispatch tracking once dispatched.\n\n` +
+        `Your payment of *₹${Number(order.total_amount).toLocaleString('en-IN')}* for order *#${order.id}* is confirmed.\n\n` +
+        `*UTR:* ${order.utr_number}\n` +
+        `*Status:* Confirmed, being made\n\n` +
+        `We're preparing your order now. We'll send tracking once it ships.\n\n` +
         `Warm regards,\nAprajita | Saak`;
     } else if (order.payment_status === 'failed') {
-      msg = `⚠️ *SAAK • PAYMENT STATUS UPDATE*\n\n` +
+      msg = `⚠️ *Saak • Payment update*\n\n` +
         `Namaste ${order.customer_name},\n\n` +
-        `Regarding your Order *#${order.id}* (Total: ₹${Number(order.total_amount).toLocaleString('en-IN')}):\n\n` +
-        `Our bank reconciliation system was unable to verify the UPI transaction reference: *${order.utr_number}*.\n` +
-        `*Reason:* ${order.failure_reason || 'Payment not credited or declined by issuing bank'}.\n\n` +
-        `Kindly reply to this message with your payment screenshot or UPI bank confirmation slip so our team can assist you immediately.\n\n` +
-        `Warm regards,\nSaak Customer Support`;
+        `About your order *#${order.id}* (₹${Number(order.total_amount).toLocaleString('en-IN')}):\n\n` +
+        `We couldn't verify your UPI reference: *${order.utr_number}*.\n` +
+        `*Reason:* ${order.failure_reason || 'Payment not received or declined by the bank'}.\n\n` +
+        `Please reply with a screenshot of your payment and we'll sort it out.\n\n` +
+        `Warm regards,\nTeam Saak`;
     } else {
-      msg = `⏳ *SAAK • ORDER ACKNOWLEDGEMENT*\n\n` +
+      msg = `⏳ *Saak • Order received*\n\n` +
         `Namaste ${order.customer_name},\n\n` +
-        `Thank you for your order *#${order.id}* with Saak by Aprajita (Total: ₹${Number(order.total_amount).toLocaleString('en-IN')}).\n\n` +
-        `We have received your UPI reference: *${order.utr_number}* and our team is currently verifying the bank ledger. You will receive an official confirmation shortly.\n\n` +
+        `Thank you for your order *#${order.id}* (₹${Number(order.total_amount).toLocaleString('en-IN')}).\n\n` +
+        `We've got your UPI reference *${order.utr_number}* and are checking the payment. We'll confirm shortly.\n\n` +
         `Warm regards,\nAprajita | Saak`;
     }
 
@@ -312,7 +374,7 @@ export default function AdminOrdersView() {
     if (statusFilter === 'succeeded' && order.payment_status !== 'succeeded') return false;
     if (statusFilter === 'pending_verification' && order.payment_status !== 'pending_verification') return false;
     if (statusFilter === 'failed' && order.payment_status !== 'failed') return false;
-    if (statusFilter === 'shipped' && order.fulfillment_status !== 'shipped') return false;
+    if (statusFilter === 'shipped' && !isShippedStatus(order.fulfillment_status)) return false;
     if (statusFilter === 'cod' && !(order.payment_method?.includes('COD') || order.payment_status?.startsWith('cod_'))) return false;
 
     // Search query
@@ -351,15 +413,18 @@ export default function AdminOrdersView() {
 
   const codOrders = orders.filter(o => o.payment_method?.includes('COD') || o.payment_status?.startsWith('cod_'));
   const codCount = codOrders.length;
-  const codPendingCount = orders.filter(o => o.payment_status === 'cod_pending').length;
+  // Gross volume = every order that isn't failed/cancelled (includes COD awaiting collection)
+  const grossVolume = orders
+    .filter(o => o.payment_status !== 'failed' && o.fulfillment_status !== 'cancelled')
+    .reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
 
   return (
     <div className="orders-admin-container">
       {/* Toast Alert for Dispatches */}
       {dispatchToast && (
         <div className="dispatch-toast">
-          <div className="dispatch-toast-icon">
-            <Check size={18} />
+          <div className="dispatch-toast-icon" style={dispatchToast.isWarning ? { background: '#C62828' } : undefined}>
+            {dispatchToast.isWarning ? <AlertCircle size={18} /> : <Check size={18} />}
           </div>
           <div className="dispatch-toast-content">
             <h4>{dispatchToast.title}</h4>
@@ -367,7 +432,10 @@ export default function AdminOrdersView() {
           </div>
           <button 
             className="dispatch-toast-close"
-            onClick={() => setDispatchToast(null)}
+            onClick={() => {
+              if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+              setDispatchToast(null);
+            }}
           >
             <X size={15} />
           </button>
@@ -379,18 +447,18 @@ export default function AdminOrdersView() {
         <div className="kpi-card total">
           <div className="kpi-label">
             <Receipt size={14} className="text-gold" />
-            <span>Total Orders Logged</span>
+            <span>Total orders</span>
           </div>
           <div className="kpi-value">{totalCount}</div>
           <div className="kpi-sub">
-            Gross Volume: <strong>₹{(succeededRevenue + pendingValue).toLocaleString('en-IN')}</strong>
+            Gross Volume: <strong>₹{grossVolume.toLocaleString('en-IN')}</strong>
           </div>
         </div>
 
         <div className="kpi-card succeeded">
           <div className="kpi-label text-green">
             <ShieldCheck size={15} />
-            <span>Transactions Succeeded</span>
+            <span>Paid</span>
           </div>
           <div className="kpi-value text-green">{succeededCount}</div>
           <div className="kpi-sub">
@@ -401,7 +469,7 @@ export default function AdminOrdersView() {
         <div className="kpi-card pending">
           <div className="kpi-label text-amber">
             <Clock size={15} />
-            <span>Pending Verification</span>
+            <span>To verify</span>
           </div>
           <div className="kpi-value text-amber">{pendingCount}</div>
           <div className="kpi-sub">
@@ -412,7 +480,7 @@ export default function AdminOrdersView() {
         <div className="kpi-card failed">
           <div className="kpi-label text-crimson">
             <AlertCircle size={15} />
-            <span>Failed / Declined</span>
+            <span>Failed</span>
           </div>
           <div className="kpi-value text-crimson">{failedCount}</div>
           <div className="kpi-sub">
@@ -425,12 +493,12 @@ export default function AdminOrdersView() {
       <div className="orders-upi-config-strip">
         <div className="upi-strip-left">
           <Sparkles size={14} className="text-gold" />
-          <span>Active Receiving UPI VPA:</span>
+          <span>Receiving UPI ID:</span>
           <code className="active-vpa-pill">{atelierUpiId}</code>
-          <span className="vpa-status-badge">● Live on Dynamic QR &amp; Direct UPI Intent</span>
+          <span className="vpa-status-badge">● Live on checkout</span>
         </div>
         <div className="upi-strip-right">
-          <span>Customer payments route directly to Aprajita's UPI account with zero gateway commissions.</span>
+          <span>Payments go straight to Aprajita's UPI account, with no gateway fees.</span>
         </div>
       </div>
 
@@ -440,7 +508,7 @@ export default function AdminOrdersView() {
           <Search size={16} className="search-icon" />
           <input 
             type="text" 
-            placeholder="Search by Order ID, Client, Phone, or UTR number..." 
+            placeholder="Search by order ID, name, phone or UTR" 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="orders-search-input"
@@ -470,7 +538,7 @@ export default function AdminOrdersView() {
           <button 
             className="btn btn-outline toolbar-btn"
             onClick={handleRefresh}
-            title="Reload latest orders from database"
+            title="Reload orders"
           >
             <RefreshCw size={13} className={isRefreshing ? 'spin' : ''} />
             <span>Refresh</span>
@@ -482,32 +550,35 @@ export default function AdminOrdersView() {
               setOutboxEmails(getOutboxEmails());
               setShowOutboxModal(true);
             }}
-            title="Inspect transactional emails sent to patrons"
+            title="See emails sent to customers"
           >
             <Mail size={13} />
-            <span>Email Outbox ({outboxEmails.length})</span>
+            <span>Sent emails ({outboxEmails.length})</span>
           </button>
 
           <button 
             className="btn btn-outline toolbar-btn"
             onClick={() => setShowSimulateModal(true)}
-            title="Create a test transaction to test Succeeded or Failed flow"
+            title="Create a test order"
           >
             <PlusCircle size={13} />
             <span>Test Order</span>
           </button>
 
-          <button 
-            className="btn btn-outline toolbar-btn reset-btn"
-            onClick={() => {
-              if (window.confirm('Reset orders to sample showcase orders (Succeeded, Pending, and Failed)?')) {
-                resetOrders();
-              }
-            }}
-            title="Reset sample orders for demonstration"
-          >
-            <span>Reset Demo Data</span>
-          </button>
+          {/* Demo data only makes sense in offline mode — never mix fake orders into the live ledger */}
+          {!isSupabaseConfigured && (
+            <button 
+              className="btn btn-outline toolbar-btn reset-btn"
+              onClick={() => {
+                if (window.confirm('Reset orders to sample showcase orders (Succeeded, Pending, and Failed)?')) {
+                  resetOrders();
+                }
+              }}
+              title="Reset sample orders"
+            >
+              <span>Reset samples</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -524,21 +595,21 @@ export default function AdminOrdersView() {
           onClick={() => setStatusFilter('succeeded')}
         >
           <ShieldCheck size={13} />
-          <span>Succeeded ({succeededCount})</span>
+          <span>Paid ({succeededCount})</span>
         </button>
         <button 
           className={`status-chip amber ${statusFilter === 'pending_verification' ? 'active' : ''}`}
           onClick={() => setStatusFilter('pending_verification')}
         >
           <Clock size={13} />
-          <span>Pending Review ({pendingCount})</span>
+          <span>To verify ({pendingCount})</span>
         </button>
         <button 
           className={`status-chip crimson ${statusFilter === 'failed' ? 'active' : ''}`}
           onClick={() => setStatusFilter('failed')}
         >
           <AlertCircle size={13} />
-          <span>Failed / Rejected ({failedCount})</span>
+          <span>Failed ({failedCount})</span>
         </button>
         <button 
           className={`status-chip brown ${statusFilter === 'cod' ? 'active' : ''}`}
@@ -552,7 +623,7 @@ export default function AdminOrdersView() {
           onClick={() => setStatusFilter('shipped')}
         >
           <Truck size={13} />
-          <span>Dispatched ({orders.filter(o => o.fulfillment_status === 'shipped').length})</span>
+          <span>Shipped ({orders.filter(o => isShippedStatus(o.fulfillment_status)).length})</span>
         </button>
       </div>
 
@@ -560,17 +631,17 @@ export default function AdminOrdersView() {
       {filteredOrders.length === 0 ? (
         <div className="no-orders-state">
           <AlertCircle size={36} className="text-muted" />
-          <h3>No Orders Found</h3>
+          <h3>No orders found</h3>
           <p>
             {searchQuery 
-              ? `No transactions matching "${searchQuery}". Try clearing filters.` 
-              : 'There are currently no orders in this category.'}
+              ? `Nothing matches "${searchQuery}". Try clearing filters.` 
+              : 'No orders here yet.'}
           </p>
           <button 
             className="btn btn-primary"
             onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}
           >
-            View All Orders
+            View all orders
           </button>
         </div>
       ) : (
@@ -579,7 +650,10 @@ export default function AdminOrdersView() {
             const isSucceeded = order.payment_status === 'succeeded';
             const isPending = order.payment_status === 'pending_verification';
             const isFailed = order.payment_status === 'failed';
-            const isShipped = order.fulfillment_status === 'shipped';
+            const isShipped = isShippedStatus(order.fulfillment_status);
+            const isDelivered = order.fulfillment_status === 'delivered';
+            const isClosed = isFailed || order.fulfillment_status === 'cancelled';
+            const isTest = isTestOrderId(order.id);
 
             return (
               <div 
@@ -590,6 +664,9 @@ export default function AdminOrdersView() {
                 <div className="order-card-header">
                   <div className="order-card-header-left">
                     <span className="order-id-badge">#{order.id}</span>
+                    {isTest && (
+                      <span className="status-badge badge-pending" title="Simulated order — no emails are sent">Test order</span>
+                    )}
                     <span className="order-date-text">
                       {order.created_at ? new Date(order.created_at).toLocaleString('en-IN', {
                         month: 'short',
@@ -606,37 +683,37 @@ export default function AdminOrdersView() {
                     {order.payment_status === 'cod_pending' && (
                       <span className="status-badge badge-cod">
                         <Banknote size={14} />
-                        <span>COD • Pay on Delivery</span>
+                        <span>COD</span>
                       </span>
                     )}
                     {order.payment_status === 'cod_confirmed' && (
                       <span className="status-badge badge-cod-confirmed">
                         <PhoneCall size={14} />
-                        <span>COD Confirmed</span>
+                        <span>COD confirmed</span>
                       </span>
                     )}
                     {isSucceeded && (
                       <span className="status-badge badge-succeeded">
                         <ShieldCheck size={14} />
-                        <span>{order.payment_method?.includes('COD') ? 'COD Paid & Settled' : 'Payment Succeeded'}</span>
+                        <span>{order.payment_method?.includes('COD') ? 'COD paid' : 'Paid'}</span>
                       </span>
                     )}
                     {isPending && (
                       <span className="status-badge badge-pending">
                         <Clock size={14} />
-                        <span>Awaiting Verification</span>
+                        <span>To verify</span>
                       </span>
                     )}
                     {isFailed && (
                       <span className="status-badge badge-failed">
                         <AlertCircle size={14} />
-                        <span>Transaction Failed</span>
+                        <span>Failed</span>
                       </span>
                     )}
                     {isShipped && (
                       <span className="status-badge badge-shipped">
                         <Truck size={14} />
-                        <span>Dispatched</span>
+                        <span>Shipped</span>
                       </span>
                     )}
                   </div>
@@ -646,7 +723,7 @@ export default function AdminOrdersView() {
                 <div className="order-card-body">
                   {/* Panel 1: Customer Info */}
                   <div className="order-panel customer-panel">
-                    <div className="panel-title">Customer &amp; Shipping</div>
+                    <div className="panel-title">Customer</div>
                     <div className="customer-info-box">
                       <div className="customer-name-row">
                         <strong>{order.customer_name}</strong>
@@ -666,7 +743,7 @@ export default function AdminOrdersView() {
 
                       {order.styling_notes && (
                         <div className="styling-notes-callout">
-                          <span className="notes-tag">Bespoke Styling Note:</span>
+                          <span className="notes-tag">Customer note:</span>
                           <p className="notes-body">"{order.styling_notes}"</p>
                         </div>
                       )}
@@ -676,7 +753,7 @@ export default function AdminOrdersView() {
                   {/* Panel 2: Items Preview */}
                   <div className="order-panel items-panel">
                     <div className="panel-title">
-                      Ordered Creations ({order.items?.length || 1})
+                      Items ({order.items?.length || 1})
                     </div>
                     <div className="order-items-list">
                       {order.items?.map((item, idx) => (
@@ -694,9 +771,9 @@ export default function AdminOrdersView() {
                                 <span className="meta-color-chip">
                                   <span 
                                     className="meta-color-dot" 
-                                    style={{ background: item.customColor.hex || '#A34835' }}
+                                    style={{ background: getColorHex(item.customColor) }}
                                   />
-                                  <span>{item.customColor.name || 'Custom Shade'}</span>
+                                  <span>{getColorName(item.customColor)}</span>
                                 </span>
                               )}
                               <span className="meta-qty">Qty: {item.quantity || 1}</span>
@@ -712,29 +789,29 @@ export default function AdminOrdersView() {
 
                   {/* Panel 3: Financial & UPI Transaction Ledger */}
                   <div className="order-panel transaction-panel">
-                    <div className="panel-title">Payment &amp; Bank Audit</div>
+                    <div className="panel-title">Payment</div>
                     <div className="transaction-audit-box">
                       <div className="total-amount-row">
-                        <span className="amount-label">Amount Payable:</span>
+                        <span className="amount-label">Amount:</span>
                         <span className="amount-value">
                           ₹{Number(order.total_amount).toLocaleString('en-IN')}
                         </span>
                       </div>
 
                       <div className="audit-detail-row">
-                        <span className="audit-label">Channel:</span>
+                        <span className="audit-label">Method:</span>
                         <span className="audit-value">{order.payment_method || 'Dynamic UPI QR'}</span>
                       </div>
 
                       <div className="audit-detail-row utr-row">
-                        <span className="audit-label">UPI UTR / Ref:</span>
+                        <span className="audit-label">UTR:</span>
                         <div className="utr-code-wrapper">
                           <code className="utr-code">{order.utr_number || 'N/A'}</code>
                           {order.utr_number && (
                             <button 
                               className="copy-utr-btn"
                               onClick={() => handleCopyUtr(order.utr_number, order.id)}
-                              title="Copy 12-digit UTR to clipboard"
+                              title="Copy UTR"
                             >
                               {copiedUtr === order.id ? <CheckCheck size={13} className="text-green" /> : <Copy size={13} />}
                               <span>{copiedUtr === order.id ? 'Copied' : 'Copy'}</span>
@@ -745,14 +822,14 @@ export default function AdminOrdersView() {
 
                       {/* Payment Screenshot Proof */}
                       <div className="audit-detail-row screenshot-row">
-                        <span className="audit-label">Receipt Proof:</span>
+                        <span className="audit-label">Screenshot:</span>
                         {order.payment_screenshot_url ? (
                           <button 
                             className="btn btn-outline receipt-preview-btn"
                             onClick={() => setSelectedReceiptUrl(order.payment_screenshot_url)}
                           >
                             <Eye size={12} />
-                            <span>View Bank Screenshot</span>
+                            <span>View screenshot</span>
                           </button>
                         ) : (
                           <span className="no-receipt-text">No image uploaded</span>
@@ -774,8 +851,8 @@ export default function AdminOrdersView() {
                         <div className="audit-failed-banner">
                           <AlertCircle size={13} className="text-crimson" />
                           <div>
-                            <strong>Transaction Declined:</strong>
-                            <p>{order.failure_reason || 'Bank reconciliation failed / invalid reference number.'}</p>
+                            <strong>Payment failed:</strong>
+                            <p>{order.failure_reason || "Couldn't verify the UTR."}</p>
                           </div>
                         </div>
                       )}
@@ -814,10 +891,10 @@ export default function AdminOrdersView() {
                             admin_notes: `Order phone confirmation completed on ${new Date().toLocaleDateString('en-IN')}. Ready for handcrafting fall & pico.`
                           });
                         }}
-                        title="Mark phone call confirmation completed with client"
+                        title="Mark as confirmed by phone"
                       >
                         <PhoneCall size={14} />
-                        <span>Confirm via Call</span>
+                        <span>Confirmed by call</span>
                       </button>
                     )}
 
@@ -826,10 +903,10 @@ export default function AdminOrdersView() {
                       <button 
                         className="btn btn-primary approve-btn"
                         onClick={() => handleMarkSucceeded(order)}
-                        title="Confirm payment received (UPI or Courier Cash Collection)"
+                        title="Confirm payment received"
                       >
                         <ShieldCheck size={14} />
-                        <span>{order.payment_method?.includes('COD') ? 'Mark COD Cash Collected' : 'Verify & Mark Succeeded'}</span>
+                        <span>{order.payment_method?.includes('COD') ? 'Mark COD paid' : 'Mark as paid'}</span>
                       </button>
                     )}
 
@@ -841,31 +918,31 @@ export default function AdminOrdersView() {
                           setFailModalOrder(order);
                           setFailReasonInput(order.payment_method?.includes('COD') ? 'Customer requested cancellation of order before payment' : 'Invalid 12-digit UTR - Payment not credited to bank ledger');
                         }}
-                        title="Mark order as cancelled or rejected"
+                        title="Cancel or reject order"
                       >
                         <AlertCircle size={14} />
-                        <span>{order.payment_method?.includes('COD') ? 'Cancel COD Order' : 'Mark as Failed / Reject'}</span>
+                        <span>{order.payment_method?.includes('COD') ? 'Cancel COD order' : 'Mark as failed'}</span>
                       </button>
                     )}
 
-                    {/* Dispatch button */}
-                    {!isShipped ? (
+                    {/* Dispatch button (never for cancelled / failed / delivered orders) */}
+                    {isClosed || isDelivered ? null : !isShipped ? (
                       <button 
                         className="btn btn-outline ship-btn"
                         onClick={() => handleOpenShipModal(order)}
-                        title="Add courier tracking and dispatch details"
+                        title="Add courier and tracking"
                       >
                         <Truck size={14} />
-                        <span>Dispatch / Add Tracking</span>
+                        <span>Ship / add tracking</span>
                       </button>
                     ) : (
                       <button 
                         className="btn btn-outline ship-btn-active"
                         onClick={() => handleOpenShipModal(order)}
-                        title="Update courier tracking details or resend dispatch email"
+                        title="Update tracking or resend the email"
                       >
                         <Truck size={14} />
-                        <span>Update Tracking</span>
+                        <span>Update tracking</span>
                       </button>
                     )}
 
@@ -874,11 +951,11 @@ export default function AdminOrdersView() {
                       <button 
                         className="btn btn-outline deliver-btn"
                         onClick={() => handleMarkDelivered(order)}
-                        title="Mark order as delivered and send delivery celebration email"
+                        title="Mark delivered and email the customer"
                         style={{ borderColor: '#2E7D32', color: '#2E7D32' }}
                       >
                         <CheckCircle size={14} />
-                        <span>Mark Delivered</span>
+                        <span>Mark delivered</span>
                       </button>
                     )}
 
@@ -897,10 +974,10 @@ export default function AdminOrdersView() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="btn btn-outline whatsapp-btn"
-                        title="Send pre-formatted WhatsApp status update to customer"
+                        title="Send a WhatsApp update to the customer"
                       >
                         <MessageCircle size={14} className="text-green" />
-                        <span>WhatsApp Client</span>
+                        <span>WhatsApp customer</span>
                       </a>
                     )}
 
@@ -908,10 +985,10 @@ export default function AdminOrdersView() {
                     <button 
                       className="btn btn-outline invoice-btn"
                       onClick={() => setInvoiceOrder(order)}
-                      title="View printable invoice slip"
+                      title="View printable invoice"
                     >
                       <FileText size={14} />
-                      <span>Invoice Slip</span>
+                      <span>Invoice</span>
                     </button>
 
                     {/* Delete order */}
@@ -919,7 +996,7 @@ export default function AdminOrdersView() {
                       className="btn btn-outline delete-btn"
                       onClick={() => {
                         if (window.confirm(`Delete order #${order.id} permanently?`)) {
-                          deleteOrder(order.id);
+                          handleDeleteOrder(order);
                         }
                       }}
                       title="Delete test order"
@@ -939,7 +1016,7 @@ export default function AdminOrdersView() {
         <div className="lightbox-overlay" onClick={() => setSelectedReceiptUrl(null)}>
           <div className="lightbox-modal" onClick={(e) => e.stopPropagation()}>
             <div className="lightbox-header">
-              <h4>Bank Transaction Proof / Screenshot</h4>
+              <h4>Payment screenshot</h4>
               <button 
                 className="lightbox-close-btn"
                 onClick={() => setSelectedReceiptUrl(null)}
@@ -950,7 +1027,7 @@ export default function AdminOrdersView() {
             <div className="lightbox-body">
               <img 
                 src={selectedReceiptUrl} 
-                alt="Payment Receipt" 
+                alt="Payment screenshot" 
                 className="lightbox-img" 
               />
             </div>
@@ -962,7 +1039,7 @@ export default function AdminOrdersView() {
                 className="btn btn-outline"
               >
                 <ExternalLink size={13} />
-                <span>Open in New Tab</span>
+                <span>Open in new tab</span>
               </a>
               <button 
                 className="btn btn-primary"
@@ -982,7 +1059,7 @@ export default function AdminOrdersView() {
             <div className="lightbox-header">
               <div className="danger-modal-title">
                 <AlertCircle size={18} className="text-crimson" />
-                <h4>Mark Transaction as Failed / Rejected</h4>
+                <h4>Mark payment as failed</h4>
               </div>
               <button className="lightbox-close-btn" onClick={() => setFailModalOrder(null)}>
                 <X size={18} />
@@ -991,11 +1068,11 @@ export default function AdminOrdersView() {
 
             <div className="lightbox-body-form">
               <p className="form-subtext">
-                Specify why payment for Order <strong>#{failModalOrder.id}</strong> (Client: {failModalOrder.customer_name}) could not be verified. This will be recorded on the audit log.
+                Why couldn't payment for order <strong>#{failModalOrder.id}</strong> ({failModalOrder.customer_name}) be verified? This is saved on the order.
               </p>
 
               <div className="form-group">
-                <label className="form-label">Select Failure Reason:</label>
+                <label className="form-label">Reason:</label>
                 <select 
                   value={failReasonInput} 
                   onChange={(e) => setFailReasonInput(e.target.value)}
@@ -1022,10 +1099,10 @@ export default function AdminOrdersView() {
 
               {failReasonInput === 'custom' && (
                 <div className="form-group">
-                  <label className="form-label">Custom Reason / Notes:</label>
+                  <label className="form-label">Your reason:</label>
                   <input 
                     type="text" 
-                    placeholder="Enter specific explanation..." 
+                    placeholder="Explain briefly" 
                     value={customFailReason}
                     onChange={(e) => setCustomFailReason(e.target.value)}
                     className="form-input"
@@ -1060,7 +1137,7 @@ export default function AdminOrdersView() {
               <div className="ship-modal-title">
                 <Truck size={20} className="text-terracotta" />
                 <div>
-                  <h4>Dispatch &amp; Assign Courier Tracking</h4>
+                  <h4>Ship order</h4>
                   <span className="modal-subtitle">Order #{shipModalOrder.id} • {shipModalOrder.customer_name}</span>
                 </div>
               </div>
@@ -1093,7 +1170,7 @@ export default function AdminOrdersView() {
                     {shipModalOrder.items?.length || 1} item(s) • ₹{Number(shipModalOrder.total_amount).toLocaleString('en-IN')}
                   </div>
                   <div className="order-status-tag">
-                    Current: {shipModalOrder.fulfillment_status === 'dispatched' ? 'Already Dispatched' : 'In Process (Tailoring)'}
+                    Current: {isShippedStatus(shipModalOrder.fulfillment_status) ? 'Already shipped' : 'Being made'}
                   </div>
                 </div>
               </div>
@@ -1102,7 +1179,7 @@ export default function AdminOrdersView() {
               <div className="form-row-2">
                 <div className="form-group">
                   <label className="form-label">
-                    <span>Courier Partner:</span>
+                    <span>Courier:</span>
                   </label>
                   <select 
                     value={courierPartner} 
@@ -1114,19 +1191,18 @@ export default function AdminOrdersView() {
                     <option value="DTDC Premium">DTDC Premium</option>
                     <option value="India Post Speed Post">India Post Speed Post</option>
                     <option value="Shadowfax Express">Shadowfax Express</option>
-                    <option value="DHL Express International">DHL Express International</option>
-                    <option value="Bespoke Studio Delivery">Bespoke Studio Delivery</option>
+                    <option value="Hand delivery">Hand delivery</option>
                   </select>
                 </div>
 
                 <div className="form-group">
                   <div className="label-with-action">
-                    <label className="form-label">AWB / Tracking Number:</label>
+                    <label className="form-label">Tracking number (AWB):</label>
                     <button 
                       type="button" 
                       onClick={handleGenerateAwb} 
                       className="generate-awb-btn"
-                      title="Generate a randomized test AWB"
+                      title="Generate a test AWB"
                     >
                       🎲 Generate AWB
                     </button>
@@ -1136,8 +1212,8 @@ export default function AdminOrdersView() {
                     placeholder="e.g. BD-89214710" 
                     value={trackingNumberInput}
                     onChange={(e) => {
+                      handleCourierChange(courierPartner, e.target.value);
                       setTrackingNumberInput(e.target.value);
-                      handleCourierChange(courierPartner);
                     }}
                     className="form-input"
                   />
@@ -1145,7 +1221,7 @@ export default function AdminOrdersView() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Live Public Tracking URL:</label>
+                <label className="form-label">Tracking link:</label>
                 <div className="input-with-icon">
                   <ExternalLink size={14} className="field-icon" />
                   <input 
@@ -1156,12 +1232,12 @@ export default function AdminOrdersView() {
                     className="form-input"
                   />
                 </div>
-                <span className="field-hint">The patron can click directly into this link from their profile to track package transit.</span>
+                <span className="field-hint">The customer can open this from their account to track the parcel.</span>
               </div>
 
               <div className="form-group">
                 <div className="label-with-action">
-                  <label className="form-label">Estimated Delivery Timeline:</label>
+                  <label className="form-label">Expected delivery:</label>
                   <div className="quick-presets">
                     <button type="button" onClick={() => setQuickDays(2)} className="preset-pill">+2 Days (Express)</button>
                     <button type="button" onClick={() => setQuickDays(4)} className="preset-pill">+4 Days (Standard)</button>
@@ -1178,10 +1254,10 @@ export default function AdminOrdersView() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Inspection &amp; Packaging Notes:</label>
+                <label className="form-label">Packing notes:</label>
                 <textarea 
                   rows={2}
-                  placeholder="e.g. Saree inspected by Aprajita. Fall & pico hand-stitched. Packaged in luxury gold box."
+                  placeholder="e.g. Checked by Aprajita. Fall & pico done."
                   value={dispatchNotesInput}
                   onChange={(e) => setDispatchNotesInput(e.target.value)}
                   className="form-textarea"
@@ -1200,13 +1276,13 @@ export default function AdminOrdersView() {
                   <div>
                     <div className="email-toggle-title">
                       <Mail size={14} className="text-terracotta" />
-                      <span>Send Automated Dispatch &amp; Tracking Email to Patron</span>
+                      <span>Email tracking to the customer</span>
                     </div>
                     <div className="email-toggle-desc">
                       {shipModalOrder.customer_email ? (
-                        <>Delivers luxury HTML dispatch notification with AWB tracking link to <strong>{shipModalOrder.customer_email}</strong>.</>
+                        <>Sends the tracking link to <strong>{shipModalOrder.customer_email}</strong>.</>
                       ) : (
-                        <span className="text-muted">No email registered on this order (notification will be recorded in Email Outbox).</span>
+                        <span className="text-muted">No email on this order. It will be saved under Sent emails.</span>
                       )}
                     </div>
                   </div>
@@ -1232,12 +1308,12 @@ export default function AdminOrdersView() {
                 {isSubmittingDispatch ? (
                   <>
                     <RefreshCw size={14} className="spin" />
-                    <span>Dispatching &amp; Sending Email...</span>
+                    <span>Shipping...</span>
                   </>
                 ) : (
                   <>
                     <Send size={14} />
-                    <span>Confirm Dispatch &amp; Notify Patron</span>
+                    <span>Ship and notify customer</span>
                   </>
                 )}
               </button>
@@ -1253,7 +1329,7 @@ export default function AdminOrdersView() {
             <div className="invoice-header-strip">
               <div className="invoice-brand">
                 <span className="brand-title">Saak by Aprajita</span>
-                <span className="brand-tag">Official Order Slip • Tax &amp; Delivery Summary</span>
+                <span className="brand-tag">Order slip</span>
               </div>
               <button className="lightbox-close-btn" onClick={() => setInvoiceOrder(null)}>
                 <X size={18} />
@@ -1263,14 +1339,14 @@ export default function AdminOrdersView() {
             <div className="invoice-content-printable" id="printable-invoice">
               <div className="invoice-meta-grid">
                 <div>
-                  <span className="meta-sub">ORDER REFERENCE</span>
+                  <span className="meta-sub">Order</span>
                   <h3 className="meta-main">#{invoiceOrder.id}</h3>
                   <p className="meta-date">
                     Date: {invoiceOrder.created_at ? new Date(invoiceOrder.created_at).toLocaleString('en-IN') : 'Recent'}
                   </p>
                 </div>
                 <div>
-                  <span className="meta-sub">PAYMENT AUDIT STATUS</span>
+                  <span className="meta-sub">Payment status</span>
                   <div className={`invoice-status-pill status-${invoiceOrder.payment_status}`}>
                     {invoiceOrder.payment_status.toUpperCase()}
                   </div>
@@ -1280,14 +1356,14 @@ export default function AdminOrdersView() {
 
               <div className="invoice-parties-grid">
                 <div className="party-box">
-                  <span className="party-title">DISPATCH FROM:</span>
+                  <span className="party-title">From:</span>
                   <strong>Saak by Aprajita</strong>
                   <p>Hauz Khas Enclave / DLF Phase 5</p>
                   <p>New Delhi / Gurugram, India</p>
-                  <p>UPI VPA: {atelierUpiId}</p>
+                  <p>UPI ID: {atelierUpiId}</p>
                 </div>
                 <div className="party-box">
-                  <span className="party-title">BILLED &amp; SHIPPED TO:</span>
+                  <span className="party-title">Billed and shipped to:</span>
                   <strong>{invoiceOrder.customer_name}</strong>
                   <p>{invoiceOrder.shipping_address}</p>
                   <p>{invoiceOrder.city}, {invoiceOrder.state} - {invoiceOrder.pincode}</p>
@@ -1298,10 +1374,10 @@ export default function AdminOrdersView() {
               <table className="invoice-items-table">
                 <thead>
                   <tr>
-                    <th>Item Description</th>
-                    <th>Size / Details</th>
+                    <th>Item</th>
+                    <th>Size</th>
                     <th>Qty</th>
-                    <th className="text-right">Unit Price</th>
+                    <th className="text-right">Price</th>
                     <th className="text-right">Total</th>
                   </tr>
                 </thead>
@@ -1310,7 +1386,7 @@ export default function AdminOrdersView() {
                     <tr key={idx}>
                       <td>
                         <strong>{it.name}</strong>
-                        {it.customColor && <div className="text-muted">Custom Shade: {it.customColor.name}</div>}
+                        {it.customColor && <div className="text-muted">Custom colour: {getColorName(it.customColor)}</div>}
                       </td>
                       <td>{it.selectedSize || 'One Size'}</td>
                       <td>{it.quantity || 1}</td>
@@ -1321,7 +1397,7 @@ export default function AdminOrdersView() {
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan="4" className="text-right"><strong>Total Amount (incl. all taxes):</strong></td>
+                    <td colSpan="4" className="text-right"><strong>Total (incl. all taxes):</strong></td>
                     <td className="text-right"><strong>₹{Number(invoiceOrder.total_amount).toLocaleString('en-IN')}</strong></td>
                   </tr>
                 </tfoot>
@@ -1329,13 +1405,13 @@ export default function AdminOrdersView() {
 
               {invoiceOrder.styling_notes && (
                 <div className="invoice-notes-box">
-                  <strong>Client Styling Instruction:</strong>
+                  <strong>Customer note:</strong>
                   <p>{invoiceOrder.styling_notes}</p>
                 </div>
               )}
 
               <div className="invoice-footer-seal">
-                <p>Authentic Handcrafted Creation by Aprajita • Saak Official Record</p>
+                <p>Handcrafted by Saak by Aprajita</p>
               </div>
             </div>
 
@@ -1365,7 +1441,7 @@ export default function AdminOrdersView() {
             <div className="lightbox-header">
               <div className="ship-modal-title">
                 <Sparkles size={16} className="text-gold" />
-                <h4>Simulate New Customer Transaction</h4>
+                <h4>Create a test order</h4>
               </div>
               <button className="lightbox-close-btn" onClick={() => setShowSimulateModal(false)}>
                 <X size={18} />
@@ -1374,7 +1450,7 @@ export default function AdminOrdersView() {
 
             <div className="lightbox-body-form">
               <div className="form-group">
-                <label className="form-label">Client Name:</label>
+                <label className="form-label">Name:</label>
                 <input 
                   type="text" 
                   value={simData.customerName}
@@ -1395,7 +1471,7 @@ export default function AdminOrdersView() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Transaction Status to Test:</label>
+                  <label className="form-label">Status:</label>
                   <select 
                     value={simData.paymentStatus}
                     onChange={(e) => setSimData({ ...simData, paymentStatus: e.target.value })}
@@ -1409,7 +1485,7 @@ export default function AdminOrdersView() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">12-Digit UPI UTR Reference:</label>
+                <label className="form-label">12-digit UTR:</label>
                 <input 
                   type="text" 
                   value={simData.utrNumber}
@@ -1430,7 +1506,7 @@ export default function AdminOrdersView() {
                 className="btn btn-primary"
                 onClick={handleSimulateOrder}
               >
-                Create Test Transaction
+                Create test order
               </button>
             </div>
           </div>
@@ -1445,8 +1521,8 @@ export default function AdminOrdersView() {
               <div className="ship-modal-title">
                 <Mail size={18} className="text-terracotta" />
                 <div>
-                  <h4>Email Notification Outbox</h4>
-                  <span className="modal-subtitle">Sent Order Confirmations &amp; Dispatch Tracking Logs ({outboxEmails.length})</span>
+                  <h4>Sent emails</h4>
+                  <span className="modal-subtitle">Order and tracking emails ({outboxEmails.length})</span>
                 </div>
               </div>
               <button className="lightbox-close-btn" onClick={() => setShowOutboxModal(false)}>
@@ -1458,8 +1534,8 @@ export default function AdminOrdersView() {
               {outboxEmails.length === 0 ? (
                 <div className="empty-outbox-state">
                   <Mail size={32} className="text-muted" />
-                  <h4>No Emails in Outbox Yet</h4>
-                  <p>When customers place orders or you dispatch shipments, transactional emails will be logged and can be previewed here.</p>
+                  <h4>No emails yet</h4>
+                  <p>Order and shipping emails will show up here.</p>
                 </div>
               ) : (
                 <div className="outbox-list">
@@ -1467,7 +1543,7 @@ export default function AdminOrdersView() {
                     <div key={idx} className="outbox-item-card">
                       <div className="outbox-item-top">
                         <span className={`outbox-badge type-${item.type}`}>
-                          {item.type === 'dispatch_notification' ? '🚚 Dispatch Tracking' : '✨ Order Confirmation'}
+                          {OUTBOX_TYPE_LABELS[item.type] || '✉️ Notification'}
                         </span>
                         <span className="outbox-time">
                           {new Date(item.sentAt).toLocaleString('en-IN', {
@@ -1479,22 +1555,25 @@ export default function AdminOrdersView() {
                         </span>
                       </div>
                       <div className="outbox-subject">
-                        <strong>{item.subject}</strong>
+                        {/* Never reveal one-time passcodes in the admin outbox */}
+                        <strong>{item.type === 'auth_otp' ? 'Verification code email (code hidden)' : item.subject}</strong>
                       </div>
                       <div className="outbox-details-row">
                         <span>Recipient: <code>{item.to}</code></span>
-                        <span>Order: <strong>#{item.orderId}</strong></span>
-                        <span className="outbox-method-tag">Method: {item.deliveryMethod}</span>
+                        {item.orderId && <span>Order: <strong>#{item.orderId}</strong></span>}
+                        <span className="outbox-method-tag">Status: {item.status || 'logged'}</span>
                       </div>
-                      <div className="outbox-item-actions">
-                        <button 
-                          className="btn btn-sm btn-outline preview-email-btn"
-                          onClick={() => setPreviewEmail(item)}
-                        >
-                          <Eye size={12} />
-                          <span>Preview Rendered Email</span>
-                        </button>
-                      </div>
+                      {item.type !== 'auth_otp' && (
+                        <div className="outbox-item-actions">
+                          <button 
+                            className="btn btn-sm btn-outline preview-email-btn"
+                            onClick={() => setPreviewEmail(item)}
+                          >
+                            <Eye size={12} />
+                            <span>Preview</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1505,20 +1584,20 @@ export default function AdminOrdersView() {
               <button 
                 className="btn btn-outline"
                 onClick={() => {
-                  if (window.confirm('Clear all sent email records from outbox?')) {
+                  if (window.confirm('Clear all sent email records?')) {
                     localStorage.removeItem('saak_outbox_emails');
                     setOutboxEmails([]);
                   }
                 }}
               >
                 <Trash2 size={13} />
-                <span>Clear Outbox</span>
+                <span>Clear</span>
               </button>
               <button 
                 className="btn btn-primary"
                 onClick={() => setShowOutboxModal(false)}
               >
-                Close Outbox
+                Close
               </button>
             </div>
           </div>
@@ -1547,7 +1626,7 @@ export default function AdminOrdersView() {
             </div>
             <div className="lightbox-footer">
               <button className="btn btn-primary" onClick={() => setPreviewEmail(null)}>
-                Close Preview
+                Close
               </button>
             </div>
           </div>
@@ -1600,21 +1679,21 @@ export default function AdminOrdersView() {
           display: flex;
           align-items: center;
           gap: 6px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           text-transform: uppercase;
           letter-spacing: 0.8px;
           font-weight: 600;
           color: var(--text-muted);
         }
         .kpi-value {
-          font-size: 26px;
+          font-size: var(--text-2xl);
           font-family: var(--font-serif);
           font-weight: 500;
           color: var(--text-primary);
           line-height: 1.1;
         }
         .kpi-sub {
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
         }
         .kpi-sub strong {
@@ -1636,7 +1715,7 @@ export default function AdminOrdersView() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          font-size: 12px;
+          font-size: var(--text-xs);
           flex-wrap: wrap;
           gap: 10px;
         }
@@ -1653,16 +1732,16 @@ export default function AdminOrdersView() {
           border-radius: 3px;
           font-family: monospace;
           font-weight: 600;
-          font-size: 12px;
+          font-size: var(--text-xs);
         }
         .vpa-status-badge {
           color: #2E7D32;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 600;
         }
         .upi-strip-right {
           color: var(--text-muted);
-          font-size: 11px;
+          font-size: var(--text-xs);
         }
 
         /* Toolbar */
@@ -1689,7 +1768,7 @@ export default function AdminOrdersView() {
         .orders-search-input {
           width: 100%;
           padding: 10px 34px 10px 36px;
-          font-size: 13px;
+          font-size: var(--text-sm);
           font-family: inherit;
           border: 1px solid var(--border-light);
           border-radius: 4px;
@@ -1718,7 +1797,7 @@ export default function AdminOrdersView() {
         }
         .orders-sort-select {
           padding: 8px 12px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-family: inherit;
           border: 1px solid var(--border-light);
           border-radius: 4px;
@@ -1727,7 +1806,7 @@ export default function AdminOrdersView() {
           cursor: pointer;
         }
         .toolbar-btn {
-          font-size: 12px;
+          font-size: var(--text-xs);
           padding: 8px 12px;
           display: flex;
           align-items: center;
@@ -1763,7 +1842,7 @@ export default function AdminOrdersView() {
           border: 1px solid var(--border-light);
           background: #FFFFFF;
           border-radius: 20px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 500;
           cursor: pointer;
           white-space: nowrap;
@@ -1845,7 +1924,7 @@ export default function AdminOrdersView() {
         }
         .order-id-badge {
           font-family: monospace;
-          font-size: 13px;
+          font-size: var(--text-sm);
           font-weight: 700;
           color: var(--accent-terracotta);
           background: rgba(163, 72, 53, 0.08);
@@ -1853,7 +1932,7 @@ export default function AdminOrdersView() {
           border-radius: 3px;
         }
         .order-date-text {
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
         }
 
@@ -1863,7 +1942,7 @@ export default function AdminOrdersView() {
           gap: 5px;
           padding: 4px 10px;
           border-radius: 12px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.5px;
@@ -1891,7 +1970,7 @@ export default function AdminOrdersView() {
         .confirm-cod-btn {
           color: #E65100;
           border-color: #FFCC80;
-          font-size: 12px;
+          font-size: var(--text-xs);
           padding: 7px 12px;
           display: flex;
           align-items: center;
@@ -1925,7 +2004,7 @@ export default function AdminOrdersView() {
           gap: 10px;
         }
         .panel-title {
-          font-size: 11px;
+          font-size: var(--text-xs);
           text-transform: uppercase;
           letter-spacing: 0.8px;
           font-weight: 600;
@@ -1939,10 +2018,10 @@ export default function AdminOrdersView() {
           display: flex;
           flex-direction: column;
           gap: 6px;
-          font-size: 12px;
+          font-size: var(--text-xs);
         }
         .customer-name-row strong {
-          font-size: 14px;
+          font-size: var(--text-base);
           color: var(--text-primary);
         }
         .customer-contact-row {
@@ -1965,7 +2044,7 @@ export default function AdminOrdersView() {
           border-left: 2px solid var(--accent-gold);
           padding: 8px 10px;
           border-radius: 0 3px 3px 0;
-          font-size: 11px;
+          font-size: var(--text-xs);
         }
         .notes-tag {
           font-weight: 600;
@@ -2006,7 +2085,7 @@ export default function AdminOrdersView() {
           gap: 2px;
         }
         .order-item-name {
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           color: var(--text-primary);
           margin: 0;
@@ -2015,7 +2094,7 @@ export default function AdminOrdersView() {
           display: flex;
           align-items: center;
           gap: 8px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
           flex-wrap: wrap;
         }
@@ -2030,7 +2109,7 @@ export default function AdminOrdersView() {
           border-radius: 50%;
         }
         .order-item-price {
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           color: var(--accent-terracotta);
         }
@@ -2040,7 +2119,7 @@ export default function AdminOrdersView() {
           display: flex;
           flex-direction: column;
           gap: 8px;
-          font-size: 12px;
+          font-size: var(--text-xs);
         }
         .total-amount-row {
           display: flex;
@@ -2050,11 +2129,11 @@ export default function AdminOrdersView() {
           border-bottom: 1px solid var(--border-light);
         }
         .amount-label {
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
         }
         .amount-value {
-          font-size: 18px;
+          font-size: var(--text-lg);
           font-family: var(--font-serif);
           font-weight: 600;
           color: var(--text-primary);
@@ -2067,7 +2146,7 @@ export default function AdminOrdersView() {
         }
         .audit-label {
           color: var(--text-muted);
-          font-size: 11px;
+          font-size: var(--text-xs);
         }
         .audit-value {
           font-weight: 500;
@@ -2083,7 +2162,7 @@ export default function AdminOrdersView() {
           background: #F4EFE6;
           padding: 2px 6px;
           border-radius: 3px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 600;
           color: #3E2723;
         }
@@ -2095,7 +2174,7 @@ export default function AdminOrdersView() {
           border: 1px solid var(--border-light);
           border-radius: 3px;
           padding: 2px 6px;
-          font-size: 10px;
+          font-size: var(--text-xs);
           cursor: pointer;
           color: var(--text-muted);
           transition: var(--transition);
@@ -2105,14 +2184,14 @@ export default function AdminOrdersView() {
           color: var(--accent-terracotta);
         }
         .receipt-preview-btn {
-          font-size: 11px;
+          font-size: var(--text-xs);
           padding: 4px 8px;
           display: flex;
           align-items: center;
           gap: 4px;
         }
         .no-receipt-text {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
           font-style: italic;
         }
@@ -2125,7 +2204,7 @@ export default function AdminOrdersView() {
           color: #2E7D32;
           padding: 6px 10px;
           border-radius: 3px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 500;
         }
         .audit-failed-banner {
@@ -2135,11 +2214,11 @@ export default function AdminOrdersView() {
           color: #C62828;
           padding: 8px 10px;
           border-radius: 3px;
-          font-size: 11px;
+          font-size: var(--text-xs);
         }
         .audit-failed-banner p {
           margin: 2px 0 0;
-          font-size: 11px;
+          font-size: var(--text-xs);
           line-height: 1.3;
         }
         .audit-tracking-banner {
@@ -2150,7 +2229,7 @@ export default function AdminOrdersView() {
           color: #1565C0;
           padding: 6px 10px;
           border-radius: 3px;
-          font-size: 11px;
+          font-size: var(--text-xs);
         }
 
         /* Card Footer */
@@ -2174,7 +2253,7 @@ export default function AdminOrdersView() {
           background: #2E7D32;
           color: #FFFFFF;
           border-color: #2E7D32;
-          font-size: 12px;
+          font-size: var(--text-xs);
           padding: 7px 14px;
           display: flex;
           align-items: center;
@@ -2186,7 +2265,7 @@ export default function AdminOrdersView() {
         .reject-btn {
           color: #C62828;
           border-color: #FFCDD2;
-          font-size: 12px;
+          font-size: var(--text-xs);
           padding: 7px 12px;
           display: flex;
           align-items: center;
@@ -2199,7 +2278,7 @@ export default function AdminOrdersView() {
         .ship-btn {
           color: #1565C0;
           border-color: #90CAF9;
-          font-size: 12px;
+          font-size: var(--text-xs);
           padding: 7px 12px;
           display: flex;
           align-items: center;
@@ -2217,7 +2296,7 @@ export default function AdminOrdersView() {
           flex-wrap: wrap;
         }
         .whatsapp-btn {
-          font-size: 12px;
+          font-size: var(--text-xs);
           padding: 7px 12px;
           display: flex;
           align-items: center;
@@ -2225,7 +2304,7 @@ export default function AdminOrdersView() {
           text-decoration: none;
         }
         .invoice-btn {
-          font-size: 12px;
+          font-size: var(--text-xs);
           padding: 7px 12px;
           display: flex;
           align-items: center;
@@ -2255,12 +2334,12 @@ export default function AdminOrdersView() {
         }
         .no-orders-state h3 {
           font-family: var(--font-serif);
-          font-size: 20px;
+          font-size: var(--text-xl);
           margin: 0;
         }
         .no-orders-state p {
           color: var(--text-muted);
-          font-size: 13px;
+          font-size: var(--text-sm);
           max-width: 400px;
           margin: 0;
         }
@@ -2307,7 +2386,7 @@ export default function AdminOrdersView() {
         }
         .lightbox-header h4 {
           margin: 0;
-          font-size: 15px;
+          font-size: var(--text-base);
           font-family: var(--font-serif);
         }
         .danger-modal-title, .ship-modal-title {
@@ -2342,7 +2421,7 @@ export default function AdminOrdersView() {
           gap: 14px;
         }
         .form-subtext {
-          font-size: 13px;
+          font-size: var(--text-sm);
           color: var(--text-secondary);
           margin: 0;
           line-height: 1.4;
@@ -2358,13 +2437,13 @@ export default function AdminOrdersView() {
           gap: 12px;
         }
         .form-label {
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           color: var(--text-secondary);
         }
         .form-select, .form-input {
           padding: 9px 12px;
-          font-size: 13px;
+          font-size: var(--text-sm);
           font-family: inherit;
           border: 1px solid var(--border-light);
           border-radius: 4px;
@@ -2385,7 +2464,7 @@ export default function AdminOrdersView() {
           border: 1px solid #C62828;
           padding: 8px 16px;
           border-radius: 3px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           cursor: pointer;
         }
@@ -2408,11 +2487,11 @@ export default function AdminOrdersView() {
         }
         .brand-title {
           font-family: var(--font-serif);
-          font-size: 20px;
+          font-size: var(--text-xl);
           letter-spacing: 1px;
         }
         .brand-tag {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--accent-gold);
           text-transform: uppercase;
           letter-spacing: 0.8px;
@@ -2432,7 +2511,7 @@ export default function AdminOrdersView() {
           padding-bottom: 14px;
         }
         .meta-sub {
-          font-size: 10px;
+          font-size: var(--text-xs);
           text-transform: uppercase;
           letter-spacing: 0.8px;
           color: var(--text-muted);
@@ -2441,11 +2520,11 @@ export default function AdminOrdersView() {
         .meta-main {
           font-family: monospace;
           margin: 4px 0 2px;
-          font-size: 18px;
+          font-size: var(--text-lg);
           color: var(--accent-terracotta);
         }
         .meta-date, .meta-utr {
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: var(--text-secondary);
           margin: 2px 0;
         }
@@ -2453,7 +2532,7 @@ export default function AdminOrdersView() {
           display: inline-block;
           padding: 3px 8px;
           border-radius: 12px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 700;
           margin: 4px 0;
         }
@@ -2468,14 +2547,14 @@ export default function AdminOrdersView() {
           padding: 12px 16px;
           background: #FAF8F5;
           border-radius: 4px;
-          font-size: 12px;
+          font-size: var(--text-xs);
         }
         .party-box p {
           margin: 2px 0;
           color: var(--text-secondary);
         }
         .party-title {
-          font-size: 10px;
+          font-size: var(--text-xs);
           font-weight: 700;
           color: var(--text-muted);
           display: block;
@@ -2484,13 +2563,13 @@ export default function AdminOrdersView() {
         .invoice-items-table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 12px;
+          font-size: var(--text-xs);
         }
         .invoice-items-table th {
           background: #F4EFE6;
           padding: 8px 10px;
           text-align: left;
-          font-size: 11px;
+          font-size: var(--text-xs);
           text-transform: uppercase;
           color: var(--text-secondary);
         }
@@ -2500,7 +2579,7 @@ export default function AdminOrdersView() {
         }
         .invoice-items-table tfoot td {
           padding: 12px 10px;
-          font-size: 13px;
+          font-size: var(--text-sm);
           border-bottom: none;
         }
         .text-right { text-align: right !important; }
@@ -2508,11 +2587,11 @@ export default function AdminOrdersView() {
           background: #FFFDF9;
           border-left: 3px solid var(--accent-gold);
           padding: 10px 14px;
-          font-size: 12px;
+          font-size: var(--text-xs);
         }
         .invoice-footer-seal {
           text-align: center;
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
           border-top: 1px dashed var(--border-light);
           padding-top: 14px;
@@ -2552,13 +2631,13 @@ export default function AdminOrdersView() {
         }
         .dispatch-toast-content h4 {
           margin: 0 0 2px 0;
-          font-size: 14px;
+          font-size: var(--text-base);
           color: #1F1A17;
           font-weight: 600;
         }
         .dispatch-toast-content p {
           margin: 0;
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: #5C524B;
         }
         .dispatch-toast-close {
@@ -2580,7 +2659,7 @@ export default function AdminOrdersView() {
           width: 100%;
         }
         .modal-subtitle {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
           font-weight: normal;
         }
@@ -2597,18 +2676,18 @@ export default function AdminOrdersView() {
         }
         .dest-name {
           font-weight: 600;
-          font-size: 14px;
+          font-size: var(--text-base);
           color: var(--text-dark);
           margin-bottom: 2px;
         }
         .dest-address {
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
           line-height: 1.4;
           margin-bottom: 4px;
         }
         .dest-contact {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--accent-terracotta);
           display: flex;
           gap: 10px;
@@ -2618,12 +2697,12 @@ export default function AdminOrdersView() {
           flex-shrink: 0;
         }
         .order-items-count {
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           color: var(--text-dark);
         }
         .order-status-tag {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--accent-gold);
           margin-top: 2px;
         }
@@ -2637,7 +2716,7 @@ export default function AdminOrdersView() {
           background: none;
           border: 1px solid var(--border-gold);
           color: var(--accent-terracotta);
-          font-size: 11px;
+          font-size: var(--text-xs);
           padding: 2px 8px;
           border-radius: 3px;
           cursor: pointer;
@@ -2653,7 +2732,7 @@ export default function AdminOrdersView() {
         .preset-pill {
           background: #FAF6EF;
           border: 1px solid var(--border-light);
-          font-size: 10px;
+          font-size: var(--text-xs);
           padding: 2px 6px;
           border-radius: 3px;
           cursor: pointer;
@@ -2680,7 +2759,7 @@ export default function AdminOrdersView() {
           padding-left: 32px;
         }
         .field-hint {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
           margin-top: 4px;
           display: block;
@@ -2709,12 +2788,12 @@ export default function AdminOrdersView() {
           display: flex;
           align-items: center;
           gap: 6px;
-          font-size: 13px;
+          font-size: var(--text-sm);
           font-weight: 600;
           color: var(--text-dark);
         }
         .email-toggle-desc {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
           margin-top: 3px;
           line-height: 1.4;
@@ -2734,7 +2813,7 @@ export default function AdminOrdersView() {
           display: flex;
           align-items: flex-start;
           gap: 8px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: #1E4F8A;
           margin-top: 6px;
         }
@@ -2757,11 +2836,11 @@ export default function AdminOrdersView() {
           background: #FFFFFF;
           padding: 1px 5px;
           border-radius: 2px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           border: 1px solid #D2E3F8;
         }
         .tracking-eta-line {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: #386497;
         }
         .ship-btn-active {
@@ -2792,7 +2871,7 @@ export default function AdminOrdersView() {
         }
         .empty-outbox-state p {
           margin: 0;
-          font-size: 13px;
+          font-size: var(--text-sm);
           color: var(--text-muted);
         }
         .outbox-list {
@@ -2820,32 +2899,36 @@ export default function AdminOrdersView() {
           align-items: center;
         }
         .outbox-badge {
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 600;
           padding: 2px 8px;
           border-radius: 3px;
         }
-        .outbox-badge.type-dispatch_notification {
+        .outbox-badge.type-dispatch_notification,
+        .outbox-badge.type-order_dispatched,
+        .outbox-badge.type-order_delivered {
           background: #E8F5E9;
           color: #2E7D32;
         }
-        .outbox-badge.type-order_confirmation {
+        .outbox-badge.type-order_confirmation,
+        .outbox-badge.type-order_placed,
+        .outbox-badge.type-order_confirmed {
           background: #FFF3E0;
           color: #E65100;
         }
         .outbox-time {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
         }
         .outbox-subject {
-          font-size: 13px;
+          font-size: var(--text-sm);
           color: var(--text-dark);
         }
         .outbox-details-row {
           display: flex;
           align-items: center;
           gap: 14px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
           flex-wrap: wrap;
         }
@@ -2861,7 +2944,7 @@ export default function AdminOrdersView() {
           margin-top: 4px;
         }
         .preview-email-btn {
-          font-size: 11px;
+          font-size: var(--text-xs);
           display: flex;
           align-items: center;
           gap: 4px;

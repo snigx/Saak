@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useShop } from '../context/ShopContext';
 import { 
-  X, User, Mail, Lock, LogOut, Check, AlertCircle, 
-  Sparkles, Shield, Package, KeyRound, Loader2, ArrowRight,
-  Clock, CheckCircle2, Truck, ExternalLink, Copy
+  X, User, Lock, LogOut, Check, AlertCircle, 
+  Sparkles, Package, KeyRound, Loader2, Clock, CheckCircle2, Truck, ExternalLink, Copy
 } from 'lucide-react';
+import { useOverlay } from '../hooks/useOverlay';
 
 export default function ProfileModal() {
   const { 
@@ -17,7 +17,7 @@ export default function ProfileModal() {
     logout 
   } = useAuth();
 
-  const { orders = [], formatPrice } = useShop();
+  const { orders = [] } = useShop();
 
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'security' | 'orders'
   
@@ -48,12 +48,13 @@ export default function ProfileModal() {
     setTimeout(() => setCopiedAwb(null), 2000);
   };
 
-  // Find user's orders by matching email or name, or fallback to all orders
-  const patronOrders = orders.filter(o => 
-    (o.customer_email && user?.email && o.customer_email.toLowerCase() === user.email.toLowerCase()) ||
-    (user?.fullName && o.customer_name && o.customer_name.toLowerCase().includes(user.fullName.toLowerCase()))
-  );
-  const displayedOrders = patronOrders.length > 0 ? patronOrders : orders;
+  // Only the signed-in patron's own orders (matched by email)
+  const userEmail = (user?.email || '').trim().toLowerCase();
+  const displayedOrders = userEmail
+    ? orders.filter(o => (o.customer_email || '').trim().toLowerCase() === userEmail)
+    : [];
+
+  useOverlay(isProfileOpen && !!user, closeProfile);
 
   if (!isProfileOpen || !user) return null;
 
@@ -63,12 +64,12 @@ export default function ProfileModal() {
     setPasswordSuccess(false);
 
     if (!newPassword || newPassword.length < 6) {
-      setPasswordError('Password must be at least 6 characters long.');
+      setPasswordError('Password must be at least 6 characters.');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setPasswordError('Passwords do not match. Please re-enter.');
+      setPasswordError("Passwords don't match.");
       return;
     }
 
@@ -113,7 +114,7 @@ export default function ProfileModal() {
         <button 
           className="modal-close-btn" 
           onClick={closeProfile}
-          aria-label="Close Profile Modal"
+          aria-label="Close"
         >
           <X size={20} />
         </button>
@@ -131,7 +132,7 @@ export default function ProfileModal() {
           <div className="profile-hero-info">
             <div className="patron-badge">
               <Sparkles size={12} className="text-gold" />
-              <span>SAAK PATRON CIRCLE</span>
+              <span>Your account</span>
             </div>
             
             {isEditingName ? (
@@ -159,11 +160,11 @@ export default function ProfileModal() {
               </div>
             ) : (
               <div className="name-display-row">
-                <h2 className="patron-name">{user.fullName || 'Patron'}</h2>
+                <h2 className="patron-name">{user.fullName || 'Your account'}</h2>
                 <button 
                   onClick={() => setIsEditingName(true)} 
                   className="edit-name-btn"
-                  title="Edit Name"
+                  title="Edit name"
                 >
                   Edit
                 </button>
@@ -181,21 +182,21 @@ export default function ProfileModal() {
             onClick={() => setActiveTab('overview')}
           >
             <User size={15} />
-            <span>Patron Details</span>
+            <span>Details</span>
           </button>
           <button 
             className={`tab-btn ${activeTab === 'security' ? 'active' : ''}`}
             onClick={() => setActiveTab('security')}
           >
             <KeyRound size={15} />
-            <span>Change Password</span>
+            <span>Password</span>
           </button>
           <button 
             className={`tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
             onClick={() => setActiveTab('orders')}
           >
             <Package size={15} />
-            <span>Your Orders ({displayedOrders.length})</span>
+            <span>Orders ({displayedOrders.length})</span>
           </button>
         </div>
 
@@ -204,32 +205,32 @@ export default function ProfileModal() {
           <div className="tab-content overview-content">
             <div className="info-cards-grid">
               <div className="info-card">
-                <span className="info-card-label">Authentication Method</span>
+                <span className="info-card-label">Sign-in</span>
                 <span className="info-card-value">
-                  {user.provider === 'google' ? 'Google Account (OAuth)' : 'Email & Encrypted Password'}
+                  {user.provider === 'google' ? 'Google' : 'Email and password'}
                 </span>
               </div>
               <div className="info-card">
-                <span className="info-card-label">Patron Status</span>
-                <span className="info-card-value text-terracotta">Active VIP Member</span>
+                <span className="info-card-label">Account</span>
+                <span className="info-card-value text-terracotta">Active</span>
               </div>
               <div className="info-card">
-                <span className="info-card-label">Member Since</span>
+                <span className="info-card-label">Member since</span>
                 <span className="info-card-value">
                   {new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
                 </span>
               </div>
               <div className="info-card">
-                <span className="info-card-label">Bespoke Styling Privileges</span>
-                <span className="info-card-value">Direct Studio Access Unlocked</span>
+                <span className="info-card-label">Styling help</span>
+                <span className="info-card-value">On WhatsApp</span>
               </div>
             </div>
 
             <div className="atelier-privilege-callout">
               <Sparkles size={16} className="text-gold" />
               <div>
-                <strong>Curated Drapes &amp; Early Releases:</strong>
-                <p>As a Saak Patron, your custom shade orders and sculpted corsets receive priority tailoring queue at Aprajita's studio.</p>
+                <strong>Need help with sizing or styling?</strong>
+                <p>WhatsApp us on +91 62676 64409.</p>
               </div>
             </div>
           </div>
@@ -239,16 +240,16 @@ export default function ProfileModal() {
         {activeTab === 'security' && (
           <div className="tab-content security-content">
             <div className="section-head">
-              <h3 className="section-title">Change Account Password</h3>
+              <h3 className="section-title">Change password</h3>
               <p className="section-desc">
-                Update your password to ensure secure access to your bespoke orders and measurements.
+                Keep your account and orders secure.
               </p>
             </div>
 
             {passwordSuccess && (
               <div className="alert-success">
                 <CheckCircle2 size={16} />
-                <span>Password updated successfully!</span>
+                <span>Password updated.</span>
               </div>
             )}
 
@@ -261,13 +262,13 @@ export default function ProfileModal() {
 
             <form onSubmit={handlePasswordChange} className="password-form">
               <div className="form-group">
-                <label htmlFor="new-password">New Password</label>
+                <label htmlFor="new-password">New password</label>
                 <div className="input-box">
                   <Lock size={16} className="input-icon" />
                   <input 
                     id="new-password"
                     type="password"
-                    placeholder="Enter at least 6 characters"
+                    placeholder="At least 6 characters"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
@@ -276,13 +277,13 @@ export default function ProfileModal() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="confirm-password">Confirm New Password</label>
+                <label htmlFor="confirm-password">Confirm new password</label>
                 <div className="input-box">
                   <Lock size={16} className="input-icon" />
                   <input 
                     id="confirm-password"
                     type="password"
-                    placeholder="Re-type new password"
+                    placeholder="Type it again"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
@@ -298,12 +299,12 @@ export default function ProfileModal() {
                 {isChangingPassword ? (
                   <>
                     <Loader2 size={16} className="spin" />
-                    <span>Updating Password...</span>
+                    <span>Saving...</span>
                   </>
                 ) : (
                   <>
                     <Check size={16} />
-                    <span>Save New Password</span>
+                    <span>Save password</span>
                   </>
                 )}
               </button>
@@ -317,14 +318,17 @@ export default function ProfileModal() {
             {displayedOrders.length === 0 ? (
               <div className="empty-orders-view">
                 <Package size={36} className="empty-icon" />
-                <h4>No Orders Yet</h4>
-                <p>Pieces you order via direct UPI checkout or Cash on Delivery will automatically appear here with their live handcrafting and courier dispatch status.</p>
+                <h4>No orders yet</h4>
+                <p>Your UPI and Cash on Delivery orders will show up here, with their status and tracking.</p>
               </div>
             ) : (
               <div className="orders-list">
                 {displayedOrders.map((ord, idx) => {
-                  const isDispatched = ord.fulfillment_status === 'dispatched' || Boolean(ord.tracking_number);
+                  const isCancelled = ord.fulfillment_status === 'cancelled';
+                  const isFailed = ord.payment_status === 'failed';
+                  const isClosed = isCancelled || isFailed;
                   const isDelivered = ord.fulfillment_status === 'delivered';
+                  const isDispatched = isDelivered || ord.fulfillment_status === 'dispatched' || ord.fulfillment_status === 'shipped' || Boolean(ord.tracking_number);
                   const dispatch = ord.dispatch_details || {};
                   const courier = dispatch.courier || (ord.tracking_number ? ord.tracking_number.split('#')[0].trim() : 'Blue Dart Express');
                   const awb = dispatch.trackingNumber || (ord.tracking_number ? ord.tracking_number.split('#')[1]?.trim() : 'Pending');
@@ -345,8 +349,18 @@ export default function ProfileModal() {
                             })}
                           </span>
                         </div>
-                        <span className={`order-status-badge ${isDispatched ? 'badge-dispatched' : 'badge-processing'}`}>
-                          {isDispatched ? (
+                        <span className={`order-status-badge ${isClosed ? 'badge-closed' : isDispatched ? 'badge-dispatched' : 'badge-processing'}`}>
+                          {isClosed ? (
+                            <>
+                              <AlertCircle size={12} />
+                              <span>{isFailed ? 'Payment failed' : 'Cancelled'}</span>
+                            </>
+                          ) : isDelivered ? (
+                            <>
+                              <CheckCircle2 size={12} />
+                              <span>Delivered</span>
+                            </>
+                          ) : isDispatched ? (
                             <>
                               <Truck size={12} />
                               <span>Dispatched ({courier})</span>
@@ -354,13 +368,14 @@ export default function ProfileModal() {
                           ) : (
                             <>
                               <Clock size={12} />
-                              <span>In Process (Tailoring)</span>
+                              <span>Being made</span>
                             </>
                           )}
                         </span>
                       </div>
 
-                      {/* Visual Stepper */}
+                      {/* Visual Stepper (not shown for failed / cancelled orders) */}
+                      {!isClosed && (
                       <div className="order-stepper">
                         <div className="step-item step-completed">
                           <div className="step-dot"><Check size={10} /></div>
@@ -369,7 +384,7 @@ export default function ProfileModal() {
                         <div className="step-line active"></div>
                         <div className="step-item step-completed">
                           <div className="step-dot"><Check size={10} /></div>
-                          <span className="step-label">In Process</span>
+                          <span className="step-label">Being made</span>
                         </div>
                         <div className={`step-line ${isDispatched ? 'active' : ''}`}></div>
                         <div className={`step-item ${isDispatched ? 'step-completed' : 'step-pending'}`}>
@@ -384,16 +399,27 @@ export default function ProfileModal() {
                           <span className="step-label">Delivered</span>
                         </div>
                       </div>
+                      )}
 
                       {/* DYNAMIC DISPATCH / IN-PROCESS CALLOUT (Requested by User) */}
-                      {isDispatched ? (
+                      {isClosed ? (
+                        <div className="patron-inprocess-box">
+                          <div className="inprocess-header">
+                            <AlertCircle size={14} className="text-terracotta" />
+                            <strong>{isFailed ? "We couldn't verify the payment for this order." : 'This order has been cancelled.'}</strong>
+                          </div>
+                          <p className="inprocess-desc">
+                            {ord.failure_reason || 'Please WhatsApp us on +91 62676 64409 for help.'}
+                          </p>
+                        </div>
+                      ) : isDispatched ? (
                         <div className="patron-dispatch-box">
                           <div className="dispatch-box-top">
                             <div className="dispatch-courier-info">
                               <Truck size={16} className="text-terracotta" />
                               <div>
                                 <span className="courier-name">{courier}</span>
-                                <span className="delivery-est">Expected Delivery: <strong>{estDelivery}</strong></span>
+                                <span className="delivery-est">Expected delivery: <strong>{estDelivery}</strong></span>
                               </div>
                             </div>
                             <a 
@@ -402,7 +428,7 @@ export default function ProfileModal() {
                               rel="noopener noreferrer"
                               className="track-external-btn"
                             >
-                              <span>Track Package</span>
+                              <span>Track order</span>
                               <ExternalLink size={12} />
                             </a>
                           </div>
@@ -414,7 +440,7 @@ export default function ProfileModal() {
                               type="button" 
                               onClick={() => handleCopyAwb(awb, ord.id)}
                               className="copy-awb-btn"
-                              title="Copy AWB Number"
+                              title="Copy tracking number"
                             >
                               {copiedAwb === ord.id ? <Check size={12} color="#2E7D32" /> : <Copy size={12} />}
                               <span>{copiedAwb === ord.id ? 'Copied' : 'Copy'}</span>
@@ -425,10 +451,10 @@ export default function ProfileModal() {
                         <div className="patron-inprocess-box">
                           <div className="inprocess-header">
                             <Clock size={14} className="text-terracotta" />
-                            <strong>Your order is in process, we will share the dispatch details shortly.</strong>
+                            <strong>We're working on your order. Tracking details will follow soon.</strong>
                           </div>
                           <p className="inprocess-desc">
-                            Our master tailors are inspecting your drapes and stitching the complimentary fall &amp; pico. As soon as Aprajita assigns the courier partner, your live tracking link will be visible right here and sent to your email.
+                            We're checking your piece and adding the fall &amp; pico. Once it ships, your tracking link will appear here and in your email.
                           </p>
                         </div>
                       )}
@@ -446,11 +472,11 @@ export default function ProfileModal() {
                       {/* Footer */}
                       <div className="order-footer-row">
                         <div className="order-delivery-tag">
-                          <span>Delivering to: {ord.city || 'India'}</span>
+                          <span>Delivering to {ord.city || 'India'}</span>
                           {ord.payment_method && <span className="order-method">• {ord.payment_method}</span>}
                         </div>
                         <div className="order-total-block">
-                          <span className="order-total-label">Total Amount:</span>
+                          <span className="order-total-label">Total:</span>
                           <strong className="order-total-val">₹{Number(ord.total_amount).toLocaleString('en-IN')}</strong>
                         </div>
                       </div>
@@ -470,7 +496,7 @@ export default function ProfileModal() {
             className="logout-action-btn"
           >
             <LogOut size={16} />
-            <span>Sign Out</span>
+            <span>Sign out</span>
           </button>
         </div>
       </div>
@@ -514,7 +540,7 @@ export default function ProfileModal() {
         }
         .avatar-initials {
           font-family: var(--font-serif);
-          font-size: 24px;
+          font-size: var(--text-2xl);
           color: #FAF6EF;
           letter-spacing: 0.05em;
         }
@@ -525,7 +551,7 @@ export default function ProfileModal() {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          font-size: 10px;
+          font-size: var(--text-xs);
           letter-spacing: 0.15em;
           color: var(--accent-gold);
           font-weight: 600;
@@ -538,7 +564,7 @@ export default function ProfileModal() {
         }
         .patron-name {
           font-family: var(--font-serif);
-          font-size: 22px;
+          font-size: var(--text-xl);
           font-weight: 400;
           color: #FFFFFF;
           margin: 0;
@@ -547,7 +573,7 @@ export default function ProfileModal() {
           background: none;
           border: none;
           color: var(--accent-gold-light);
-          font-size: 11px;
+          font-size: var(--text-xs);
           cursor: pointer;
           text-decoration: underline;
         }
@@ -559,14 +585,14 @@ export default function ProfileModal() {
         }
         .name-input {
           padding: 4px 8px;
-          font-size: 14px;
+          font-size: var(--text-base);
           border-radius: 2px;
           border: 1px solid var(--accent-gold);
           background: #FAF6EF;
           color: var(--text-primary);
         }
         .patron-email {
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: #BDB3A7;
           display: block;
           margin-top: 2px;
@@ -586,7 +612,7 @@ export default function ProfileModal() {
           background: none;
           border: none;
           border-bottom: 2px solid transparent;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           letter-spacing: 0.05em;
           text-transform: uppercase;
@@ -620,13 +646,13 @@ export default function ProfileModal() {
           gap: 4px;
         }
         .info-card-label {
-          font-size: 11px;
+          font-size: var(--text-xs);
           text-transform: uppercase;
           letter-spacing: 0.05em;
           color: var(--text-muted);
         }
         .info-card-value {
-          font-size: 13px;
+          font-size: var(--text-sm);
           font-weight: 600;
           color: var(--text-primary);
         }
@@ -640,7 +666,7 @@ export default function ProfileModal() {
           border: 1px solid rgba(197, 160, 89, 0.3);
           border-radius: 3px;
           padding: 14px 16px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           line-height: 1.5;
           color: var(--text-primary);
         }
@@ -654,12 +680,12 @@ export default function ProfileModal() {
         }
         .section-title {
           font-family: var(--font-serif);
-          font-size: 18px;
+          font-size: var(--text-lg);
           color: var(--text-primary);
           margin-bottom: 4px;
         }
         .section-desc {
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: var(--text-secondary);
         }
         .alert-success {
@@ -671,7 +697,7 @@ export default function ProfileModal() {
           border: 1px solid #C8E6C9;
           padding: 10px 14px;
           border-radius: 3px;
-          font-size: 13px;
+          font-size: var(--text-sm);
           margin-bottom: 16px;
         }
         .alert-error {
@@ -683,7 +709,7 @@ export default function ProfileModal() {
           border: 1px solid #F5C6CB;
           padding: 10px 14px;
           border-radius: 3px;
-          font-size: 13px;
+          font-size: var(--text-sm);
           margin-bottom: 16px;
         }
         .password-form {
@@ -697,7 +723,7 @@ export default function ProfileModal() {
           gap: 6px;
         }
         .form-group label {
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 600;
           letter-spacing: 0.05em;
           text-transform: uppercase;
@@ -719,7 +745,7 @@ export default function ProfileModal() {
           background: #FFFFFF;
           border: 1px solid var(--border-light);
           border-radius: 2px;
-          font-size: 13px;
+          font-size: var(--text-sm);
         }
         .input-box input:focus {
           outline: none;
@@ -732,7 +758,7 @@ export default function ProfileModal() {
           align-items: center;
           justify-content: center;
           gap: 8px;
-          font-size: 13px;
+          font-size: var(--text-sm);
           font-weight: 600;
           letter-spacing: 0.05em;
           text-transform: uppercase;
@@ -744,12 +770,12 @@ export default function ProfileModal() {
         }
         .empty-orders-view h4 {
           font-family: var(--font-serif);
-          font-size: 16px;
+          font-size: var(--text-lg);
           color: var(--text-primary);
           margin: 10px 0 6px;
         }
         .empty-orders-view p {
-          font-size: 12px;
+          font-size: var(--text-xs);
           line-height: 1.5;
           max-width: 320px;
           margin: 0 auto;
@@ -775,19 +801,19 @@ export default function ProfileModal() {
         }
         .order-id {
           font-weight: 700;
-          font-size: 13px;
+          font-size: var(--text-sm);
           color: var(--text-primary);
           display: block;
         }
         .order-date {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
         }
         .order-status-badge {
           display: inline-flex;
           align-items: center;
           gap: 5px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 600;
           padding: 4px 10px;
           border-radius: 2px;
@@ -796,6 +822,11 @@ export default function ProfileModal() {
           background: #FFF4E5;
           color: #B25E00;
           border: 1px solid #FFE0B2;
+        }
+        .badge-closed {
+          background: #FDECEA;
+          color: #C62828;
+          border: 1px solid #F5C6CB;
         }
         .badge-dispatched {
           background: #E8F5E9;
@@ -823,7 +854,7 @@ export default function ProfileModal() {
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 10px;
+          font-size: var(--text-xs);
           background: #EDE6DC;
           color: #8C827A;
           transition: var(--transition);
@@ -833,7 +864,7 @@ export default function ProfileModal() {
           color: #FFFFFF;
         }
         .step-label {
-          font-size: 10px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
           font-weight: 500;
           letter-spacing: 0.04em;
@@ -864,12 +895,12 @@ export default function ProfileModal() {
           display: flex;
           align-items: center;
           gap: 8px;
-          font-size: 13px;
+          font-size: var(--text-sm);
           color: var(--text-primary);
           margin-bottom: 4px;
         }
         .inprocess-desc {
-          font-size: 11.5px;
+          font-size: var(--text-xs);
           line-height: 1.45;
           color: var(--text-secondary);
           margin: 0;
@@ -895,13 +926,13 @@ export default function ProfileModal() {
           gap: 8px;
         }
         .courier-name {
-          font-size: 13px;
+          font-size: var(--text-sm);
           font-weight: 700;
           color: #1F1A17;
           display: block;
         }
         .delivery-est {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: #5C524B;
         }
         .track-external-btn {
@@ -911,7 +942,7 @@ export default function ProfileModal() {
           background: #1F1A17;
           color: #FAF6EF;
           text-decoration: none;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 600;
           letter-spacing: 0.05em;
           padding: 6px 12px;
@@ -925,7 +956,7 @@ export default function ProfileModal() {
           display: flex;
           align-items: center;
           gap: 8px;
-          font-size: 11.5px;
+          font-size: var(--text-xs);
           padding-top: 8px;
           border-top: 1px dashed rgba(46, 125, 50, 0.2);
         }
@@ -935,7 +966,7 @@ export default function ProfileModal() {
         .awb-code {
           font-family: monospace;
           font-weight: 700;
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: #1F1A17;
           background: #FFFFFF;
           padding: 2px 6px;
@@ -948,7 +979,7 @@ export default function ProfileModal() {
           display: inline-flex;
           align-items: center;
           gap: 3px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: #2E7D32;
           font-weight: 600;
           cursor: pointer;
@@ -959,7 +990,7 @@ export default function ProfileModal() {
           flex-direction: column;
           gap: 4px;
           margin-bottom: 10px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: var(--text-secondary);
         }
         .order-line-item {
@@ -972,23 +1003,23 @@ export default function ProfileModal() {
           align-items: center;
           padding-top: 8px;
           border-top: 1px solid var(--border-light);
-          font-size: 12px;
+          font-size: var(--text-xs);
         }
         .order-delivery-tag {
           color: var(--text-muted);
-          font-size: 11px;
+          font-size: var(--text-xs);
         }
         .order-total-block {
           text-align: right;
         }
         .order-total-label {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
           margin-right: 6px;
         }
         .order-total-val {
           color: var(--accent-terracotta);
-          font-size: 13px;
+          font-size: var(--text-sm);
           font-weight: 700;
         }
         .profile-footer {
@@ -1007,7 +1038,7 @@ export default function ProfileModal() {
           color: var(--accent-terracotta);
           padding: 8px 16px;
           border-radius: 2px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           letter-spacing: 0.05em;
           text-transform: uppercase;
@@ -1032,14 +1063,14 @@ export default function ProfileModal() {
             height: 50px;
           }
           .patron-name {
-            font-size: 18px;
+            font-size: var(--text-lg);
           }
           .profile-tabs {
             overflow-x: auto;
           }
           .tab-btn {
             padding: 11px 8px;
-            font-size: 10px;
+            font-size: var(--text-xs);
             white-space: nowrap;
           }
           .tab-content {

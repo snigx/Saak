@@ -10,7 +10,8 @@ create table if not exists public.products (
   category text not null,
   sub_category text not null,
   price numeric not null,
-  original_price numeric,
+  original_price numeric, -- retired; see discount
+  discount jsonb,         -- offer: {type, value, label, startsAt, endsAt, enabled}
   tag text,
   tag_color text default '#A34835',
   description text,
@@ -48,6 +49,18 @@ create policy "Allow public insert and update on products"
   on public.products for all
   using (true)
   with check (true);
+
+-- STORE SETTINGS (e.g. the Mix & Match pair offer)
+create table if not exists public.store_settings (
+  key text primary key,
+  value jsonb,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+alter table public.store_settings enable row level security;
+create policy "Allow public read access on store_settings"
+  on public.store_settings for select using (true);
+create policy "Allow public write on store_settings"
+  on public.store_settings for all using (true) with check (true);
 
 -- 2. ORDERS TABLE
 create table if not exists public.orders (
@@ -393,9 +406,9 @@ insert into public.products (
   'The Iconic Signature Duo (Black Crepe + Gold Corset)',
   'sets',
   'curated-duo',
-  8460,
   9400,
-  'Save 10% as a Set',
+  null,
+  'Styled by Aprajita',
   '#8C3B2B',
   'The definitive Saak by Aprajita look: our fluid Black Crepe Pre-Draped Saree paired with the showstopper Sculpted Antique Gold Corset. Minimalist effortless drape meets high-impact royal embellishment.',
   'Black Pure Crepe Saree + Raw Silk Gold Zardozi Corset',
@@ -435,6 +448,8 @@ alter table public.orders add column if not exists verified_at timestamp with ti
 alter table public.orders add column if not exists verified_by text;
 alter table public.orders add column if not exists failure_reason text;
 alter table public.orders add column if not exists admin_notes text;
+alter table public.orders add column if not exists delivered_at timestamp with time zone;
+alter table public.orders add column if not exists cancelled_at timestamp with time zone;
 
 -- Policy: Allow updates on orders (for admin verification and dispatch updates)
 create policy "Allow public update on orders"

@@ -63,10 +63,10 @@ export async function requestEmailOtp(email, fullName = '', type = 'signup', pas
 
   if (type === 'signup') {
     if (password && confirmPassword && password !== confirmPassword) {
-      throw new Error('Passwords do not match. Please ensure both passwords are identical.');
+      throw new Error("Passwords don't match.");
     }
     if (password && password.length < 6) {
-      throw new Error('Password must be at least 6 characters long.');
+      throw new Error('Password must be at least 6 characters.');
     }
   }
 
@@ -82,7 +82,7 @@ export async function requestEmailOtp(email, fullName = '', type = 'signup', pas
 
     const data = await res.json();
     if (!res.ok) {
-      throw new Error(data.error || 'Failed to dispatch verification code.');
+      throw new Error(data.error || "Couldn't send the code. Please try again.");
     }
     return data;
   } catch (err) {
@@ -99,7 +99,7 @@ export async function requestEmailOtp(email, fullName = '', type = 'signup', pas
       }
       return dataFallback;
     } catch (fallbackErr) {
-      throw new Error(fallbackErr.message || err.message || 'Failed to send OTP.');
+      throw new Error(fallbackErr.message || err.message || "Couldn't send the code. Please try again.");
     }
   }
 }
@@ -109,11 +109,11 @@ export async function requestEmailOtp(email, fullName = '', type = 'signup', pas
  */
 export async function verifyEmailOtp(email, otp, fullName = '', password = '', confirmPassword = '') {
   if (!email || !otp) {
-    throw new Error('Please enter both email and the 6-digit verification code.');
+    throw new Error('Please enter your email and the 6-digit code.');
   }
 
   if (password && confirmPassword && password !== confirmPassword) {
-    throw new Error('Passwords do not match. Please ensure both passwords are identical.');
+    throw new Error("Passwords don't match.");
   }
 
   const normalizedEmail = email.trim().toLowerCase();
@@ -129,7 +129,7 @@ export async function verifyEmailOtp(email, otp, fullName = '', password = '', c
 
     const data = await res.json();
     if (!res.ok) {
-      throw new Error(data.error || 'Verification failed. Please check the code.');
+      throw new Error(data.error || 'That code didn\'t work. Please check it.');
     }
     authenticatedUser = data.user;
   } catch (err) {
@@ -151,7 +151,7 @@ export async function verifyEmailOtp(email, otp, fullName = '', password = '', c
   }
 
   if (!authenticatedUser) {
-    throw new Error('Verification failed. Please try again.');
+    throw new Error("That didn't work. Please try again.");
   }
 
   // Format and persist user
@@ -185,10 +185,10 @@ export async function verifyEmailOtp(email, otp, fullName = '', password = '', c
  * Dispatches 6-digit OTP code to the patron's email instead of broken confirmation links.
  */
 export async function signUpWithEmail(email, password, confirmPassword, fullName) {
-  if (!email || !password) throw new Error('Please enter both email and password.');
-  if (!confirmPassword) throw new Error('Please retype your password to confirm.');
-  if (password !== confirmPassword) throw new Error('Passwords do not match. Please ensure both passwords are identical.');
-  if (password.length < 6) throw new Error('Password must be at least 6 characters long.');
+  if (!email || !password) throw new Error('Please enter your email and password.');
+  if (!confirmPassword) throw new Error('Please type your password again.');
+  if (password !== confirmPassword) throw new Error("Passwords don't match.");
+  if (password.length < 6) throw new Error('Password must be at least 6 characters.');
 
   // Send 6-digit OTP to patron's email via verified Gmail SMTP
   await requestEmailOtp(email, fullName, 'signup', password, confirmPassword);
@@ -199,7 +199,7 @@ export async function signUpWithEmail(email, password, confirmPassword, fullName
  * Sign in with Email and Password
  */
 export async function signInWithEmail(email, password) {
-  if (!email || !password) throw new Error('Please enter both email and password.');
+  if (!email || !password) throw new Error('Please enter your email and password.');
 
   const normalizedEmail = email.trim().toLowerCase();
   const enteredPass = password.trim();
@@ -244,7 +244,7 @@ export async function signInWithEmail(email, password) {
         return cleanUser;
       }
     }
-  } catch (err) {
+  } catch {
     // Ignore server error and continue to other providers
   }
 
@@ -266,7 +266,7 @@ export async function signInWithEmail(email, password) {
 
   // If user exists locally or on server with a password, but entered password did not match:
   if (found && found.password) {
-    throw new Error('Invalid password. Please check your credentials or sign in with an OTP code.');
+    throw new Error('Wrong password. Try again, or sign in with an email code.');
   }
 
   // 4. Fallback: If user exists in local database without password (e.g. Google or OTP signup)
@@ -278,13 +278,36 @@ export async function signInWithEmail(email, password) {
   }
 
   // If no user found, invite user to create account or sign in with OTP
-  throw new Error('No account found with this email. Please click "Create an account" to join Saak.');
+  throw new Error('No account with this email. Tap "Create an account" to sign up.');
+}
+
+let googleAvailabilityPromise = null;
+
+/**
+ * Whether Google OAuth is enabled on the Supabase project (cached per page load).
+ * signInWithOAuth redirects without validating the provider, so without this
+ * check shoppers land on a raw JSON error page when Google isn't configured.
+ */
+export function isGoogleAuthAvailable() {
+  if (!isSupabaseConfigured) return Promise.resolve(false);
+  if (!googleAvailabilityPromise) {
+    googleAvailabilityPromise = fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/settings`, {
+      headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY }
+    })
+      .then(res => (res.ok ? res.json() : null))
+      .then(settings => Boolean(settings?.external?.google))
+      .catch(() => false);
+  }
+  return googleAvailabilityPromise;
 }
 
 /**
  * Sign in with Google (OAuth)
  */
 export async function signInWithGoogle() {
+  if (!(await isGoogleAuthAvailable())) {
+    throw new Error('GOOGLE_PROVIDER_NOT_ENABLED');
+  }
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -325,8 +348,7 @@ export async function signInWithGoogle() {
     }
   }
 
-  // Local Fallback Mock
-  return signInWithDemoPatron();
+  throw new Error('GOOGLE_PROVIDER_NOT_ENABLED');
 }
 
 /**
@@ -352,11 +374,11 @@ export async function signInWithDemoPatron() {
  */
 export async function changePassword(newPassword) {
   if (!newPassword || newPassword.length < 6) {
-    throw new Error('New password must be at least 6 characters long.');
+    throw new Error('New password must be at least 6 characters.');
   }
 
   if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase.auth.updateUser({
+    const { error } = await supabase.auth.updateUser({
       password: newPassword
     });
 
@@ -366,7 +388,7 @@ export async function changePassword(newPassword) {
 
   // Local Fallback Mock
   const currentUser = await getCurrentUser();
-  if (!currentUser) throw new Error('No user is currently authenticated.');
+  if (!currentUser) throw new Error('Please sign in first.');
 
   const users = getLocalUsersDb();
   const userIdx = users.findIndex(u => u.id === currentUser.id || u.email === currentUser.email);
@@ -393,7 +415,7 @@ export async function updateUserProfile({ fullName }) {
 
   // Local Fallback Mock
   const currentUser = await getCurrentUser();
-  if (!currentUser) throw new Error('No user authenticated.');
+  if (!currentUser) throw new Error('Please sign in first.');
 
   currentUser.fullName = fullName;
   localStorage.setItem(LOCAL_STORAGE_AUTH_KEY, JSON.stringify(currentUser));

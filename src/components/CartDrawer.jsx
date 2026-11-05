@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
-import { X, Trash2, Plus, Minus, ShoppingBag, Sparkles, ArrowRight, ShieldCheck, Check, RotateCcw } from 'lucide-react';
-import confetti from 'canvas-confetti';
+import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, ShieldCheck, Check, RotateCcw } from 'lucide-react';
+import { useOverlay } from '../hooks/useOverlay';
+import OfferPrice from './OfferPrice';
 
 export default function CartDrawer() {
   const { 
@@ -17,13 +18,12 @@ export default function CartDrawer() {
     openPolicyModal
   } = useShop();
 
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [isCheckingOut] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
 
-  if (!isCartOpen) return null;
+  useOverlay(isCartOpen, () => setIsCartOpen(false));
 
-  const freeShippingThreshold = 5000;
-  const freeShippingMet = cartTotal >= freeShippingThreshold;
+  if (!isCartOpen) return null;
 
   const handleCheckout = () => {
     openCheckout();
@@ -36,37 +36,25 @@ export default function CartDrawer() {
         <div className="drawer-header">
           <div className="drawer-title-group">
             <ShoppingBag size={18} className="text-gold" />
-            <h3 className="drawer-title">Your Shopping Bag</h3>
+            <h3 className="drawer-title">Your bag</h3>
             <span className="drawer-count">({cart.reduce((t, i) => t + i.quantity, 0)})</span>
           </div>
           <button 
             className="drawer-close-btn"
             onClick={() => setIsCartOpen(false)}
-            aria-label="Close Bag"
+            aria-label="Close bag"
           >
             <X size={20} />
           </button>
         </div>
 
-        {/* Free Shipping Progress */}
+        {/* Shipping is complimentary on every order */}
         <div className="shipping-progress-box">
           <div className="progress-text">
-            {freeShippingMet ? (
-              <span className="free-ship-success">
-                <Check size={13} />
-                <span>You've unlocked <strong>Complimentary Insured Express Delivery</strong>!</span>
-              </span>
-            ) : (
-              <span>
-                Add {formatPrice(freeShippingThreshold - cartTotal)} more for <strong>Free Express Delivery</strong>
-              </span>
-            )}
-          </div>
-          <div className="progress-bar-track">
-            <div 
-              className="progress-bar-fill"
-              style={{ width: `${Math.min(100, (cartTotal / freeShippingThreshold) * 100)}%` }}
-            ></div>
+            <span className="free-ship-success">
+              <Check size={13} />
+              <span><strong>Free insured shipping</strong> on every order</span>
+            </span>
           </div>
         </div>
 
@@ -77,9 +65,9 @@ export default function CartDrawer() {
               <div className="complete-badge">
                 <Check size={32} />
               </div>
-              <h3 className="complete-title">Order Received with Grace</h3>
+              <h3 className="complete-title">Order received</h3>
               <p className="complete-desc">
-                Thank you for choosing <strong>Saak by Aprajita</strong>. Our master artisans have begun preparing your ensemble. We have sent the confirmation to your phone.
+                Thank you for shopping with <strong>Saak by Aprajita</strong>. We've started on your order.
               </p>
               <button 
                 onClick={() => {
@@ -88,19 +76,19 @@ export default function CartDrawer() {
                 }}
                 className="btn btn-primary"
               >
-                Continue Exploring
+                Keep shopping
               </button>
             </div>
           ) : cart.length === 0 ? (
             <div className="empty-cart-state">
               <ShoppingBag size={42} strokeWidth={1.5} className="empty-bag-icon" />
-              <h4 className="empty-title">Your Bag is Empty</h4>
-              <p className="empty-desc">Explore our signature crushed tissue drapes and zardozi corsets.</p>
+              <h4 className="empty-title">Your bag is empty</h4>
+              <p className="empty-desc">Take a look at our tissue sarees and zardozi corsets.</p>
               <button 
                 onClick={() => setIsCartOpen(false)}
                 className="btn btn-outline"
               >
-                Discover Creations
+                Start shopping
               </button>
             </div>
           ) : (
@@ -130,7 +118,10 @@ export default function CartDrawer() {
                       <span className="spec-pill color-pill">Shade: {item.customColor}</span>
                     )}
                     {item.isDuo && (
-                      <span className="spec-pill duo-pill">10% Set Privilege</span>
+                      <span className="spec-pill duo-pill">Duo set</span>
+                    )}
+                    {item.offerLabel && item.basePrice > item.price && (
+                      <span className="saak-tag is-offer cart-offer-tag">{item.offerLabel}</span>
                     )}
                   </div>
 
@@ -152,12 +143,11 @@ export default function CartDrawer() {
                     </div>
 
                     <div className="cart-item-price-box">
-                      <span className="item-price-current">{formatPrice(item.price * item.quantity)}</span>
-                      {item.originalPrice && (
-                        <span className="item-price-strike">
-                          {formatPrice(item.originalPrice * item.quantity)}
-                        </span>
-                      )}
+                      <OfferPrice
+                        className="item-price-current"
+                        price={item.price * item.quantity}
+                        basePrice={(item.basePrice ?? item.price) * item.quantity}
+                      />
                     </div>
                   </div>
                 </div>
@@ -170,20 +160,19 @@ export default function CartDrawer() {
         {!orderComplete && cart.length > 0 && (
           <div className="drawer-footer">
             {cartSavings > 0 && (
-              <div className="cart-savings-banner">
-                <Sparkles size={13} className="text-gold" />
-                <span>You're saving <strong>{formatPrice(cartSavings)}</strong> on this order!</span>
+              <div className="savings-row">
+                <span>Offer savings</span>
+                <span>−{formatPrice(cartSavings)}</span>
               </div>
             )}
-
             <div className="subtotal-row">
-              <span className="subtotal-label">Estimated Total:</span>
+              <span className="subtotal-label">Total</span>
               <span className="subtotal-val">{formatPrice(cartTotal)}</span>
             </div>
 
             <div className="perk-reassurance">
               <ShieldCheck size={13} className="text-gold" />
-              <span>Includes complimentary fall &amp; pico + secure insured packaging</span>
+              <span>Free fall &amp; pico, and insured packaging</span>
             </div>
 
             <button 
@@ -192,10 +181,10 @@ export default function CartDrawer() {
               className="btn btn-primary checkout-btn"
             >
               {isCheckingOut ? (
-                <span>Securing Your Pieces...</span>
+                <span>One moment...</span>
               ) : (
                 <>
-                  <span>Proceed to Checkout</span>
+                  <span>Checkout</span>
                   <ArrowRight size={16} />
                 </>
               )}
@@ -203,7 +192,7 @@ export default function CartDrawer() {
 
             <div className="cart-policy-badge">
               <RotateCcw size={11} className="text-gold" />
-              <span>48h Defect Coverage • <button type="button" onClick={openPolicyModal} className="cart-policy-link">Returns &amp; Refund Policy</button></span>
+              <span>48-hour defect cover • <button type="button" onClick={openPolicyModal} className="cart-policy-link">Returns &amp; refunds</button></span>
             </div>
           </div>
         )}
@@ -250,11 +239,11 @@ export default function CartDrawer() {
         }
         .drawer-title {
           font-family: var(--font-serif);
-          font-size: 20px;
+          font-size: var(--text-xl);
           color: var(--text-primary);
         }
         .drawer-count {
-          font-size: 13px;
+          font-size: var(--text-sm);
           color: var(--text-muted);
         }
         .drawer-close-btn {
@@ -273,7 +262,7 @@ export default function CartDrawer() {
           border-bottom: 1px solid var(--border-light);
         }
         .progress-text {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-secondary);
           margin-bottom: 6px;
         }
@@ -330,7 +319,7 @@ export default function CartDrawer() {
         }
         .cart-item-name {
           font-family: var(--font-serif);
-          font-size: 14px;
+          font-size: var(--text-base);
           color: var(--text-primary);
           line-height: 1.25;
         }
@@ -350,7 +339,7 @@ export default function CartDrawer() {
           gap: 4px;
         }
         .spec-pill {
-          font-size: 10px;
+          font-size: var(--text-xs);
           background: var(--bg-primary);
           padding: 2px 6px;
           border-radius: 2px;
@@ -385,7 +374,7 @@ export default function CartDrawer() {
           color: var(--text-primary);
         }
         .qty-val {
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 600;
           min-width: 18px;
           text-align: center;
@@ -396,12 +385,12 @@ export default function CartDrawer() {
           gap: 6px;
         }
         .item-price-current {
-          font-size: 14px;
+          font-size: var(--text-base);
           font-weight: 700;
           color: var(--accent-terracotta);
         }
         .item-price-strike {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
           text-decoration: line-through;
         }
@@ -420,11 +409,11 @@ export default function CartDrawer() {
         }
         .empty-title {
           font-family: var(--font-serif);
-          font-size: 20px;
+          font-size: var(--text-xl);
           color: var(--text-primary);
         }
         .empty-desc {
-          font-size: 13px;
+          font-size: var(--text-sm);
           max-width: 240px;
         }
         .order-complete-state {
@@ -449,11 +438,11 @@ export default function CartDrawer() {
         }
         .complete-title {
           font-family: var(--font-serif);
-          font-size: 22px;
+          font-size: var(--text-xl);
           color: var(--text-primary);
         }
         .complete-desc {
-          font-size: 13px;
+          font-size: var(--text-sm);
           color: var(--text-secondary);
           line-height: 1.5;
         }
@@ -473,8 +462,18 @@ export default function CartDrawer() {
           border: 1px solid var(--border-gold);
           padding: 8px 12px;
           border-radius: 2px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: #8C6D2B;
+        }
+        .cart-offer-tag {
+          padding: 2px 8px;
+        }
+        .savings-row {
+          display: flex;
+          justify-content: space-between;
+          font-size: var(--text-sm);
+          color: var(--accent-terracotta);
+          margin-bottom: 6px;
         }
         .subtotal-row {
           display: flex;
@@ -482,12 +481,12 @@ export default function CartDrawer() {
           align-items: baseline;
         }
         .subtotal-label {
-          font-size: 14px;
+          font-size: var(--text-base);
           color: var(--text-secondary);
         }
         .subtotal-val {
           font-family: var(--font-sans);
-          font-size: 22px;
+          font-size: var(--text-xl);
           font-weight: 700;
           color: var(--accent-terracotta);
           letter-spacing: -0.01em;
@@ -498,20 +497,20 @@ export default function CartDrawer() {
           display: flex;
           align-items: center;
           gap: 6px;
-          font-size: 10px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
         }
         .checkout-btn {
           width: 100%;
           padding: 14px;
-          font-size: 13px;
+          font-size: var(--text-sm);
         }
         .cart-policy-badge {
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 5px;
-          font-size: 10.5px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
           text-align: center;
           margin-top: -2px;

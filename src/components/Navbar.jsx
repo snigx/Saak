@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useShop } from '../context/ShopContext';
 import { useAuth } from '../context/AuthContext';
 import { Heart, ShoppingBag, Search, Sparkles, Menu, X, User } from 'lucide-react';
@@ -7,7 +7,6 @@ export default function Navbar() {
   const { 
     cart, 
     wishlist, 
-    activeCategory, 
     setActiveCategory, 
     setIsCartOpen, 
     setIsWishlistOpen,
@@ -20,6 +19,42 @@ export default function Navbar() {
   const { user, openAuthModal, openProfile } = useAuth();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState('');
+
+  // Highlight the menu item for the section currently on screen
+  useEffect(() => {
+    const sections = [
+      ['about-saak', 'story'],
+      ['mix-match-studio', 'studio'],
+      ['catalog-section', 'catalog'],
+      ['sarees-block', 'sarees'],
+      ['blouses-block', 'blouses'],
+      ['sets-block', 'sets']
+    ];
+    const handleScroll = () => {
+      const probe = window.innerHeight * 0.35;
+      let current = '';
+      for (const [id, key] of sections) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        if (rect.top <= probe && rect.bottom > probe) current = key;
+      }
+      setActiveSection(current);
+    };
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToId = (id, offset = 78) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const navHeight = window.innerWidth <= 768 ? 64 : offset;
+    const extra = id.endsWith('-block') ? 64 : 0; // room for the sticky chapter rail
+    const top = el.getBoundingClientRect().top + window.scrollY - navHeight - extra;
+    window.scrollTo({ top, behavior: 'smooth' });
+  };
 
   const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);
 
@@ -31,40 +66,24 @@ export default function Navbar() {
   };
 
   const handleNavClick = (catKey) => {
-    setActiveCategory(catKey);
     setMobileMenuOpen(false);
-    // Smooth scroll to catalog section or specific category block
-    setTimeout(() => {
-      let targetEl = null;
-      if (catKey === 'sarees' || catKey === 'tissue') {
-        targetEl = document.getElementById('sarees-block') || document.getElementById('catalog-section');
-      } else if (catKey === 'blouses' || catKey === 'corset') {
-        targetEl = document.getElementById('blouses-block') || document.getElementById('catalog-section');
-      } else if (catKey === 'sets') {
-        targetEl = document.getElementById('sets-block') || document.getElementById('catalog-section');
-      } else {
-        targetEl = document.getElementById('catalog-section');
-      }
-      if (targetEl) {
-        targetEl.scrollIntoView({ behavior: 'smooth' });
-      }
-    }, 50);
+    const target = {
+      sarees: 'sarees-block',
+      blouses: 'blouses-block',
+      sets: 'sets-block'
+    }[catKey] || 'catalog-section';
+    // Let the mobile drawer close before measuring
+    setTimeout(() => scrollToId(target), 30);
   };
 
   const handleStudioScroll = () => {
     setMobileMenuOpen(false);
-    const studioEl = document.getElementById('mix-match-studio');
-    if (studioEl) {
-      studioEl.scrollIntoView({ behavior: 'smooth' });
-    }
+    setTimeout(() => scrollToId('mix-match-studio'), 30);
   };
 
   const handleStoryScroll = () => {
     setMobileMenuOpen(false);
-    const storyEl = document.getElementById('about-saak');
-    if (storyEl) {
-      storyEl.scrollIntoView({ behavior: 'smooth' });
-    }
+    setTimeout(() => scrollToId('about-saak'), 30);
   };
 
   return (
@@ -74,7 +93,7 @@ export default function Navbar() {
         <button 
           className="mobile-menu-toggle"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          aria-label="Toggle Navigation"
+          aria-label="Menu"
         >
           {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
@@ -84,7 +103,7 @@ export default function Navbar() {
           type="button"
           className="brand-logo-wrapper" 
           onClick={handleLogoClick}
-          aria-label="Saak by Aprajita - Return to top of page"
+          aria-label="Saak by Aprajita - back to top"
         >
           <img 
             src="/assets/saak_emblem_transparent.png" 
@@ -100,38 +119,32 @@ export default function Navbar() {
         {/* Desktop Navigation Links */}
         <nav className="desktop-nav">
           <button 
-            className={`nav-link ${activeCategory === 'all' ? 'active' : ''}`}
-            onClick={() => handleNavClick('all')}
-          >
-            All Creations
-          </button>
-          <button 
-            className={`nav-link ${activeCategory === 'sarees' || activeCategory === 'tissue' ? 'active' : ''}`}
+            className={`nav-link ${activeSection === 'sarees' ? 'active' : ''}`}
             onClick={() => handleNavClick('sarees')}
           >
             Sarees
           </button>
           <button 
-            className={`nav-link ${activeCategory === 'blouses' || activeCategory === 'corset' ? 'active' : ''}`}
+            className={`nav-link ${activeSection === 'blouses' ? 'active' : ''}`}
             onClick={() => handleNavClick('blouses')}
           >
-            Blouses &amp; Corsets
+            Blouses
           </button>
           <button 
-            className={`nav-link studio-nav-pill ${activeCategory === 'studio' ? 'active' : ''}`}
+            className={`nav-link ${activeSection === 'sets' ? 'active' : ''}`}
+            onClick={() => handleNavClick('sets')}
+          >
+            The Duo
+          </button>
+          <button 
+            className={`nav-link studio-nav-pill ${activeSection === 'studio' ? 'active' : ''}`}
             onClick={handleStudioScroll}
           >
             <Sparkles size={13} className="text-gold" />
-            <span>Mix &amp; Match Studio</span>
+            <span>Mix &amp; Match</span>
           </button>
           <button 
-            className={`nav-link ${activeCategory === 'sets' ? 'active' : ''}`}
-            onClick={() => handleNavClick('sets')}
-          >
-            Curated Duos
-          </button>
-          <button 
-            className="nav-link"
+            className={`nav-link ${activeSection === 'story' ? 'active' : ''}`}
             onClick={handleStoryScroll}
           >
             Our Story
@@ -145,8 +158,8 @@ export default function Navbar() {
             type="button"
             onClick={openSearch}
             className="action-icon-btn search-nav-trigger"
-            title="Search collection (⌘K)"
-            aria-label="Search collection"
+            title="Search (⌘K)"
+            aria-label="Search"
           >
             <Search size={19} />
           </button>
@@ -155,7 +168,7 @@ export default function Navbar() {
           <button 
             onClick={() => setIsWishlistOpen(true)}
             className={`action-icon-btn wishlist-nav-btn ${wishlist.length > 0 ? 'has-items' : ''}`}
-            title={`Curated Wishlist (${wishlist.length} saved)`}
+            title={`Wishlist (${wishlist.length} saved)`}
             aria-label="Wishlist"
           >
             <Heart 
@@ -172,7 +185,7 @@ export default function Navbar() {
           <button 
             onClick={() => user ? openProfile() : openAuthModal('signin')}
             className={`action-icon-btn patron-account-btn ${user ? 'is-logged-in' : ''}`}
-            title={user ? `Patron Profile (${user.fullName || user.email})` : "Sign In"}
+            title={user ? "My account" : "Sign in"}
           >
             {user ? (
               user.avatarUrl ? (
@@ -189,7 +202,7 @@ export default function Navbar() {
           <button 
             onClick={() => setIsCartOpen(true)}
             className="cart-trigger-btn"
-            title="Shopping Bag"
+            title="Bag"
           >
             <ShoppingBag size={19} />
             <div className="cart-btn-info">
@@ -212,7 +225,7 @@ export default function Navbar() {
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleLogoClick(); }}
             style={{ cursor: 'pointer' }}
-            aria-label="Saak by Aprajita - Return to top of page"
+            aria-label="Saak by Aprajita - back to top"
           >
             <img 
               src="/assets/saak_logo_transparent.png" 
@@ -225,44 +238,38 @@ export default function Navbar() {
             onClick={() => { setMobileMenuOpen(false); openSearch(); }}
           >
             <Search size={16} className="text-gold" />
-            <span>Search Creations &amp; Silhouettes</span>
+            <span>Search</span>
           </button>
           <button 
-            className={`mobile-nav-link ${activeCategory === 'all' ? 'active' : ''}`}
-            onClick={() => handleNavClick('all')}
-          >
-            All Creations
-          </button>
-          <button 
-            className={`mobile-nav-link ${activeCategory === 'sarees' || activeCategory === 'tissue' ? 'active' : ''}`}
+            className={`mobile-nav-link ${activeSection === 'sarees' ? 'active' : ''}`}
             onClick={() => handleNavClick('sarees')}
           >
-            Artisanal Sarees (Tissue &amp; Crepe)
+            Sarees
           </button>
           <button 
-            className={`mobile-nav-link ${activeCategory === 'blouses' || activeCategory === 'corset' ? 'active' : ''}`}
+            className={`mobile-nav-link ${activeSection === 'blouses' ? 'active' : ''}`}
             onClick={() => handleNavClick('blouses')}
           >
-            Sculpted Blouses &amp; Corsets
+            Blouses &amp; Corsets
+          </button>
+          <button 
+            className={`mobile-nav-link ${activeSection === 'sets' ? 'active' : ''}`}
+            onClick={() => handleNavClick('sets')}
+          >
+            The Duo
           </button>
           <button 
             className="mobile-nav-link mobile-studio-link"
             onClick={handleStudioScroll}
           >
             <Sparkles size={15} />
-            <span>Mix &amp; Match Styling Studio</span>
+            <span>Mix &amp; Match</span>
           </button>
           <button 
-            className={`mobile-nav-link ${activeCategory === 'sets' ? 'active' : ''}`}
-            onClick={() => handleNavClick('sets')}
-          >
-            Curated Duos (Save 10%)
-          </button>
-          <button 
-            className="mobile-nav-link"
+            className={`mobile-nav-link ${activeSection === 'story' ? 'active' : ''}`}
             onClick={handleStoryScroll}
           >
-            Our Story (The SAAK Ethos)
+            Our Story
           </button>
 
           <button 
@@ -270,7 +277,7 @@ export default function Navbar() {
             onClick={() => { setMobileMenuOpen(false); setIsWishlistOpen(true); }}
           >
             <Heart size={16} fill={wishlist.length > 0 ? "var(--accent-terracotta)" : "none"} color={wishlist.length > 0 ? "var(--accent-terracotta)" : "currentColor"} />
-            <span>Curated Wishlist {wishlist.length > 0 ? `(${wishlist.length})` : ''}</span>
+            <span>Wishlist {wishlist.length > 0 ? `(${wishlist.length})` : ''}</span>
           </button>
 
           <div className="mobile-auth-divider"></div>
@@ -280,7 +287,7 @@ export default function Navbar() {
               onClick={() => { setMobileMenuOpen(false); openProfile(); }}
             >
               <User size={16} />
-              <span>Patron Profile ({user.fullName || 'Member'})</span>
+              <span>My account</span>
             </button>
           ) : (
             <button 
@@ -288,7 +295,7 @@ export default function Navbar() {
               onClick={() => { setMobileMenuOpen(false); openAuthModal('signin'); }}
             >
               <User size={16} />
-              <span>Sign In / Create Account</span>
+              <span>Sign in / Create account</span>
             </button>
           )}
         </div>
@@ -348,7 +355,7 @@ export default function Navbar() {
         }
         .brand-name {
           font-family: var(--font-serif);
-          font-size: 30px;
+          font-size: var(--text-2xl);
           font-weight: 600;
           letter-spacing: 0.08em;
           color: #0E352F;
@@ -356,7 +363,7 @@ export default function Navbar() {
           text-shadow: 0 1px 2px rgba(14, 53, 47, 0.08);
         }
         .brand-sub {
-          font-size: 9.5px;
+          font-size: var(--text-xs);
           letter-spacing: 0.28em;
           text-transform: uppercase;
           color: #B28328;
@@ -384,7 +391,7 @@ export default function Navbar() {
           background: none;
           border: none;
           font-family: var(--font-sans);
-          font-size: 13px;
+          font-size: var(--text-sm);
           font-weight: 500;
           letter-spacing: 0.03em;
           color: var(--text-secondary);
@@ -452,7 +459,7 @@ export default function Navbar() {
           border-radius: 50%;
           background: var(--accent-terracotta);
           color: #FFFFFF;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 700;
           display: flex;
           align-items: center;
@@ -485,7 +492,7 @@ export default function Navbar() {
           right: -2px;
           background: var(--accent-terracotta);
           color: #FFFFFF;
-          font-size: 10px;
+          font-size: var(--text-xs);
           font-weight: 700;
           width: 17px;
           height: 17px;
@@ -517,13 +524,13 @@ export default function Navbar() {
         }
         .cart-count-pill {
           background: rgba(255, 255, 255, 0.2);
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 700;
           padding: 1px 6px;
           border-radius: 10px;
         }
         .cart-total-text {
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
         }
         .search-input-wrapper {
@@ -538,7 +545,7 @@ export default function Navbar() {
         .search-input {
           border: none;
           outline: none;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-family: inherit;
           width: 180px;
         }
@@ -560,7 +567,7 @@ export default function Navbar() {
           background: none;
           border: none;
           text-align: left;
-          font-size: 14px;
+          font-size: var(--text-base);
           font-weight: 600;
           color: var(--text-primary);
           padding: 8px 0;
@@ -591,10 +598,10 @@ export default function Navbar() {
             height: 35px;
           }
           .brand-name {
-            font-size: 25px;
+            font-size: var(--text-2xl);
           }
           .brand-sub {
-            font-size: 8.5px;
+            font-size: var(--text-xs);
             letter-spacing: 0.22em;
           }
           .cart-total-text {

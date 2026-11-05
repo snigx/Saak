@@ -1,13 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useShop } from '../context/ShopContext';
+import { useOverlay } from '../hooks/useOverlay';
+
+// Sub-categories must match the filters used by the storefront grid
+const SUBCATEGORY_OPTIONS = {
+  sarees: [
+    { value: 'tissue', label: 'Tissue' },
+    { value: 'crepe', label: 'Crepe' }
+  ],
+  blouses: [
+    { value: 'corset', label: 'Corset' },
+    { value: 'blouse', label: 'Blouse' }
+  ],
+  sets: [
+    { value: 'curated-duo', label: 'Duo set' }
+  ]
+};
 import { 
   X, PlusCircle, Sparkles, Check, RefreshCw, Upload, 
-  Trash2, Edit3, Image as ImageIcon, ArrowLeft, AlertCircle,
-  Camera, Layers, Loader2, Receipt 
+  Trash2, Edit3, Image as ArrowLeft, AlertCircle,
+  Camera, Layers, Loader2, Receipt, Tag
 } from 'lucide-react';
 import { uploadImageBlob } from '../services/storageService';
 import { useAuth } from '../context/AuthContext';
 import AdminOrdersView from './AdminOrdersView';
+import AdminOffersView from './AdminOffersView';
+import { getOfferStatus, describeOfferValue } from '../utils/offers';
 
 export default function AtelierAdminModal() {
   const { 
@@ -23,19 +41,24 @@ export default function AtelierAdminModal() {
     editingProduct, 
     setEditingProduct, 
     resetCatalogToDefault,
+    catalog,
+    pairOffer,
     formatPrice 
   } = useShop();
 
   // Active Tab: 'inventory', 'orders', or 'editor'
   const [activeTab, setActiveTab] = useState(adminActiveTab || (editingProduct ? 'editor' : 'inventory'));
 
+  // Re-sync the visible tab every time the console is opened from an entry point
   useEffect(() => {
-    if (adminActiveTab) {
+    if (isAtelierModalOpen && adminActiveTab) {
       setActiveTab(adminActiveTab);
     }
-  }, [adminActiveTab]);
+  }, [adminActiveTab, isAtelierModalOpen]);
 
   const pendingOrdersCount = orders.filter(o => o.payment_status === 'pending_verification').length;
+  const liveOffersCount = products.filter(p => getOfferStatus(p.discount) === 'live').length
+    + (getOfferStatus(pairOffer) === 'live' ? 1 : 0);
 
   const [formData, setFormData] = useState({
     id: '',
@@ -43,7 +66,6 @@ export default function AtelierAdminModal() {
     category: 'sarees',
     subCategory: 'tissue',
     price: 4500,
-    originalPrice: '',
     tag: 'New Drop',
     tagColor: '#A34835',
     description: '',
@@ -78,7 +100,6 @@ export default function AtelierAdminModal() {
         category: editingProduct.category,
         subCategory: editingProduct.subCategory,
         price: editingProduct.price,
-        originalPrice: editingProduct.originalPrice || '',
         tag: editingProduct.tag || '',
         tagColor: editingProduct.tagColor || '#A34835',
         description: editingProduct.description || '',
@@ -97,8 +118,7 @@ export default function AtelierAdminModal() {
         category: 'sarees',
         subCategory: 'tissue',
         price: 4500,
-        originalPrice: '',
-        tag: 'New Drop',
+            tag: 'New Drop',
         tagColor: '#A34835',
         description: '',
         fabric: 'Crushed Metallic Shimmer Tissue',
@@ -120,12 +140,12 @@ export default function AtelierAdminModal() {
 
   // Model Presets
   const musePresets = [
-    { label: 'Sunset Orange Muse (Front)', url: '/assets/muse_sunset_tissue.jpg' },
-    { label: 'Sunset Orange Muse (Portrait #2)', url: '/assets/muse_sunset_tissue_2.jpg' },
-    { label: 'Olive Tissue Muse', url: '/assets/muse_olive_tissue.jpg' },
-    { label: 'Burnt Copper Muse', url: '/assets/muse_copper_tissue.jpg' },
-    { label: 'Black Saree Muse (Front)', url: '/assets/saak_muse_black_saree_gold_corset.jpg' },
-    { label: 'Black Saree Muse (Side Profile)', url: '/assets/saak_muse_black_corset_side.jpg' }
+    { label: 'Sunset orange (front)', url: '/assets/muse_sunset_tissue.jpg' },
+    { label: 'Sunset orange (portrait)', url: '/assets/muse_sunset_tissue_2.jpg' },
+    { label: 'Olive tissue', url: '/assets/muse_olive_tissue.jpg' },
+    { label: 'Burnt copper', url: '/assets/muse_copper_tissue.jpg' },
+    { label: 'Black saree (front)', url: '/assets/saak_muse_black_saree_gold_corset.jpg' },
+    { label: 'Black saree (side)', url: '/assets/saak_muse_black_corset_side.jpg' }
   ];
 
   // Flat-lay Presets
@@ -230,7 +250,7 @@ export default function AtelierAdminModal() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name) return;
+    if (!formData.name || savedSuccess) return; // guard against double-submit
 
     const combinedGallery = [
       ...formData.modelPhotos,
@@ -240,7 +260,6 @@ export default function AtelierAdminModal() {
     const payload = {
       ...formData,
       price: Number(formData.price),
-      originalPrice: formData.originalPrice ? Number(formData.originalPrice) : undefined,
       modelPhotos: formData.modelPhotos,
       flatlayPhotos: formData.flatlayPhotos,
       gallery: combinedGallery.length > 0 ? combinedGallery : ['/assets/muse_sunset_tissue.jpg'],
@@ -278,7 +297,8 @@ export default function AtelierAdminModal() {
   };
 
   const startEditProduct = (prod) => {
-    setEditingProduct(prod);
+    // Edit the regular-price record, not the offer-priced copy
+    setEditingProduct(catalog.find(p => p.id === prod.id) || prod);
     setActiveTab('editor');
   };
 
@@ -288,6 +308,7 @@ export default function AtelierAdminModal() {
   };
 
   const { isAdmin } = useAuth();
+  useOverlay(isAtelierModalOpen && isAdmin, () => setIsAtelierModalOpen(false));
 
   if (!isAtelierModalOpen || !isAdmin) return null;
 
@@ -305,19 +326,23 @@ export default function AtelierAdminModal() {
         <div className="admin-modal-header">
           <div className="admin-badge">
             <Sparkles size={13} className="text-gold" />
-            <span>SAAK • PRODUCT MANAGEMENT ENGINE</span>
+            <span>Admin</span>
           </div>
           <h2 className="admin-title">
             {activeTab === 'inventory' 
-              ? 'Catalog Inventory & Products' 
+              ? 'Products' 
               : activeTab === 'orders'
-              ? 'Client Orders & UPI Transactions Ledger'
-              : (editingProduct ? `Edit: ${editingProduct.name}` : 'Add New Creation')}
+              ? 'Orders and payments'
+              : activeTab === 'offers'
+              ? 'Offers'
+              : (editingProduct ? `Edit: ${editingProduct.name}` : 'Add a product')}
           </h2>
           <p className="admin-subtitle">
             {activeTab === 'orders'
-              ? 'Reconcile customer UPI payments against bank ledger, approve or reject transactions, manage dispatch fulfillment, and communicate directly on WhatsApp.'
-              : 'Manage your live store products, edit prices & descriptions, upload multiple model and flat-lay photos, and re-arrange looks in real time.'}
+              ? 'Check UPI payments, approve or reject orders, ship them and message customers on WhatsApp.'
+              : activeTab === 'offers'
+              ? 'Run a discount on any piece, duo set or Mix & Match pair. Schedule it, pause it, or end it any time.'
+              : 'Edit products, prices and photos on the live store.'}
           </p>
 
           {/* Navigation Tabs */}
@@ -330,7 +355,7 @@ export default function AtelierAdminModal() {
                 if (setAdminActiveTab) setAdminActiveTab('inventory');
               }}
             >
-              All Products ({products.length})
+              Products ({products.length})
             </button>
             <button 
               className={`admin-tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
@@ -341,9 +366,23 @@ export default function AtelierAdminModal() {
               }}
             >
               <Receipt size={14} />
-              <span>Orders &amp; Transactions ({orders.length})</span>
+              <span>Orders ({orders.length})</span>
               {pendingOrdersCount > 0 && (
                 <span className="admin-tab-pending-badge">{pendingOrdersCount} pending</span>
+              )}
+            </button>
+            <button 
+              className={`admin-tab-btn ${activeTab === 'offers' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('offers');
+                setEditingProduct(null);
+                if (setAdminActiveTab) setAdminActiveTab('offers');
+              }}
+            >
+              <Tag size={14} />
+              <span>Offers</span>
+              {liveOffersCount > 0 && (
+                <span className="admin-tab-live-badge">{liveOffersCount} live</span>
               )}
             </button>
             <button 
@@ -351,7 +390,7 @@ export default function AtelierAdminModal() {
               onClick={startCreateNew}
             >
               <PlusCircle size={14} />
-              <span>Add New Creation</span>
+              <span>Add product</span>
             </button>
             {editingProduct && (
               <button className="admin-tab-btn active">
@@ -376,9 +415,16 @@ export default function AtelierAdminModal() {
                   <div className="inv-info">
                     <h4 className="inv-title">{prod.name}</h4>
                     <div className="inv-meta">
-                      <span className="inv-price">{formatPrice(prod.price)}</span>
-                      {prod.originalPrice && (
-                        <span className="inv-strike">{formatPrice(prod.originalPrice)}</span>
+                      <span className="inv-price">{formatPrice(prod.basePrice ?? prod.price)}</span>
+                      {['live', 'scheduled'].includes(getOfferStatus(prod.discount)) && (
+                        <button
+                          type="button"
+                          className={`inv-offer-pill is-${getOfferStatus(prod.discount)}`}
+                          onClick={() => setActiveTab('offers')}
+                          title="Manage in Offers"
+                        >
+                          {getOfferStatus(prod.discount) === 'live' ? 'Offer live' : 'Offer scheduled'} · {describeOfferValue(prod.discount)}
+                        </button>
                       )}
                       <span className="inv-cat-pill">{prod.category}</span>
                       <span className="inv-photo-count">
@@ -391,7 +437,7 @@ export default function AtelierAdminModal() {
                     <button 
                       onClick={() => startEditProduct(prod)}
                       className="btn btn-outline inv-edit-btn"
-                      title="Edit price, title, and photos"
+                      title="Edit price, name and photos"
                     >
                       <Edit3 size={13} />
                       <span>Edit</span>
@@ -417,7 +463,7 @@ export default function AtelierAdminModal() {
                       <button 
                         onClick={() => setConfirmDeleteId(prod.id)}
                         className="inv-delete-btn"
-                        title="Remove product from store"
+                        title="Remove from store"
                       >
                         <Trash2 size={15} />
                       </button>
@@ -432,13 +478,18 @@ export default function AtelierAdminModal() {
                 type="button" 
                 onClick={resetCatalogToDefault}
                 className="btn btn-outline reset-btn"
-                title="Reset catalog to default launch products"
+                title="Reset to the original launch products"
               >
                 <RefreshCw size={13} />
-                <span>Restore Default Catalog</span>
+                <span>Reset products</span>
               </button>
             </div>
           </div>
+        )}
+
+        {/* OFFERS */}
+        {activeTab === 'offers' && (
+          <AdminOffersView />
         )}
 
         {/* TAB 2: CLIENT ORDERS & TRANSACTIONS AUDIT */}
@@ -459,18 +510,18 @@ export default function AtelierAdminModal() {
                 className="back-to-inv-btn"
               >
                 <ArrowLeft size={14} />
-                <span>Back to All Products</span>
+                <span>Back to products</span>
               </button>
             </div>
 
             <div className="form-grid">
               {/* Product Name */}
               <div className="form-group full-width">
-                <label className="form-label">Creation Title *</label>
+                <label className="form-label">Product name *</label>
                 <input 
                   type="text" 
                   required
-                  placeholder="e.g. Royal Champagne Shimmer Tissue Saree"
+                  placeholder="e.g. Champagne Tissue Saree"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="form-input"
@@ -482,34 +533,38 @@ export default function AtelierAdminModal() {
                 <label className="form-label">Category</label>
                 <select 
                   value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  onChange={(e) => {
+                    const category = e.target.value;
+                    const allowed = SUBCATEGORY_OPTIONS[category] || [];
+                    const subCategory = allowed.some(o => o.value === formData.subCategory)
+                      ? formData.subCategory
+                      : (allowed[0]?.value || '');
+                    setFormData({ ...formData, category, subCategory });
+                  }}
                   className="form-select"
                 >
                   <option value="sarees">Sarees</option>
                   <option value="blouses">Blouses &amp; Corsets</option>
-                  <option value="sets">Curated Sets / Duos</option>
-                  <option value="lehengas">Lehengas (Future Expansion)</option>
-                  <option value="fusion">Fusion &amp; Indo-Western</option>
+                  <option value="sets">Duo sets</option>
                 </select>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Sub-Category</label>
+                <label className="form-label">Type</label>
                 <select 
                   value={formData.subCategory}
                   onChange={(e) => setFormData({ ...formData, subCategory: e.target.value })}
                   className="form-select"
                 >
-                  <option value="tissue">Crushed Shimmer Tissue</option>
-                  <option value="crepe">Pure Fluid Crepe</option>
-                  <option value="corset">Sculpted Corset Bustier</option>
-                  <option value="curated-duo">Curated Complete Look</option>
+                  {(SUBCATEGORY_OPTIONS[formData.category] || []).map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
               </div>
 
               {/* Price & Original Price */}
               <div className="form-group">
-                <label className="form-label">Offering Price (INR ₹) *</label>
+                <label className="form-label">Price (₹) *</label>
                 <input 
                   type="number" 
                   required
@@ -520,20 +575,25 @@ export default function AtelierAdminModal() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">MRP / Strikethrough Price (Optional)</label>
-                <input 
-                  type="number" 
-                  placeholder="Leave empty if you don't want discount tags"
-                  value={formData.originalPrice}
-                  onChange={(e) => setFormData({ ...formData, originalPrice: e.target.value })}
-                  className="form-input"
-                />
-                <span className="form-hint">Leave blank for fixed luxury pricing with no discount.</span>
+                <span className="form-label">Discount</span>
+                <div className="editor-offer-note">
+                  {editingProduct && getOfferStatus(editingProduct.discount) !== 'none'
+                    ? <span>This piece has an offer ({describeOfferValue(editingProduct.discount)}).</span>
+                    : <span>Sold at the price on the left.</span>}
+                  <button
+                    type="button"
+                    className="editor-offer-link"
+                    onClick={() => { setEditingProduct(null); setActiveTab('offers'); }}
+                  >
+                    Manage offers
+                  </button>
+                </div>
+                <span className="form-hint">Enter the regular price here. Discounts are set in Offers.</span>
               </div>
 
               {/* Badge Tag */}
               <div className="form-group">
-                <label className="form-label">Badge Tag (e.g. Hero Piece, Festive Classic)</label>
+                <label className="form-label">Badge (e.g. New, Festive)</label>
                 <input 
                   type="text" 
                   value={formData.tag}
@@ -544,10 +604,10 @@ export default function AtelierAdminModal() {
 
               {/* Fabric Specification */}
               <div className="form-group">
-                <label className="form-label">Fabric Specification</label>
+                <label className="form-label">Fabric</label>
                 <input 
                   type="text" 
-                  placeholder="e.g. Pure Tissue Silk with Metallic Weft"
+                  placeholder="e.g. Tissue silk"
                   value={formData.fabric}
                   onChange={(e) => setFormData({ ...formData, fabric: e.target.value })}
                   className="form-input"
@@ -556,7 +616,7 @@ export default function AtelierAdminModal() {
 
               {/* Drape Weight */}
               <div className="form-group">
-                <label className="form-label">Drape Weight Tag</label>
+                <label className="form-label">Drape feel</label>
                 <select 
                   value={formData.drapeWeight}
                   onChange={(e) => setFormData({ ...formData, drapeWeight: e.target.value })}
@@ -571,10 +631,10 @@ export default function AtelierAdminModal() {
 
               {/* Zari / Work */}
               <div className="form-group">
-                <label className="form-label">Zari / Embroidery Details</label>
+                <label className="form-label">Zari / embroidery</label>
                 <input 
                   type="text" 
-                  placeholder="e.g. Banarasi Antique Gold Floral Border / Hand Zardozi"
+                  placeholder="e.g. Gold zari border / hand zardozi"
                   value={formData.zariWork}
                   onChange={(e) => setFormData({ ...formData, zariWork: e.target.value })}
                   className="form-input"
@@ -583,7 +643,7 @@ export default function AtelierAdminModal() {
 
               {/* Description */}
               <div className="form-group full-width">
-                <label className="form-label">Product Description</label>
+                <label className="form-label">Description</label>
                 <textarea 
                   rows="2"
                   placeholder="Describe the styling and occasion..."
@@ -601,16 +661,16 @@ export default function AtelierAdminModal() {
                   <div>
                     <div className="photo-section-badge badge-muse">
                       <Camera size={13} />
-                      <span>MODEL / ON MUSE LOOKS ({formData.modelPhotos.length})</span>
+                      <span>On model ({formData.modelPhotos.length})</span>
                     </div>
-                    <h4 className="manager-title">Photos of Model Wearing the Outfit</h4>
-                    <span className="manager-sub">Add multiple model angles (full drape, side angle, close-up with jewelry, back pleats).</span>
+                    <h4 className="manager-title">Model photos</h4>
+                    <span className="manager-sub">Add a few angles: front, side, close-up, back.</span>
                   </div>
 
                   {/* Upload from Computer Button */}
                   <label className={`upload-file-btn ${isUploadingModel ? 'uploading' : ''}`}>
                     {isUploadingModel ? <Loader2 size={14} className="spin" /> : <Upload size={14} />}
-                    <span>{isUploadingModel ? 'Uploading to Blob...' : 'Upload Model Photo'}</span>
+                    <span>{isUploadingModel ? 'Uploading...' : 'Upload photo'}</span>
                     <input 
                       type="file" 
                       accept="image/*" 
@@ -626,12 +686,12 @@ export default function AtelierAdminModal() {
                   {formData.modelPhotos.map((photoUrl, idx) => (
                     <div key={idx} className="gallery-thumb-card card-model">
                       <img src={photoUrl} alt="" className="thumb-preview-img" />
-                      <div className="thumb-order-badge">Muse #{idx + 1}</div>
+                      <div className="thumb-order-badge">Model #{idx + 1}</div>
                       <button 
                         type="button"
                         onClick={() => handleRemoveModelPhoto(idx)}
                         className="thumb-delete-btn"
-                        title="Remove this model photo"
+                        title="Remove photo"
                       >
                         <Trash2 size={13} />
                       </button>
@@ -641,7 +701,7 @@ export default function AtelierAdminModal() {
                   {formData.modelPhotos.length === 0 && (
                     <div className="no-photos-alert">
                       <AlertCircle size={18} />
-                      <span>No model photos added yet. Upload a photo or select from presets below.</span>
+                      <span>No model photos yet. Upload one or pick below.</span>
                     </div>
                   )}
                 </div>
@@ -650,7 +710,7 @@ export default function AtelierAdminModal() {
                 <div className="add-url-row">
                   <input 
                     type="text" 
-                    placeholder="Or paste model image link (https://... or /assets/...)"
+                    placeholder="Or paste an image link"
                     value={customModelUrl}
                     onChange={(e) => setCustomModelUrl(e.target.value)}
                     className="url-input"
@@ -660,13 +720,13 @@ export default function AtelierAdminModal() {
                     onClick={handleAddModelUrl}
                     className="btn btn-outline add-url-btn"
                   >
-                    Add Model Photo
+                    Add photo
                   </button>
                 </div>
 
                 {/* Pick from Muse Presets */}
                 <div className="preset-strip">
-                  <span className="preset-label">Quick Add From Muse Gallery:</span>
+                  <span className="preset-label">Quick add:</span>
                   <div className="preset-chips">
                     {musePresets.map((preset, idx) => (
                       <button
@@ -691,16 +751,16 @@ export default function AtelierAdminModal() {
                   <div>
                     <div className="photo-section-badge badge-flatlay">
                       <Layers size={13} />
-                      <span>STUDIO FLAT-LAYS &amp; SWATCHES ({formData.flatlayPhotos.length})</span>
+                      <span>Flat-lays ({formData.flatlayPhotos.length})</span>
                     </div>
-                    <h4 className="manager-title">Folded Sarees, Swatches &amp; Craft Details</h4>
-                    <span className="manager-sub">Add multiple flat-lay angles (folded look, embroidery close-ups, brass thali &amp; flowers).</span>
+                    <h4 className="manager-title">Fabric and detail photos</h4>
+                    <span className="manager-sub">Add folded shots and close-ups of the work.</span>
                   </div>
 
                   {/* Upload Flatlay Button */}
                   <label className={`upload-file-btn upload-flatlay-btn ${isUploadingFlatlay ? 'uploading' : ''}`}>
                     {isUploadingFlatlay ? <Loader2 size={14} className="spin" /> : <Upload size={14} />}
-                    <span>{isUploadingFlatlay ? 'Uploading to Blob...' : 'Upload Flat-lay Photo'}</span>
+                    <span>{isUploadingFlatlay ? 'Uploading...' : 'Upload photo'}</span>
                     <input 
                       type="file" 
                       accept="image/*" 
@@ -721,7 +781,7 @@ export default function AtelierAdminModal() {
                         type="button"
                         onClick={() => handleRemoveFlatlayPhoto(idx)}
                         className="thumb-delete-btn"
-                        title="Remove this flat-lay photo"
+                        title="Remove photo"
                       >
                         <Trash2 size={13} />
                       </button>
@@ -731,7 +791,7 @@ export default function AtelierAdminModal() {
                   {formData.flatlayPhotos.length === 0 && (
                     <div className="no-photos-alert">
                       <AlertCircle size={18} />
-                      <span>No flat-lay photos added yet. Upload a photo or select from presets below.</span>
+                      <span>No flat-lay photos yet. Upload one or pick below.</span>
                     </div>
                   )}
                 </div>
@@ -740,7 +800,7 @@ export default function AtelierAdminModal() {
                 <div className="add-url-row">
                   <input 
                     type="text" 
-                    placeholder="Or paste flat-lay image link (https://... or /assets/...)"
+                    placeholder="Or paste an image link"
                     value={customFlatlayUrl}
                     onChange={(e) => setCustomFlatlayUrl(e.target.value)}
                     className="url-input"
@@ -750,13 +810,13 @@ export default function AtelierAdminModal() {
                     onClick={handleAddFlatlayUrl}
                     className="btn btn-outline add-url-btn"
                   >
-                    Add Flat-lay Photo
+                    Add photo
                   </button>
                 </div>
 
                 {/* Pick from Flat-lay Presets */}
                 <div className="preset-strip">
-                  <span className="preset-label">Quick Add From Flat-lay Gallery:</span>
+                  <span className="preset-label">Quick add:</span>
                   <div className="preset-chips">
                     {flatlayPresets.map((preset, idx) => (
                       <button
@@ -788,17 +848,18 @@ export default function AtelierAdminModal() {
 
               <button 
                 type="submit" 
+                disabled={savedSuccess}
                 className={`btn btn-primary publish-btn ${savedSuccess ? 'success' : ''}`}
               >
                 {savedSuccess ? (
                   <>
                     <Check size={16} />
-                    <span>Saved Successfully!</span>
+                    <span>Saved</span>
                   </>
                 ) : (
                   <>
                     <Check size={16} />
-                    <span>{editingProduct ? 'Save Changes' : 'Publish Creation to Store'}</span>
+                    <span>{editingProduct ? 'Save changes' : 'Add to store'}</span>
                   </>
                 )}
               </button>
@@ -827,24 +888,25 @@ export default function AtelierAdminModal() {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 700;
           letter-spacing: 0.12em;
           color: var(--accent-gold);
           margin-bottom: 6px;
         }
         .admin-title {
-          font-size: 26px;
+          font-size: var(--text-2xl);
           color: var(--text-primary);
           margin-bottom: 6px;
         }
         .admin-subtitle {
-          font-size: 13px;
+          font-size: var(--text-sm);
           color: var(--text-secondary);
           margin-bottom: 16px;
         }
         .admin-tab-bar {
           display: flex;
+          flex-wrap: wrap;
           gap: 10px;
           border-bottom: 1px solid var(--border-light);
           padding-bottom: 10px;
@@ -854,7 +916,7 @@ export default function AtelierAdminModal() {
           border: 1px solid var(--border-light);
           padding: 8px 16px;
           border-radius: 20px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           color: var(--text-secondary);
           display: flex;
@@ -875,7 +937,7 @@ export default function AtelierAdminModal() {
         .admin-tab-pending-badge {
           background: #E65100;
           color: #FFFFFF;
-          font-size: 10px;
+          font-size: var(--text-xs);
           font-weight: 700;
           padding: 1px 7px;
           border-radius: 10px;
@@ -925,35 +987,79 @@ export default function AtelierAdminModal() {
         }
         .inv-title {
           font-family: var(--font-serif);
-          font-size: 15px;
+          font-size: var(--text-base);
           color: var(--text-primary);
         }
         .inv-meta {
           display: flex;
           align-items: center;
           gap: 8px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           flex-wrap: wrap;
         }
         .inv-price {
           font-weight: 700;
           color: var(--accent-terracotta);
         }
-        .inv-strike {
-          color: var(--text-muted);
-          text-decoration: line-through;
-          font-size: 11px;
+        .inv-offer-pill {
+          border: none;
+          cursor: pointer;
+          font-size: var(--text-xs);
+          font-weight: 600;
+          padding: 1px 8px;
+          border-radius: 10px;
+          color: var(--accent-terracotta);
+          background: rgba(163, 72, 53, 0.08);
+        }
+        .inv-offer-pill.is-scheduled {
+          color: #8A6A2B;
+          background: rgba(197, 160, 89, 0.16);
+        }
+        .admin-tab-live-badge {
+          background: rgba(163, 72, 53, 0.1);
+          color: var(--accent-terracotta);
+          font-size: var(--text-xs);
+          font-weight: 700;
+          padding: 1px 7px;
+          border-radius: 10px;
+        }
+        .admin-tab-btn.active .admin-tab-live-badge {
+          background: #FFFFFF;
+        }
+        .editor-offer-note {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          flex-wrap: wrap;
+          padding: 10px 14px;
+          font-size: var(--text-sm);
+          color: var(--text-secondary);
+          background: var(--bg-primary);
+          border: 1px dashed var(--border-gold);
+          border-radius: 3px;
+        }
+        .editor-offer-link {
+          background: none;
+          border: none;
+          padding: 0;
+          font-size: var(--text-sm);
+          font-weight: 600;
+          color: var(--accent-terracotta);
+          text-decoration: underline;
+          text-underline-offset: 3px;
+          cursor: pointer;
         }
         .inv-cat-pill {
           background: rgba(0, 0, 0, 0.06);
           padding: 1px 6px;
           border-radius: 2px;
-          font-size: 10px;
+          font-size: var(--text-xs);
           text-transform: uppercase;
         }
         .inv-photo-count {
           color: var(--text-muted);
-          font-size: 11px;
+          font-size: var(--text-xs);
         }
         .inv-actions {
           display: flex;
@@ -961,7 +1067,7 @@ export default function AtelierAdminModal() {
           gap: 8px;
         }
         .inv-edit-btn {
-          font-size: 11px;
+          font-size: var(--text-xs);
           padding: 6px 12px;
         }
         .inv-delete-btn {
@@ -992,20 +1098,20 @@ export default function AtelierAdminModal() {
           border-radius: 3px;
         }
         .confirm-text {
-          font-size: 11px;
+          font-size: var(--text-xs);
           font-weight: 700;
           color: #CF1322;
         }
         .confirm-yes {
           padding: 4px 8px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           background: #CF1322;
           color: #FFFFFF;
           border: none;
         }
         .confirm-no {
           padding: 4px 8px;
-          font-size: 11px;
+          font-size: var(--text-xs);
         }
         .inventory-footer {
           display: flex;
@@ -1014,7 +1120,7 @@ export default function AtelierAdminModal() {
           padding-top: 14px;
         }
         .reset-btn {
-          font-size: 11px;
+          font-size: var(--text-xs);
           gap: 6px;
         }
 
@@ -1031,7 +1137,7 @@ export default function AtelierAdminModal() {
           background: none;
           border: none;
           color: var(--accent-terracotta);
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           display: inline-flex;
           align-items: center;
@@ -1052,17 +1158,17 @@ export default function AtelierAdminModal() {
           grid-column: 1 / -1;
         }
         .form-label {
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           color: var(--text-primary);
         }
         .form-hint {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
         }
         .form-input, .form-select, .form-textarea {
           padding: 10px 14px;
-          font-size: 13px;
+          font-size: var(--text-sm);
           font-family: inherit;
           border: 1px solid var(--border-light);
           border-radius: 3px;
@@ -1095,7 +1201,7 @@ export default function AtelierAdminModal() {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          font-size: 10px;
+          font-size: var(--text-xs);
           font-weight: 800;
           letter-spacing: 0.08em;
           padding: 2px 8px;
@@ -1118,12 +1224,12 @@ export default function AtelierAdminModal() {
           gap: 16px;
         }
         .manager-title {
-          font-size: 15px;
+          font-size: var(--text-base);
           color: var(--text-primary);
           margin-bottom: 2px;
         }
         .manager-sub {
-          font-size: 12px;
+          font-size: var(--text-xs);
           color: var(--text-secondary);
         }
         .upload-file-btn {
@@ -1134,7 +1240,7 @@ export default function AtelierAdminModal() {
           color: #FFFFFF;
           padding: 8px 14px;
           border-radius: 2px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-weight: 600;
           cursor: pointer;
           white-space: nowrap;
@@ -1181,7 +1287,7 @@ export default function AtelierAdminModal() {
           left: 4px;
           background: rgba(0, 0, 0, 0.72);
           color: #FFFFFF;
-          font-size: 9px;
+          font-size: var(--text-xs);
           font-weight: 700;
           padding: 1px 5px;
           border-radius: 2px;
@@ -1213,7 +1319,7 @@ export default function AtelierAdminModal() {
           padding: 14px;
           background: rgba(0, 0, 0, 0.04);
           color: var(--text-muted);
-          font-size: 12px;
+          font-size: var(--text-xs);
           border-radius: 3px;
           width: 100%;
         }
@@ -1224,7 +1330,7 @@ export default function AtelierAdminModal() {
         .url-input {
           flex-grow: 1;
           padding: 8px 12px;
-          font-size: 12px;
+          font-size: var(--text-xs);
           font-family: inherit;
           border: 1px solid var(--border-light);
           border-radius: 3px;
@@ -1232,7 +1338,7 @@ export default function AtelierAdminModal() {
           outline: none;
         }
         .add-url-btn {
-          font-size: 11px;
+          font-size: var(--text-xs);
           padding: 8px 14px;
         }
         .preset-strip {
@@ -1241,7 +1347,7 @@ export default function AtelierAdminModal() {
           gap: 6px;
         }
         .preset-label {
-          font-size: 11px;
+          font-size: var(--text-xs);
           color: var(--text-muted);
         }
         .preset-chips {
@@ -1257,7 +1363,7 @@ export default function AtelierAdminModal() {
           border: 1px solid var(--border-light);
           background: #FFFFFF;
           border-radius: 3px;
-          font-size: 11px;
+          font-size: var(--text-xs);
           cursor: pointer;
           transition: var(--transition);
         }

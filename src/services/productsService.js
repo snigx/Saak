@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabaseClient';
-import { initialProducts } from '../data/initialProducts';
+import { normalizeOffer } from '../utils/offers';
 
 const TABLE_NAME = 'products';
 
@@ -11,7 +11,8 @@ function mapDbToProduct(row) {
     category: row.category,
     subCategory: row.sub_category,
     price: Number(row.price),
-    originalPrice: row.original_price ? Number(row.original_price) : undefined,
+    // undefined (not null) when the offers column doesn't exist yet
+    discount: row.discount === undefined ? undefined : normalizeOffer(row.discount),
     tag: row.tag || '',
     tagColor: row.tag_color || '#A34835',
     description: row.description || '',
@@ -31,7 +32,6 @@ function mapDbToProduct(row) {
       gallery: row.gallery || [...(row.model_photos || []), ...(row.flatlay_photos || [])]
     },
     recommendedPairings: row.recommended_pairings || ['the-gold-corset'],
-    bundleDiscountPercent: row.bundle_discount_percent || 10,
     inStock: row.in_stock !== false,
     featured: Boolean(row.featured)
   };
@@ -49,7 +49,8 @@ function mapProductToDb(product) {
     category: product.category,
     sub_category: product.subCategory,
     price: Number(product.price),
-    original_price: product.originalPrice ? Number(product.originalPrice) : null,
+    original_price: null, // retired: offers replace the old compare-at price
+    discount: normalizeOffer(product.discount),
     tag: product.tag || null,
     tag_color: product.tagColor || '#A34835',
     description: product.description || '',
@@ -67,7 +68,6 @@ function mapProductToDb(product) {
     flatlay_view: flatlayPhotos[0] || gallery[1] || gallery[0] || '/assets/saak_folded_copper_tissue.jpg',
     swatch_zoom: flatlayPhotos[1] || flatlayPhotos[0] || '/assets/saak_flatlay_copper_green.jpg',
     recommended_pairings: product.recommendedPairings || ['the-gold-corset'],
-    bundle_discount_percent: product.bundleDiscountPercent || 10,
     in_stock: product.inStock !== false,
     featured: Boolean(product.featured),
     updated_at: new Date().toISOString()
@@ -92,25 +92,31 @@ export async function fetchProductsFromDb() {
     }
   }
 
-  // Fallback to local storage or initial seed
-  try {
-    const saved = localStorage.getItem('saak_products_v6');
-    return saved ? JSON.parse(saved) : initialProducts;
-  } catch {
-    return initialProducts;
-  }
+  // No remote catalog available: return null so the app keeps its locally
+  // persisted catalog (ShopContext initialises from localStorage / seed data).
+  return null;
 }
+
+// PostgREST error when a column in the payload doesn't exist yet
+const isMissingDiscountColumn = (error) =>
+  Boolean(error) && /discount/i.test(error.message || '') && (error.code === 'PGRST204' || error.code === '42703');
 
 export async function saveProductToDb(product) {
   const dbRecord = mapProductToDb(product);
 
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from(TABLE_NAME)
         .upsert(dbRecord)
         .select()
         .single();
+
+      // Offers migration not run yet: save everything else
+      if (isMissingDiscountColumn(error)) {
+        delete dbRecord.discount;
+        ({ data, error } = await supabase.from(TABLE_NAME).upsert(dbRecord).select().single());
+      }
 
       if (error) {
         console.error('Error saving product to Supabase:', error.message);
@@ -123,6 +129,28 @@ export async function saveProductToDb(product) {
   }
 
   return product;
+}
+
+// Saves only the offer on a product. Returns { ok: true } or { ok: false, error }.
+export async function saveProductOfferToDb(productId, offer) {
+  if (!isSupabaseConfigured || !supabase) return { ok: true };
+  try {
+    const { error } = await supabase
+      .from(TABLE_NAME)
+      .update({ discount: normalizeOffer(offer), updated_at: new Date().toISOString() })
+      .eq('id', productId);
+    if (error) {
+      return {
+        ok: false,
+        error: isMissingDiscountColumn(error)
+          ? 'The database needs the one-time offers update first.'
+          : error.message
+      };
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
 }
 
 export async function deleteProductFromDb(productId) {
